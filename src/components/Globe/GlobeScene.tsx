@@ -49,7 +49,9 @@ export const GlobeScene: React.FC<GlobeSceneProps> = ({
     <div className="relative w-full h-full select-none touch-none" style={{ touchAction: 'none' }}>
       <Canvas
         camera={{ position: [0, 24, 18], fov: 45, near: 0.1, far: 1000 }}
-        gl={{ antialias: true, alpha: true }}
+        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+        dpr={[1, 2]}
+        resize={{ scroll: false, debounce: { scroll: 50, resize: 0 } }}
         className="w-full h-full touch-none"
         style={{ touchAction: 'none' }}
       >

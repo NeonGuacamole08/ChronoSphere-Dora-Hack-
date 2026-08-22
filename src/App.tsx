@@ -53,7 +53,7 @@ export default function App() {
   // 2. Real Supabase Authentication State
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup' | 'config'>('signin');
+  const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
 
   // Load existing Supabase auth session on mount
   useEffect(() => {
@@ -264,7 +264,7 @@ export default function App() {
   };
 
   // Open Auth Modal
-  const handleOpenAuth = (mode: 'signin' | 'signup' | 'config' = 'signin') => {
+  const handleOpenAuth = (mode: 'signin' | 'signup' = 'signin') => {
     setAuthModalMode(mode);
     setIsAuthModalOpen(true);
   };

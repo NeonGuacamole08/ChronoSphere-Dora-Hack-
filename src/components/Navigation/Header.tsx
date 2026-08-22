@@ -31,7 +31,7 @@ interface HeaderProps {
   onOpenHelp: () => void;
   onOpenBackendHub?: () => void;
   currentUser: AppUser | null;
-  onOpenAuthModal: (mode?: 'signin' | 'signup' | 'config') => void;
+  onOpenAuthModal: (mode?: 'signin' | 'signup') => void;
   onSignOut: () => void;
   capsulesCount: number;
   totalCapsulesCount: number;
@@ -114,29 +114,29 @@ export const Header: React.FC<HeaderProps> = ({
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
   return (
-    <header className="absolute top-2 left-2 right-2 md:top-4 md:left-4 md:right-4 z-40 flex flex-col md:flex-row md:items-center justify-between gap-2 md:gap-3 pointer-events-auto select-none">
-      <div className="flex items-center justify-between w-full md:w-auto gap-2">
+    <header className="absolute top-2 left-2 right-2 sm:top-3 sm:left-3 sm:right-3 md:top-4 md:left-4 md:right-4 z-40 flex flex-col md:flex-row md:items-center justify-between gap-2 md:gap-2.5 lg:gap-3 pointer-events-auto select-none">
+      <div className="flex items-center justify-between w-full md:w-auto gap-2 shrink-0">
         {/* 1. LEFT: ChronoSpheres Brand */}
         <div className="flex items-center gap-2 md:gap-2.5 shrink-0">
           {/* Glowing Globe Circle Emblem */}
-          <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#0c1b2f]/90 border-2 border-cyan-400 flex items-center justify-center text-cyan-200 shadow-[0_0_15px_rgba(6,182,212,0.4)] shrink-0">
-            <Globe className="w-4 h-4 md:w-5 md:h-5 stroke-[1.9] text-cyan-300" />
+          <div className="w-8 h-8 md:w-9 md:h-9 lg:w-10 lg:h-10 rounded-full bg-[#0c1b2f]/90 border-2 border-cyan-400 flex items-center justify-center text-cyan-200 shadow-[0_0_15px_rgba(6,182,212,0.4)] shrink-0">
+            <Globe className="w-4 h-4 md:w-4.5 md:h-4.5 lg:w-5 lg:h-5 stroke-[1.9] text-cyan-300" />
           </div>
 
           {/* Brand Text */}
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
-              <span className="font-sans font-bold text-base md:text-xl text-white tracking-tight leading-none drop-shadow">
+              <span className="font-sans font-bold text-sm sm:text-base md:text-lg lg:text-xl text-white tracking-tight leading-none drop-shadow">
                 ChronoSpheres
               </span>
             </div>
-            <span className="text-[9px] md:text-[11px] text-cyan-200/70 font-sans tracking-tight mt-0.5 font-medium">
+            <span className="text-[9px] md:text-[10px] lg:text-[11px] text-cyan-200/70 font-sans tracking-tight mt-0.5 font-medium hidden sm:inline">
               3D Earth Time Capsules
             </span>
           </div>
         </div>
 
-        {/* Mobile Search Toggle & Mobile Plant Button on small screens */}
+        {/* Mobile Search Toggle & Mobile Plant Button on small screens (<md) */}
         <div className="flex items-center gap-1.5 md:hidden">
           <button
             type="button"
@@ -161,11 +161,11 @@ export const Header: React.FC<HeaderProps> = ({
       {/* 2. CENTER: Search Bar with Embedded 'Drop Pin' Action */}
       <div
         ref={searchContainerRef}
-        className={`relative flex-1 max-w-lg mx-0 md:mx-2 ${
+        className={`relative flex-1 min-w-0 max-w-full md:max-w-[240px] lg:max-w-sm xl:max-w-md mx-0 md:mx-1 lg:mx-2 ${
           isMobileSearchOpen ? 'block w-full' : 'hidden md:block'
         }`}
       >
-        <div className="relative flex items-center bg-[#0c1626]/90 backdrop-blur-md rounded-full border border-cyan-500/40 shadow-[0_0_20px_rgba(4,20,38,0.7)] px-2.5 md:px-3.5 py-1 md:py-1.5">
+        <div className="relative flex items-center bg-[#0c1626]/90 backdrop-blur-md rounded-full border border-cyan-500/40 shadow-[0_0_20px_rgba(4,20,38,0.7)] px-2.5 md:px-3 py-1 md:py-1.5">
           <Search className="w-3.5 h-3.5 md:w-4 md:h-4 text-cyan-400/90 shrink-0 ml-0.5" />
           <input
             type="text"
@@ -174,23 +174,23 @@ export const Header: React.FC<HeaderProps> = ({
             onFocus={() => {
               if (suggestions.length > 0) setShowDropdown(true);
             }}
-            placeholder="Search city, address, or landmark..."
-            className="w-full text-[11px] md:text-xs px-2 md:px-2.5 py-0.5 md:py-1 bg-transparent text-cyan-50 placeholder:text-cyan-200/50 focus:outline-none font-sans"
+            placeholder="Search city, address..."
+            className="w-full min-w-0 text-[11px] md:text-xs px-2 py-0.5 md:py-1 bg-transparent text-cyan-50 placeholder:text-cyan-200/50 focus:outline-none font-sans truncate"
           />
 
           {/* Embedded Drop Pin Action Button inside Search Bar */}
           <button
             type="button"
             onClick={onDropPinClick}
-            className={`flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-0.5 md:py-1 rounded-full text-[10px] md:text-xs font-medium shrink-0 transition cursor-pointer border ${
+            className={`flex items-center gap-1 px-2 py-0.5 md:py-1 rounded-full text-[10px] md:text-[11px] font-medium shrink-0 transition cursor-pointer border ${
               isPlantingMode
                 ? 'bg-cyan-500 text-stone-950 border-cyan-300 ring-2 ring-cyan-400/50 font-bold'
                 : 'bg-[#14233b] hover:bg-[#1a2f4d] text-cyan-200 border-cyan-500/40'
             }`}
             title="Drop a pin at searched location or on globe"
           >
-            <MapPin className="w-3 h-3 md:w-3.5 md:h-3.5 text-cyan-400" />
-            <span>Drop Pin</span>
+            <MapPin className="w-3 h-3 text-cyan-400 shrink-0" />
+            <span className="hidden sm:inline">Drop Pin</span>
           </button>
         </div>
 
@@ -226,22 +226,24 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* 3. RIGHT: Action Buttons Cluster */}
-      <div className="flex items-center justify-end gap-1 md:gap-2 shrink-0 flex-wrap">
-        {/* + Plant Capsule Glowing Button (Desktop) */}
+      <div className="flex items-center justify-end gap-1 md:gap-1.5 lg:gap-2 shrink-0 flex-nowrap">
+        {/* + Plant Capsule Glowing Button (Tablet & Desktop) */}
         <button
           type="button"
           onClick={onOpenCreate}
-          className="hidden md:flex items-center gap-1.5 px-3 md:px-4 py-1.5 md:py-2 rounded-full bg-[#208b9e] hover:bg-[#1fa1bc] text-white text-xs font-bold transition shadow-[0_0_20px_rgba(6,182,212,0.5)] border border-cyan-300 hover:shadow-cyan-400/60 cursor-pointer"
+          className="hidden md:flex items-center gap-1 md:gap-1.5 px-2.5 md:px-3 lg:px-4 py-1.5 md:py-2 rounded-full bg-[#208b9e] hover:bg-[#1fa1bc] text-white text-[11px] md:text-xs font-bold transition shadow-[0_0_20px_rgba(6,182,212,0.5)] border border-cyan-300 hover:shadow-cyan-400/60 cursor-pointer shrink-0"
+          title="Plant a new encrypted time capsule"
         >
           <Plus className="w-3.5 h-3.5 md:w-4 md:h-4 text-cyan-100 stroke-[2.5]" />
-          <span>Plant Capsule</span>
+          <span className="hidden lg:inline">Plant Capsule</span>
+          <span className="inline lg:hidden">Plant</span>
         </button>
 
         {/* 3. TOTAL PIN COUNT STACK BADGE & HEATMAP TOGGLE */}
         <button
           type="button"
           onClick={onToggleLayers}
-          className={`flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1 md:py-2 rounded-xl border text-[11px] md:text-xs font-medium transition shadow-md cursor-pointer ${
+          className={`flex items-center gap-1 md:gap-1.5 px-2 md:px-2.5 lg:px-3 py-1.5 md:py-2 rounded-xl border text-[11px] md:text-xs font-medium transition shadow-md cursor-pointer shrink-0 ${
             showHeatmap
               ? 'bg-amber-500/30 text-amber-200 border-amber-400 ring-2 ring-amber-400/50 shadow-[0_0_15px_rgba(245,158,11,0.4)] font-bold'
               : 'bg-[#0c1626]/90 text-stone-200 border-cyan-500/40 hover:bg-[#13233a]'
@@ -249,13 +251,13 @@ export const Header: React.FC<HeaderProps> = ({
           title="Total Active Pins Stack & 3D Glowing Memory Heatmap Overlay"
         >
           <Layers className={`w-3.5 h-3.5 md:w-4 md:h-4 ${showHeatmap ? 'text-amber-400' : 'text-cyan-300'}`} />
-          <span className="hidden lg:inline font-semibold">
-            {showHeatmap ? 'Heatmap' : 'Pins Layer'}
+          <span className="hidden xl:inline font-semibold">
+            {showHeatmap ? 'Heatmap' : 'Pins'}
           </span>
           {/* Dynamic Pin Count Stack Badge */}
           <span
             id="total-pin-count-badge"
-            className="text-[9px] md:text-[10px] px-1.5 md:px-2 py-0.5 rounded-full bg-cyan-900/90 text-cyan-200 border border-cyan-400/60 font-mono font-bold shadow-inner"
+            className="text-[9px] md:text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-900/90 text-cyan-200 border border-cyan-400/60 font-mono font-bold shadow-inner"
             title={`${capsulesCount} visible capsules on globe`}
           >
             {capsulesCount}
@@ -267,7 +269,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={onOpenBackendHub}
-            className="w-7 h-7 md:w-9 md:h-9 rounded-xl bg-[#0c1626]/90 hover:bg-[#13233a] text-cyan-300 border border-cyan-500/40 transition shadow-md flex items-center justify-center font-bold text-xs cursor-pointer"
+            className="w-7 h-7 sm:w-8 sm:h-8 md:w-8.5 md:h-8.5 lg:w-9 lg:h-9 rounded-xl bg-[#0c1626]/90 hover:bg-[#13233a] text-cyan-300 border border-cyan-500/40 transition shadow-md flex items-center justify-center font-bold text-xs cursor-pointer shrink-0"
             title="Backend Hub: Supabase Edge Functions, Resend & Arweave"
           >
             <Server className="w-3.5 h-3.5 md:w-4 md:h-4 text-cyan-300" />
@@ -278,7 +280,7 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           type="button"
           onClick={onToggleAudio}
-          className={`w-7 h-7 md:w-9 md:h-9 rounded-xl border flex items-center justify-center transition shadow-md cursor-pointer ${
+          className={`w-7 h-7 sm:w-8 sm:h-8 md:w-8.5 md:h-8.5 lg:w-9 lg:h-9 rounded-xl border flex items-center justify-center transition shadow-md cursor-pointer shrink-0 ${
             !isAudioMuted
               ? 'bg-cyan-950/90 text-cyan-300 border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
               : 'bg-[#0c1626]/90 text-white border-cyan-500/40 hover:bg-[#13233a]'
@@ -296,19 +298,19 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           type="button"
           onClick={onOpenHelp}
-          className="w-7 h-7 md:w-9 md:h-9 rounded-xl bg-[#0c1626]/90 hover:bg-[#13233a] text-white border border-cyan-500/40 transition shadow-md flex items-center justify-center font-bold text-xs cursor-pointer"
+          className="w-7 h-7 sm:w-8 sm:h-8 md:w-8.5 md:h-8.5 lg:w-9 lg:h-9 rounded-xl bg-[#0c1626]/90 hover:bg-[#13233a] text-white border border-cyan-500/40 transition shadow-md flex items-center justify-center font-bold text-xs cursor-pointer shrink-0"
           title="Interactive Guide & Website Tutorial"
         >
           <HelpCircle className="w-3.5 h-3.5 md:w-4 md:h-4" />
         </button>
 
         {/* 2. REAL SUPABASE AUTHENTICATION BADGE & USER DROPDOWN */}
-        <div className="relative" ref={userDropdownRef}>
+        <div className="relative shrink-0" ref={userDropdownRef}>
           {currentUser ? (
             <button
               type="button"
               onClick={() => setShowUserDropdown(!showUserDropdown)}
-              className="flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 rounded-xl bg-[#0c1626]/90 hover:bg-[#13233a] text-white border border-emerald-500/50 text-[10px] md:text-xs font-semibold transition cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.25)]"
+              className="flex items-center gap-1 md:gap-1.5 px-2 md:px-2.5 lg:px-3 py-1 md:py-1.5 rounded-xl bg-[#0c1626]/90 hover:bg-[#13233a] text-white border border-emerald-500/50 text-[10px] md:text-xs font-semibold transition cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.25)]"
               title={`Logged in as ${currentUser.username} (${currentUser.email})`}
             >
               <img
@@ -316,7 +318,7 @@ export const Header: React.FC<HeaderProps> = ({
                 alt={currentUser.username}
                 className="w-4 h-4 md:w-5 md:h-5 rounded-full border border-emerald-400 object-cover bg-stone-900 shrink-0"
               />
-              <span className="max-w-[70px] md:max-w-[110px] truncate font-medium text-emerald-100 hidden xs:inline">
+              <span className="max-w-[60px] md:max-w-[85px] lg:max-w-[110px] truncate font-medium text-emerald-100 hidden sm:inline">
                 {currentUser.username}
               </span>
               <ShieldCheck className="w-3 h-3 md:w-3.5 md:h-3.5 text-emerald-400 shrink-0" />
@@ -326,10 +328,10 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={() => onOpenAuthModal('signin')}
-              className="flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1 md:py-1.5 rounded-xl bg-gradient-to-r from-emerald-900/90 to-teal-900/90 hover:from-emerald-800 hover:to-teal-800 text-emerald-100 border border-emerald-400/60 text-[10px] md:text-xs font-bold transition cursor-pointer shadow-md"
+              className="flex items-center gap-1 md:gap-1.5 px-2 md:px-2.5 lg:px-3 py-1 md:py-1.5 rounded-xl bg-gradient-to-r from-emerald-900/90 to-teal-900/90 hover:from-emerald-800 hover:to-teal-800 text-emerald-100 border border-emerald-400/60 text-[10px] md:text-xs font-bold transition cursor-pointer shadow-md"
             >
               <User className="w-3 h-3 md:w-3.5 md:h-3.5 text-emerald-300" />
-              <span className="hidden xs:inline">Auth</span>
+              <span className="hidden sm:inline">Auth</span>
             </button>
           )}
 
@@ -363,18 +365,6 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   <span>Account & Decryption Key</span>
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowUserDropdown(false);
-                    onOpenAuthModal('config');
-                  }}
-                  className="w-full text-left px-2.5 py-1.5 rounded-xl text-xs hover:bg-cyan-950/70 text-cyan-100 transition cursor-pointer flex items-center justify-between"
-                >
-                  <span>Supabase Config</span>
-                  <Server className="w-3.5 h-3.5 text-cyan-400" />
                 </button>
 
                 <button

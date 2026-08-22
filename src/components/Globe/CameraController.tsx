@@ -20,7 +20,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
   onFlyInComplete,
   controlsRef,
 }) => {
-  const { camera } = useThree();
+  const { camera, size } = useThree();
   
   // Animation state
   const isAnimatingRef = useRef<boolean>(true);
@@ -30,6 +30,25 @@ export const CameraController: React.FC<CameraControllerProps> = ({
   const targetEndPosRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0.35, 4.85));
   const isFocusingRef = useRef<boolean>(false);
   const focusTargetPosRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 5.0));
+
+  // Dynamic aspect ratio & FOV adaptation on viewport resize (tablets, portrait, split-screen)
+  useEffect(() => {
+    if (camera instanceof THREE.PerspectiveCamera) {
+      const aspect = size.width / Math.max(1, size.height);
+      camera.aspect = aspect;
+
+      // When in portrait mode (<1.0) or tablet portrait/split ratio (<1.25), adjust FOV so the 3D globe is never cropped
+      if (aspect < 0.85) {
+        camera.fov = Math.min(62, 45 / (aspect * 1.05));
+      } else if (aspect < 1.2) {
+        camera.fov = 49;
+      } else {
+        camera.fov = 45;
+      }
+
+      camera.updateProjectionMatrix();
+    }
+  }, [size.width, size.height, camera]);
 
   // Trigger fly-in when component mounts or flyInTrigger increments
   useEffect(() => {

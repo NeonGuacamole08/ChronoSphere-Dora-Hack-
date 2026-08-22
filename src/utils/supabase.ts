@@ -1,11 +1,9 @@
 import { createClient, SupabaseClient, User as SupabaseUser, Session } from '@supabase/supabase-js';
 
-// Environment credentials or fallback project
-const ENV_SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL || '';
-const ENV_SUPABASE_ANON_KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '';
+// Environment credentials automatically read from Vite environment variables
+const ENV_SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const ENV_SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-const LOCAL_STORAGE_CUSTOM_URL_KEY = 'chronospheres_custom_supabase_url';
-const LOCAL_STORAGE_CUSTOM_KEY_KEY = 'chronospheres_custom_supabase_anon_key';
 const LOCAL_STORAGE_AUTH_SESSION_KEY = 'chronospheres_supabase_auth_session';
 
 export interface AppUser {
@@ -21,14 +19,14 @@ export interface AppUser {
 }
 
 export function getSupabaseConfig() {
-  const customUrl = localStorage.getItem(LOCAL_STORAGE_CUSTOM_URL_KEY) || ENV_SUPABASE_URL || 'https://chronospheres.supabase.co';
-  const customKey = localStorage.getItem(LOCAL_STORAGE_CUSTOM_KEY_KEY) || ENV_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNocm9ub3NwaGVyZXMiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoyMDAwMDAwMDAwfQ.demo_key';
-  const isCustomConfigured = Boolean(
-    (ENV_SUPABASE_URL && ENV_SUPABASE_ANON_KEY) ||
-    (localStorage.getItem(LOCAL_STORAGE_CUSTOM_URL_KEY) && localStorage.getItem(LOCAL_STORAGE_CUSTOM_KEY_KEY))
+  const url = import.meta.env.VITE_SUPABASE_URL || ENV_SUPABASE_URL || 'https://chronospheres.supabase.co';
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ENV_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNocm9ub3NwaGVyZXMiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoyMDAwMDAwMDAwfQ.demo_key';
+  const isConfigured = Boolean(
+    (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY) ||
+    (ENV_SUPABASE_URL && ENV_SUPABASE_ANON_KEY)
   );
 
-  return { url: customUrl, anonKey: customKey, isCustomConfigured };
+  return { url, anonKey, isConfigured, isCustomConfigured: isConfigured };
 }
 
 let supabaseInstance: SupabaseClient | null = null;
@@ -47,13 +45,7 @@ export function getSupabaseClient(): SupabaseClient {
   return supabaseInstance;
 }
 
-export function setCustomSupabaseCredentials(url: string, key: string) {
-  if (url) localStorage.setItem(LOCAL_STORAGE_CUSTOM_URL_KEY, url);
-  else localStorage.removeItem(LOCAL_STORAGE_CUSTOM_URL_KEY);
-
-  if (key) localStorage.setItem(LOCAL_STORAGE_CUSTOM_KEY_KEY, key);
-  else localStorage.removeItem(LOCAL_STORAGE_CUSTOM_KEY_KEY);
-
+export function setCustomSupabaseCredentials(_url?: string, _key?: string) {
   supabaseInstance = null; // Re-instantiate on next get
 }
 

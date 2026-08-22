@@ -51,23 +51,23 @@ export const GlobeControlsOverlay: React.FC<GlobeControlsOverlayProps> = ({
   return (
     <>
       {/* 1. CENTER BOTTOM: Real-time Clock & Judge Fast-Forward Toolbar */}
-      <div className="absolute bottom-3 md:bottom-5 left-3 right-3 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-40 pointer-events-auto flex items-center justify-center shadow-2xl select-none">
-        <div className="flex flex-col sm:flex-row items-center gap-1.5 sm:gap-2.5 p-1.5 sm:p-2 rounded-2xl bg-[#0c1626]/90 backdrop-blur-md border border-cyan-500/40 shadow-2xl max-w-full">
+      <div className="absolute bottom-3 sm:bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 z-40 pointer-events-auto flex items-center justify-center select-none w-[calc(100%-20px)] sm:w-auto max-w-[94vw] px-1 pb-[env(safe-area-inset-bottom,0px)]">
+        <div className="flex flex-col sm:flex-row items-center gap-1.5 sm:gap-2 md:gap-2.5 p-1.5 sm:p-2 rounded-2xl bg-[#0c1626]/95 backdrop-blur-md border border-cyan-500/40 shadow-[0_4px_25px_rgba(0,0,0,0.6)] w-full sm:w-auto">
           {/* Purple/Magenta Realtime Clock Badge */}
-          <div className="flex items-center justify-center gap-2 sm:gap-2.5 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl bg-gradient-to-r from-[#3e135e] to-[#250d40] border border-purple-500/40 shadow-inner w-full sm:w-auto">
+          <div className="flex items-center justify-center gap-2 sm:gap-2.5 px-2.5 sm:px-3 md:px-3.5 py-1 sm:py-1.5 rounded-xl bg-gradient-to-r from-[#3e135e] to-[#250d40] border border-purple-500/40 shadow-inner w-full sm:w-auto shrink-0">
             <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-fuchsia-300 shrink-0" />
             <div className="flex flex-col text-center sm:text-left">
               <span className="text-[8px] sm:text-[9px] font-mono font-bold text-fuchsia-300/90 tracking-wider uppercase leading-none">
                 {isFastForwarded ? 'SIMULATED TIME' : 'REALTIME'}
               </span>
-              <span className="text-[11px] sm:text-xs font-mono font-bold text-white tracking-wider mt-0.5 whitespace-pre">
+              <span className="text-[10px] sm:text-xs font-mono font-bold text-white tracking-wider mt-0.5 whitespace-pre">
                 {formatDateTime(currentTimestamp)}
               </span>
             </div>
           </div>
 
           {/* Quick Time Travel Fast-Forward Buttons: +1h, +1d, +1w, +1y */}
-          <div className="flex items-center justify-center gap-1 sm:gap-1.5 flex-wrap">
+          <div className="flex items-center justify-center gap-1 sm:gap-1.5 flex-wrap shrink-0">
             <button
               type="button"
               onClick={() => onFastForward(1)}
@@ -106,7 +106,7 @@ export const GlobeControlsOverlay: React.FC<GlobeControlsOverlayProps> = ({
               <button
                 type="button"
                 onClick={onResetTime}
-                className="p-1 rounded-lg bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-500/60 transition cursor-pointer"
+                className="p-1 sm:p-1.5 rounded-lg bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-500/60 transition cursor-pointer shadow-sm"
                 title="Reset simulated time to Realtime"
               >
                 <RotateCcw className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -117,14 +117,14 @@ export const GlobeControlsOverlay: React.FC<GlobeControlsOverlayProps> = ({
       </div>
 
       {/* 2. BOTTOM RIGHT: 'Drop Pin on Globe' Action Button */}
-      <div className="absolute bottom-24 sm:bottom-5 right-3 sm:right-5 z-40 pointer-events-auto select-none">
+      <div className="absolute bottom-20 sm:bottom-4 md:bottom-6 right-2.5 sm:right-4 md:right-6 z-40 pointer-events-auto select-none pb-[env(safe-area-inset-bottom,0px)]">
         <button
           type="button"
           onClick={onTogglePlantingMode}
-          className={`flex items-center gap-1.5 sm:gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-2xl text-[11px] sm:text-xs font-bold transition shadow-2xl cursor-pointer border ${
+          className={`flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-3.5 sm:py-2 md:px-4 md:py-2.5 rounded-2xl text-[11px] sm:text-xs font-bold transition shadow-2xl cursor-pointer border ${
             isPlantingMode
               ? 'bg-cyan-500 text-stone-950 border-cyan-300 ring-2 ring-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.6)]'
-              : 'bg-[#0c1626]/90 hover:bg-[#13233a] text-white border-cyan-500/40'
+              : 'bg-[#0c1626]/95 hover:bg-[#13233a] text-white border-cyan-500/40 backdrop-blur-md'
           }`}
           title="Click anywhere on the 3D globe to plant a capsule at precise coordinates"
         >
