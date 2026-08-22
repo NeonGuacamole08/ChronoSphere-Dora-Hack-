@@ -198,62 +198,62 @@ export const CapsuleModal: React.FC<CapsuleModalProps> = ({
   const isVoyager = capsule.id === 'cap_voyager_00' || capsule.title.toLowerCase().includes('voyager');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl parchment-card border-2 border-amber-800/40 shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="relative w-full max-w-2xl max-h-[95dvh] sm:max-h-[90vh] flex flex-col rounded-2xl parchment-card border-2 border-amber-800/40 shadow-2xl overflow-hidden">
         {/* Tree Bark Wood Trim Header */}
-        <div className="tree-bark-banner px-6 py-4 flex items-center justify-between text-amber-50 shadow-md">
-          <div className="flex items-center gap-3">
+        <div className="tree-bark-banner px-3.5 py-3 sm:px-6 sm:py-4 flex items-center justify-between text-amber-50 shadow-md">
+          <div className="flex items-center gap-2 sm:gap-3">
             <div
-              className={`p-2 rounded-full ring-2 ${
+              className={`p-1.5 sm:p-2 rounded-full ring-2 ${
                 isTimeUnlocked
                   ? 'bg-emerald-700/80 text-emerald-100 ring-emerald-400/50'
                   : 'bg-amber-900 text-amber-300 ring-amber-400/50'
               }`}
             >
-              {isTimeUnlocked ? <Unlock className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
+              {isTimeUnlocked ? <Unlock className="w-4 h-4 sm:w-5 sm:h-5" /> : <Lock className="w-4 h-4 sm:w-5 sm:h-5" />}
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs uppercase tracking-wider text-amber-300 font-mono">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="text-[10px] sm:text-xs uppercase tracking-wider text-amber-300 font-mono">
                   {capsule.access_type === 'public' ? 'Public Earth Capsule' : '🔒 Private Capsule'}
                 </span>
                 {isVoyager && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/50 font-bold">
+                  <span className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/50 font-bold">
                     VOYAGER GOLDEN RECORD
                   </span>
                 )}
               </div>
-              <h2 className="font-serif font-bold text-xl carved-wood-text leading-tight line-clamp-1">
+              <h2 className="font-serif font-bold text-base sm:text-xl carved-wood-text leading-tight line-clamp-1">
                 {capsule.title}
               </h2>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 sm:gap-1.5">
             {/* Website Tutorial Trigger Button */}
             {onOpenTutorial && (
               <button
                 type="button"
                 onClick={onOpenTutorial}
-                className="p-1.5 rounded-lg bg-emerald-950/70 hover:bg-emerald-900 text-emerald-300 hover:text-white transition cursor-pointer border border-emerald-600/40 flex items-center gap-1 text-xs px-2"
+                className="p-1 sm:p-1.5 rounded-lg bg-emerald-950/70 hover:bg-emerald-900 text-emerald-300 hover:text-white transition cursor-pointer border border-emerald-600/40 flex items-center gap-1 text-[11px] sm:text-xs px-1.5 sm:px-2"
                 title="Open Website Tutorial & Guide"
               >
-                <HelpCircle className="w-4 h-4" />
+                <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline font-sans font-medium">Tutorial</span>
               </button>
             )}
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-full hover:bg-amber-950/60 text-amber-200 hover:text-white transition cursor-pointer"
+              className="p-1 sm:p-1.5 rounded-full hover:bg-amber-950/60 text-amber-200 hover:text-white transition cursor-pointer"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
         </div>
 
         {/* Modal Scrollable Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-3.5 sm:space-y-6">
           {/* Metadata Chips Bar */}
           <div className="flex flex-wrap gap-2 text-xs">
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full parchment-subtle border border-amber-300/80 text-stone-800">

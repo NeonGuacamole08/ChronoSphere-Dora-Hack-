@@ -88,12 +88,12 @@ export const GlobeView: React.FC<GlobeViewProps> = ({
   };
 
   return (
-    <div className="relative w-full h-screen overflow-hidden">
+    <div className="relative w-full w-screen h-screen h-dvh overflow-hidden touch-none" style={{ touchAction: 'none' }}>
       {/* Drifting Cosmic Stars & Atmospheric Horizon Background */}
       <SkyBackground />
 
       {/* 3D Interactive Photorealistic Earth Scene */}
-      <div className="relative z-10 w-full h-full">
+      <div className="relative z-10 w-full h-full h-dvh touch-none" style={{ touchAction: 'none' }}>
         <GlobeScene
           capsules={capsules}
           selectedCapsule={selectedCapsule}

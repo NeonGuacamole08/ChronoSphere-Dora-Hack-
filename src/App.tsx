@@ -301,7 +301,7 @@ export default function App() {
   };
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden select-none bg-[#0a192f] text-stone-100">
+    <div className="relative w-screen w-full h-screen h-dvh max-w-full overflow-hidden select-none bg-[#0a192f] text-stone-100">
       {/* 1. TOP HEADER with dynamic Total Pin Count Stack Badge & Real Supabase Auth */}
       <Header
         searchQuery={searchQuery}

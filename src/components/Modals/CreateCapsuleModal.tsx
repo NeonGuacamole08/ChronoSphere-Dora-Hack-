@@ -150,19 +150,19 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl parchment-card border-2 border-amber-800/40 shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="relative w-full max-w-2xl max-h-[95dvh] sm:max-h-[90vh] flex flex-col rounded-2xl parchment-card border-2 border-amber-800/40 shadow-2xl overflow-hidden">
         {/* Wood Header */}
-        <div className="wood-trim px-6 py-4 flex items-center justify-between text-amber-50 shadow-md">
-          <div className="flex items-center gap-2.5">
-            <span className="wax-seal w-8 h-8 rounded-full flex items-center justify-center text-white font-serif font-black text-sm ring-2 ring-amber-300/40">
+        <div className="wood-trim px-3.5 py-3 sm:px-6 sm:py-4 flex items-center justify-between text-amber-50 shadow-md">
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <span className="wax-seal w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white font-serif font-black text-xs sm:text-sm ring-2 ring-amber-300/40">
               TF
             </span>
             <div>
-              <h2 className="font-serif font-bold text-lg text-amber-100 leading-none">
+              <h2 className="font-serif font-bold text-sm sm:text-lg text-amber-100 leading-none">
                 Plant a New Earth Time Capsule
               </h2>
-              <span className="text-[11px] text-amber-300/80">
+              <span className="text-[9px] sm:text-[11px] text-amber-300/80">
                 Sealed Cryptographically & Anchored to Arweave
               </span>
             </div>
@@ -170,18 +170,18 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-amber-950/60 text-amber-200 hover:text-white transition cursor-pointer"
+            className="p-1 sm:p-1.5 rounded-full hover:bg-amber-950/60 text-amber-200 hover:text-white transition cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
 
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-3.5 sm:space-y-5">
           {/* Title & Story */}
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div>
-              <label className="block text-xs font-bold text-amber-950 uppercase tracking-wider mb-1">
+              <label className="block text-[10px] sm:text-xs font-bold text-amber-950 uppercase tracking-wider mb-1">
                 Capsule Title
               </label>
               <input
@@ -190,63 +190,63 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g., Midnight Promise under the Tuscan Stars"
-                className="w-full text-sm font-medium px-3.5 py-2.5 rounded-xl bg-white border border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-600 text-stone-900 placeholder:text-stone-400 shadow-xs"
+                className="w-full text-xs sm:text-sm font-medium px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl bg-white border border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-600 text-stone-900 placeholder:text-stone-400 shadow-xs"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-amber-950 uppercase tracking-wider mb-1">
+              <label className="block text-[10px] sm:text-xs font-bold text-amber-950 uppercase tracking-wider mb-1">
                 Memory Text & Secret Letter
               </label>
               <textarea
                 required
-                rows={4}
+                rows={3}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Write your heartfelt story, future message, coordinates secret, or time reflection..."
-                className="w-full text-xs leading-relaxed px-3.5 py-2.5 rounded-xl bg-white border border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-600 text-stone-900 placeholder:text-stone-400 shadow-xs"
+                className="w-full text-[11px] sm:text-xs leading-relaxed px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl bg-white border border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-600 text-stone-900 placeholder:text-stone-400 shadow-xs"
               />
             </div>
           </div>
 
           {/* Coordinates & Location */}
-          <div className="p-3.5 rounded-xl parchment-subtle border border-amber-300/80 space-y-3">
+          <div className="p-3 sm:p-3.5 rounded-xl parchment-subtle border border-amber-300/80 space-y-2.5 sm:space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-amber-700" />
+              <span className="text-[11px] sm:text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-700" />
                 Earth Coordinates & Location
               </span>
-              <span className="text-[11px] font-mono text-amber-800">
+              <span className="text-[10px] sm:text-[11px] font-mono text-amber-800">
                 Lat: {Number(lat).toFixed(4)}°, Lng: {Number(lng).toFixed(4)}°
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
               <input
                 type="text"
                 value={locationName}
                 onChange={(e) => setLocationName(e.target.value)}
                 placeholder="Location Name (e.g. Kyoto Bamboo Grove)"
-                className="text-xs px-3 py-2 rounded-lg bg-white border border-amber-300 text-stone-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                className="text-[11px] sm:text-xs px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-white border border-amber-300 text-stone-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
               />
               <input
                 type="text"
                 value={countryName}
                 onChange={(e) => setCountryName(e.target.value)}
                 placeholder="Country Name (e.g. Japan)"
-                className="text-xs px-3 py-2 rounded-lg bg-white border border-amber-300 text-stone-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                className="text-[11px] sm:text-xs px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-white border border-amber-300 text-stone-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
               />
             </div>
           </div>
 
           {/* Time Lock & Unlock Date */}
-          <div className="p-3.5 rounded-xl parchment-subtle border border-amber-300/80 space-y-3">
+          <div className="p-3 sm:p-3.5 rounded-xl parchment-subtle border border-amber-300/80 space-y-2.5 sm:space-y-3">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-amber-700" />
-                Unlock Date & Time (Time-Lock Vault)
+              <label className="text-[11px] sm:text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                <Calendar className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-700" />
+                Unlock Date & Time (Vault Lock)
               </label>
-              <span className="text-[10px] text-amber-800 italic">Locked until timestamp arrives</span>
+              <span className="text-[9px] sm:text-[10px] text-amber-800 italic">Locked until timestamp arrives</span>
             </div>
 
             <input
@@ -254,37 +254,37 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
               required
               value={unlockDate}
               onChange={(e) => setUnlockDate(e.target.value)}
-              className="w-full text-xs font-mono px-3 py-2 rounded-lg bg-white border border-amber-300 text-stone-900 focus:outline-none focus:ring-1 focus:ring-amber-500 shadow-xs"
+              className="w-full text-[11px] sm:text-xs font-mono px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-white border border-amber-300 text-stone-900 focus:outline-none focus:ring-1 focus:ring-amber-500 shadow-xs"
             />
 
             {/* Quick Presets */}
-            <div className="flex flex-wrap gap-1.5 items-center">
-              <span className="text-[10px] text-stone-500">Quick Presets:</span>
+            <div className="flex flex-wrap gap-1 sm:gap-1.5 items-center">
+              <span className="text-[9px] sm:text-[10px] text-stone-500">Quick Presets:</span>
               <button
                 type="button"
                 onClick={() => setPresetDate('week')}
-                className="text-[10px] px-2 py-0.5 rounded bg-white hover:bg-amber-100 text-stone-700 border border-amber-200 cursor-pointer"
+                className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded bg-white hover:bg-amber-100 text-stone-700 border border-amber-200 cursor-pointer"
               >
                 +1 Week
               </button>
               <button
                 type="button"
                 onClick={() => setPresetDate('month')}
-                className="text-[10px] px-2 py-0.5 rounded bg-white hover:bg-amber-100 text-stone-700 border border-amber-200 cursor-pointer"
+                className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded bg-white hover:bg-amber-100 text-stone-700 border border-amber-200 cursor-pointer"
               >
                 +1 Month
               </button>
               <button
                 type="button"
                 onClick={() => setPresetDate('year')}
-                className="text-[10px] px-2 py-0.5 rounded bg-white hover:bg-amber-100 text-stone-700 border border-amber-200 cursor-pointer"
+                className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded bg-white hover:bg-amber-100 text-stone-700 border border-amber-200 cursor-pointer"
               >
                 +1 Year
               </button>
               <button
                 type="button"
                 onClick={() => setPresetDate('decade')}
-                className="text-[10px] px-2 py-0.5 rounded bg-white hover:bg-amber-100 text-stone-700 border border-amber-200 cursor-pointer"
+                className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded bg-white hover:bg-amber-100 text-stone-700 border border-amber-200 cursor-pointer"
               >
                 +10 Years
               </button>
@@ -292,20 +292,20 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
           </div>
 
           {/* Access Control: Personal Private (Default) vs Shared vs Public */}
-          <div className="p-3.5 rounded-xl parchment-subtle border border-amber-300/80 space-y-3">
+          <div className="p-3 sm:p-3.5 rounded-xl parchment-subtle border border-amber-300/80 space-y-2.5 sm:space-y-3">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
-                <Key className="w-3.5 h-3.5 text-amber-700" />
+              <label className="text-[11px] sm:text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                <Key className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-700" />
                 Privacy & Access Permissions
               </label>
-              <span className="text-[10px] text-amber-800 font-medium">Personal by Default</span>
+              <span className="text-[9px] sm:text-[10px] text-amber-800 font-medium">Personal by Default</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => setAccessType('private')}
-                className={`py-2.5 px-3 rounded-lg text-xs font-medium border flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                className={`py-2 sm:py-2.5 px-2.5 sm:px-3 rounded-lg text-xs font-medium border flex items-center justify-center gap-1.5 transition cursor-pointer ${
                   accessType === 'private'
                     ? 'bg-amber-900 text-amber-100 border-amber-950 shadow-xs'
                     : 'bg-white text-stone-700 border-amber-200 hover:bg-amber-50'
@@ -313,15 +313,15 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
               >
                 <Lock className="w-3.5 h-3.5 text-amber-400" />
                 <div className="text-left leading-tight">
-                  <div className="font-bold">Personal Vault</div>
-                  <div className="text-[9px] opacity-80">Private to you (or shared)</div>
+                  <div className="font-bold text-[11px] sm:text-xs">Personal Vault</div>
+                  <div className="text-[8px] sm:text-[9px] opacity-80">Private to you (or shared)</div>
                 </div>
               </button>
 
               <button
                 type="button"
                 onClick={() => setAccessType('public')}
-                className={`py-2.5 px-3 rounded-lg text-xs font-medium border flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                className={`py-2 sm:py-2.5 px-2.5 sm:px-3 rounded-lg text-xs font-medium border flex items-center justify-center gap-1.5 transition cursor-pointer ${
                   accessType === 'public'
                     ? 'bg-amber-900 text-amber-100 border-amber-950 shadow-xs'
                     : 'bg-white text-stone-700 border-amber-200 hover:bg-amber-50'
@@ -329,8 +329,8 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
               >
                 <Globe2 className="w-3.5 h-3.5 text-cyan-400" />
                 <div className="text-left leading-tight">
-                  <div className="font-bold">Public Explorer</div>
-                  <div className="text-[9px] opacity-80">Open to the world</div>
+                  <div className="font-bold text-[11px] sm:text-xs">Public Explorer</div>
+                  <div className="text-[8px] sm:text-[9px] opacity-80">Open to the world</div>
                 </div>
               </button>
             </div>

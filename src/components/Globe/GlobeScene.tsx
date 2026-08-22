@@ -46,11 +46,12 @@ export const GlobeScene: React.FC<GlobeSceneProps> = ({
   }, []);
 
   return (
-    <div className="relative w-full h-full select-none">
+    <div className="relative w-full h-full select-none touch-none" style={{ touchAction: 'none' }}>
       <Canvas
         camera={{ position: [0, 24, 18], fov: 45, near: 0.1, far: 1000 }}
         gl={{ antialias: true, alpha: true }}
-        className="w-full h-full"
+        className="w-full h-full touch-none"
+        style={{ touchAction: 'none' }}
       >
         {/* Deep Cosmic Lighting */}
         <ambientLight intensity={0.95} color="#e0f2fe" />

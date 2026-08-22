@@ -111,35 +111,62 @@ export const Header: React.FC<HeaderProps> = ({
     onSearchChange(place.name);
   };
 
-  return (
-    <header className="absolute top-4 left-4 right-4 z-40 flex items-center justify-between gap-3 pointer-events-auto select-none">
-      {/* 1. LEFT: ChronoSpheres Brand */}
-      <div className="flex items-center gap-2.5 shrink-0">
-        {/* Glowing Globe Circle Emblem */}
-        <div className="w-10 h-10 rounded-full bg-[#0c1b2f]/90 border-2 border-cyan-400 flex items-center justify-center text-cyan-200 shadow-[0_0_15px_rgba(6,182,212,0.4)] shrink-0">
-          <Globe className="w-5 h-5 stroke-[1.9] text-cyan-300" />
-        </div>
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
-        {/* Brand Text */}
-        <div className="flex flex-col">
-          <div className="flex items-center gap-1.5">
-            <span className="font-sans font-bold text-xl text-white tracking-tight leading-none drop-shadow">
-              ChronoSpheres
+  return (
+    <header className="absolute top-2 left-2 right-2 md:top-4 md:left-4 md:right-4 z-40 flex flex-col md:flex-row md:items-center justify-between gap-2 md:gap-3 pointer-events-auto select-none">
+      <div className="flex items-center justify-between w-full md:w-auto gap-2">
+        {/* 1. LEFT: ChronoSpheres Brand */}
+        <div className="flex items-center gap-2 md:gap-2.5 shrink-0">
+          {/* Glowing Globe Circle Emblem */}
+          <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#0c1b2f]/90 border-2 border-cyan-400 flex items-center justify-center text-cyan-200 shadow-[0_0_15px_rgba(6,182,212,0.4)] shrink-0">
+            <Globe className="w-4 h-4 md:w-5 md:h-5 stroke-[1.9] text-cyan-300" />
+          </div>
+
+          {/* Brand Text */}
+          <div className="flex flex-col">
+            <div className="flex items-center gap-1.5">
+              <span className="font-sans font-bold text-base md:text-xl text-white tracking-tight leading-none drop-shadow">
+                ChronoSpheres
+              </span>
+            </div>
+            <span className="text-[9px] md:text-[11px] text-cyan-200/70 font-sans tracking-tight mt-0.5 font-medium">
+              3D Earth Time Capsules
             </span>
           </div>
-          <span className="text-[11px] text-cyan-200/70 font-sans tracking-tight mt-0.5 font-medium">
-            3D Earth Time Capsules
-          </span>
+        </div>
+
+        {/* Mobile Search Toggle & Mobile Plant Button on small screens */}
+        <div className="flex items-center gap-1.5 md:hidden">
+          <button
+            type="button"
+            onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+            className="w-8 h-8 rounded-xl bg-[#0c1626]/90 border border-cyan-500/40 text-cyan-300 flex items-center justify-center text-xs"
+            title="Search Places"
+          >
+            <Search className="w-3.5 h-3.5" />
+          </button>
+
+          <button
+            type="button"
+            onClick={onOpenCreate}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#208b9e] text-white text-[11px] font-bold border border-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.4)]"
+          >
+            <Plus className="w-3.5 h-3.5 text-cyan-100" />
+            <span>Plant</span>
+          </button>
         </div>
       </div>
 
       {/* 2. CENTER: Search Bar with Embedded 'Drop Pin' Action */}
       <div
         ref={searchContainerRef}
-        className="relative flex-1 max-w-lg mx-2 hidden sm:block"
+        className={`relative flex-1 max-w-lg mx-0 md:mx-2 ${
+          isMobileSearchOpen ? 'block w-full' : 'hidden md:block'
+        }`}
       >
-        <div className="relative flex items-center bg-[#0c1626]/90 backdrop-blur-md rounded-full border border-cyan-500/40 shadow-[0_0_20px_rgba(4,20,38,0.7)] px-3.5 py-1.5">
-          <Search className="w-4 h-4 text-cyan-400/90 shrink-0 ml-0.5" />
+        <div className="relative flex items-center bg-[#0c1626]/90 backdrop-blur-md rounded-full border border-cyan-500/40 shadow-[0_0_20px_rgba(4,20,38,0.7)] px-2.5 md:px-3.5 py-1 md:py-1.5">
+          <Search className="w-3.5 h-3.5 md:w-4 md:h-4 text-cyan-400/90 shrink-0 ml-0.5" />
           <input
             type="text"
             value={searchQuery}
@@ -147,45 +174,48 @@ export const Header: React.FC<HeaderProps> = ({
             onFocus={() => {
               if (suggestions.length > 0) setShowDropdown(true);
             }}
-            placeholder="Search city, address, or world landmark..."
-            className="w-full text-xs px-2.5 py-1 bg-transparent text-cyan-50 placeholder:text-cyan-200/50 focus:outline-none font-sans"
+            placeholder="Search city, address, or landmark..."
+            className="w-full text-[11px] md:text-xs px-2 md:px-2.5 py-0.5 md:py-1 bg-transparent text-cyan-50 placeholder:text-cyan-200/50 focus:outline-none font-sans"
           />
 
           {/* Embedded Drop Pin Action Button inside Search Bar */}
           <button
             type="button"
             onClick={onDropPinClick}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium shrink-0 transition cursor-pointer border ${
+            className={`flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-0.5 md:py-1 rounded-full text-[10px] md:text-xs font-medium shrink-0 transition cursor-pointer border ${
               isPlantingMode
                 ? 'bg-cyan-500 text-stone-950 border-cyan-300 ring-2 ring-cyan-400/50 font-bold'
                 : 'bg-[#14233b] hover:bg-[#1a2f4d] text-cyan-200 border-cyan-500/40'
             }`}
             title="Drop a pin at searched location or on globe"
           >
-            <MapPin className="w-3.5 h-3.5 text-cyan-400" />
+            <MapPin className="w-3 h-3 md:w-3.5 md:h-3.5 text-cyan-400" />
             <span>Drop Pin</span>
           </button>
         </div>
 
         {/* Mapbox Autocomplete Suggestions Dropdown */}
         {showDropdown && suggestions.length > 0 && (
-          <div className="absolute left-0 right-0 top-full mt-2 rounded-2xl bg-[#0b1320]/95 backdrop-blur-lg border border-cyan-500/40 shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150">
-            <div className="p-1.5 space-y-0.5 max-h-60 overflow-y-auto">
-              <span className="text-[10px] uppercase font-bold text-cyan-400 px-2.5 py-1 block">
+          <div className="absolute left-0 right-0 top-full mt-1.5 md:mt-2 rounded-2xl bg-[#0b1320]/95 backdrop-blur-lg border border-cyan-500/40 shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150">
+            <div className="p-1.5 space-y-0.5 max-h-52 md:max-h-60 overflow-y-auto">
+              <span className="text-[9px] md:text-[10px] uppercase font-bold text-cyan-400 px-2.5 py-1 block">
                 Mapbox Precision Coordinates
               </span>
               {suggestions.map((item) => (
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => handleSuggestionClick(item)}
-                  className="w-full text-left px-3 py-2 rounded-xl text-xs hover:bg-cyan-950/80 text-cyan-100 transition cursor-pointer flex items-center justify-between group"
+                  onClick={() => {
+                    handleSuggestionClick(item);
+                    setIsMobileSearchOpen(false);
+                  }}
+                  className="w-full text-left px-2.5 md:px-3 py-1.5 md:py-2 rounded-xl text-[11px] md:text-xs hover:bg-cyan-950/80 text-cyan-100 transition cursor-pointer flex items-center justify-between group"
                 >
                   <div className="flex items-center gap-2 truncate">
-                    <MapPin className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition-transform shrink-0" />
+                    <MapPin className="w-3 h-3 md:w-3.5 md:h-3.5 text-cyan-400 group-hover:scale-110 transition-transform shrink-0" />
                     <span className="truncate font-medium">{item.placeName}</span>
                   </div>
-                  <span className="text-[10px] font-mono text-cyan-300/60 shrink-0 ml-2">
+                  <span className="text-[9px] md:text-[10px] font-mono text-cyan-300/60 shrink-0 ml-2">
                     {item.lat.toFixed(2)}°, {item.lng.toFixed(2)}°
                   </span>
                 </button>
@@ -196,51 +226,51 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* 3. RIGHT: Action Buttons Cluster */}
-      <div className="flex items-center gap-2 shrink-0">
-        {/* + Plant Capsule Glowing Button */}
+      <div className="flex items-center justify-end gap-1 md:gap-2 shrink-0 flex-wrap">
+        {/* + Plant Capsule Glowing Button (Desktop) */}
         <button
           type="button"
           onClick={onOpenCreate}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#208b9e] hover:bg-[#1fa1bc] text-white text-xs font-bold transition shadow-[0_0_20px_rgba(6,182,212,0.5)] border border-cyan-300 hover:shadow-cyan-400/60 cursor-pointer"
+          className="hidden md:flex items-center gap-1.5 px-3 md:px-4 py-1.5 md:py-2 rounded-full bg-[#208b9e] hover:bg-[#1fa1bc] text-white text-xs font-bold transition shadow-[0_0_20px_rgba(6,182,212,0.5)] border border-cyan-300 hover:shadow-cyan-400/60 cursor-pointer"
         >
-          <Plus className="w-4 h-4 text-cyan-100 stroke-[2.5]" />
-          <span className="hidden xs:inline">Plant Capsule</span>
+          <Plus className="w-3.5 h-3.5 md:w-4 md:h-4 text-cyan-100 stroke-[2.5]" />
+          <span>Plant Capsule</span>
         </button>
 
         {/* 3. TOTAL PIN COUNT STACK BADGE & HEATMAP TOGGLE */}
         <button
           type="button"
           onClick={onToggleLayers}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition shadow-md cursor-pointer ${
+          className={`flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1 md:py-2 rounded-xl border text-[11px] md:text-xs font-medium transition shadow-md cursor-pointer ${
             showHeatmap
               ? 'bg-amber-500/30 text-amber-200 border-amber-400 ring-2 ring-amber-400/50 shadow-[0_0_15px_rgba(245,158,11,0.4)] font-bold'
               : 'bg-[#0c1626]/90 text-stone-200 border-cyan-500/40 hover:bg-[#13233a]'
           }`}
           title="Total Active Pins Stack & 3D Glowing Memory Heatmap Overlay"
         >
-          <Layers className={`w-4 h-4 ${showHeatmap ? 'text-amber-400' : 'text-cyan-300'}`} />
-          <span className="hidden md:inline font-semibold">
+          <Layers className={`w-3.5 h-3.5 md:w-4 md:h-4 ${showHeatmap ? 'text-amber-400' : 'text-cyan-300'}`} />
+          <span className="hidden lg:inline font-semibold">
             {showHeatmap ? 'Heatmap' : 'Pins Layer'}
           </span>
-          {/* Dynamic Pin Count Stack Badge bound to capsules count state */}
+          {/* Dynamic Pin Count Stack Badge */}
           <span
             id="total-pin-count-badge"
-            className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-900/90 text-cyan-200 border border-cyan-400/60 font-mono font-bold shadow-inner"
+            className="text-[9px] md:text-[10px] px-1.5 md:px-2 py-0.5 rounded-full bg-cyan-900/90 text-cyan-200 border border-cyan-400/60 font-mono font-bold shadow-inner"
             title={`${capsulesCount} visible capsules on globe`}
           >
             {capsulesCount}
           </span>
         </button>
 
-        {/* Backend Hub (Edge Function & Resend & Arweave docs/simulator) */}
+        {/* Backend Hub */}
         {onOpenBackendHub && (
           <button
             type="button"
             onClick={onOpenBackendHub}
-            className="w-9 h-9 rounded-xl bg-[#0c1626]/90 hover:bg-[#13233a] text-cyan-300 border border-cyan-500/40 transition shadow-md flex items-center justify-center font-bold text-xs cursor-pointer"
+            className="w-7 h-7 md:w-9 md:h-9 rounded-xl bg-[#0c1626]/90 hover:bg-[#13233a] text-cyan-300 border border-cyan-500/40 transition shadow-md flex items-center justify-center font-bold text-xs cursor-pointer"
             title="Backend Hub: Supabase Edge Functions, Resend & Arweave"
           >
-            <Server className="w-4 h-4 text-cyan-300" />
+            <Server className="w-3.5 h-3.5 md:w-4 md:h-4 text-cyan-300" />
           </button>
         )}
 
@@ -248,7 +278,7 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           type="button"
           onClick={onToggleAudio}
-          className={`w-9 h-9 rounded-xl border flex items-center justify-center transition shadow-md cursor-pointer ${
+          className={`w-7 h-7 md:w-9 md:h-9 rounded-xl border flex items-center justify-center transition shadow-md cursor-pointer ${
             !isAudioMuted
               ? 'bg-cyan-950/90 text-cyan-300 border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
               : 'bg-[#0c1626]/90 text-white border-cyan-500/40 hover:bg-[#13233a]'
@@ -256,9 +286,9 @@ export const Header: React.FC<HeaderProps> = ({
           title={isAudioMuted ? 'Unmute Ambient Sound' : 'Mute Ambient Sound'}
         >
           {!isAudioMuted ? (
-            <Volume2 className="w-4 h-4 text-cyan-300" />
+            <Volume2 className="w-3.5 h-3.5 md:w-4 md:h-4 text-cyan-300" />
           ) : (
-            <VolumeX className="w-4 h-4 text-stone-300" />
+            <VolumeX className="w-3.5 h-3.5 md:w-4 md:h-4 text-stone-300" />
           )}
         </button>
 
@@ -266,10 +296,10 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           type="button"
           onClick={onOpenHelp}
-          className="w-9 h-9 rounded-xl bg-[#0c1626]/90 hover:bg-[#13233a] text-white border border-cyan-500/40 transition shadow-md flex items-center justify-center font-bold text-xs cursor-pointer"
+          className="w-7 h-7 md:w-9 md:h-9 rounded-xl bg-[#0c1626]/90 hover:bg-[#13233a] text-white border border-cyan-500/40 transition shadow-md flex items-center justify-center font-bold text-xs cursor-pointer"
           title="Interactive Guide & Website Tutorial"
         >
-          <HelpCircle className="w-4 h-4" />
+          <HelpCircle className="w-3.5 h-3.5 md:w-4 md:h-4" />
         </button>
 
         {/* 2. REAL SUPABASE AUTHENTICATION BADGE & USER DROPDOWN */}
@@ -278,28 +308,28 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={() => setShowUserDropdown(!showUserDropdown)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#0c1626]/90 hover:bg-[#13233a] text-white border border-emerald-500/50 text-xs font-semibold transition cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.25)]"
+              className="flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 rounded-xl bg-[#0c1626]/90 hover:bg-[#13233a] text-white border border-emerald-500/50 text-[10px] md:text-xs font-semibold transition cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.25)]"
               title={`Logged in as ${currentUser.username} (${currentUser.email})`}
             >
               <img
                 src={currentUser.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=explorer'}
                 alt={currentUser.username}
-                className="w-5 h-5 rounded-full border border-emerald-400 object-cover bg-stone-900 shrink-0"
+                className="w-4 h-4 md:w-5 md:h-5 rounded-full border border-emerald-400 object-cover bg-stone-900 shrink-0"
               />
-              <span className="max-w-[110px] truncate font-medium text-emerald-100">
+              <span className="max-w-[70px] md:max-w-[110px] truncate font-medium text-emerald-100 hidden xs:inline">
                 {currentUser.username}
               </span>
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <ChevronDown className="w-3 h-3 text-cyan-400/80 shrink-0" />
+              <ShieldCheck className="w-3 h-3 md:w-3.5 md:h-3.5 text-emerald-400 shrink-0" />
+              <ChevronDown className="w-2.5 h-2.5 md:w-3 md:h-3 text-cyan-400/80 shrink-0" />
             </button>
           ) : (
             <button
               type="button"
               onClick={() => onOpenAuthModal('signin')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-900/90 to-teal-900/90 hover:from-emerald-800 hover:to-teal-800 text-emerald-100 border border-emerald-400/60 text-xs font-bold transition cursor-pointer shadow-md"
+              className="flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1 md:py-1.5 rounded-xl bg-gradient-to-r from-emerald-900/90 to-teal-900/90 hover:from-emerald-800 hover:to-teal-800 text-emerald-100 border border-emerald-400/60 text-[10px] md:text-xs font-bold transition cursor-pointer shadow-md"
             >
-              <User className="w-3.5 h-3.5 text-emerald-300" />
-              <span>Sign In / Auth</span>
+              <User className="w-3 h-3 md:w-3.5 md:h-3.5 text-emerald-300" />
+              <span className="hidden xs:inline">Auth</span>
             </button>
           )}
 
