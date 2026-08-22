@@ -101,7 +101,7 @@ class AmbientSoundManager {
 
       // Note envelope - crisp pluck and smooth acoustic decay
       const noteGain = ctx.createGain();
-      const peakVol = 0.10 * velocity;
+      const peakVol = 0.15 * velocity;
       noteGain.gain.setValueAtTime(0.0001, now);
       noteGain.gain.linearRampToValueAtTime(peakVol, now + 0.012);
       noteGain.gain.exponentialRampToValueAtTime(peakVol * 0.35, now + 0.3);
@@ -160,7 +160,7 @@ class AmbientSoundManager {
 
       // Flute envelope (gentle attack, graceful sustain, soft decay)
       const noteGain = ctx.createGain();
-      const peakVol = 0.08;
+      const peakVol = 0.14;
       noteGain.gain.setValueAtTime(0.0001, now);
       noteGain.gain.linearRampToValueAtTime(peakVol, now + 0.4);
       noteGain.gain.setValueAtTime(peakVol * 0.85, now + duration - 0.6);
@@ -325,10 +325,10 @@ class AmbientSoundManager {
       const ctx = this.getAudioContext();
       if (!ctx) return;
 
-      // Master output volume - kept very quiet and gentle
+      // Master output volume - clearly audible and pleasant
       this.masterGain = ctx.createGain();
       this.masterGain.gain.setValueAtTime(0.0001, ctx.currentTime);
-      this.masterGain.gain.exponentialRampToValueAtTime(0.035, ctx.currentTime + 1.2);
+      this.masterGain.gain.exponentialRampToValueAtTime(0.095, ctx.currentTime + 1.2);
       this.masterGain.connect(ctx.destination);
 
       this.isPlaying = true;
