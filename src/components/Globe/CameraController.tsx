@@ -1,0 +1,123 @@
+import React, { useEffect, useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
+import { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
+import * as THREE from 'three';
+import { Capsule } from '../../types';
+import { latLngToVector3 } from '../../utils/coordinates';
+
+interface CameraControllerProps {
+  selectedCapsule: Capsule | null;
+  targetCoordinates?: { lat: number; lng: number } | null;
+  flyInTrigger: number;
+  onFlyInComplete?: () => void;
+  controlsRef: React.RefObject<OrbitControlsImpl | null>;
+}
+
+export const CameraController: React.FC<CameraControllerProps> = ({
+  selectedCapsule,
+  targetCoordinates,
+  flyInTrigger,
+  onFlyInComplete,
+  controlsRef,
+}) => {
+  const { camera } = useThree();
+  
+  // Animation state
+  const isAnimatingRef = useRef<boolean>(true);
+  const animProgressRef = useRef<number>(0);
+  const animDurationRef = useRef<number>(3.0); // 3.0s dramatic skydiving entry
+  const startPosRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 16, 12));
+  const targetEndPosRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0.35, 4.85));
+  const isFocusingRef = useRef<boolean>(false);
+  const focusTargetPosRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 5.0));
+
+  // Trigger fly-in when component mounts or flyInTrigger increments
+  useEffect(() => {
+    isAnimatingRef.current = true;
+    animProgressRef.current = 0;
+    startPosRef.current = new THREE.Vector3(0, 26, 16);
+    camera.position.copy(startPosRef.current);
+    camera.lookAt(0, 0, 0);
+
+    if (controlsRef.current) {
+      controlsRef.current.enabled = false;
+      controlsRef.current.target.set(0, 0, 0);
+    }
+  }, [flyInTrigger, camera, controlsRef]);
+
+  // When selected capsule changes, smoothly focus camera
+  useEffect(() => {
+    if (selectedCapsule) {
+      const pinPos = latLngToVector3(selectedCapsule.lat, selectedCapsule.lng, 2.0);
+      const focusCamPos = pinPos.clone().normalize().multiplyScalar(4.2);
+      focusTargetPosRef.current = focusCamPos;
+      isFocusingRef.current = true;
+      
+      if (controlsRef.current) {
+        controlsRef.current.target.set(0, 0, 0);
+      }
+    }
+  }, [selectedCapsule, controlsRef]);
+
+  // When target coordinates change (e.g. from Mapbox search), smoothly fly camera
+  useEffect(() => {
+    if (targetCoordinates) {
+      const targetPos = latLngToVector3(targetCoordinates.lat, targetCoordinates.lng, 2.0);
+      const focusCamPos = targetPos.clone().normalize().multiplyScalar(3.8);
+      focusTargetPosRef.current = focusCamPos;
+      isFocusingRef.current = true;
+
+      if (controlsRef.current) {
+        controlsRef.current.target.set(0, 0, 0);
+      }
+    }
+  }, [targetCoordinates, controlsRef]);
+
+  useFrame((_, delta) => {
+    // 1. Skydiving Fly-In Entry Animation
+    if (isAnimatingRef.current) {
+      animProgressRef.current += delta / animDurationRef.current;
+      const t = Math.min(1.0, animProgressRef.current);
+
+      // Smooth custom acceleration and decelerating cubic ease
+      const easeT = t < 0.5
+        ? 4 * t * t * t
+        : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+      const currentPos = new THREE.Vector3();
+      currentPos.lerpVectors(startPosRef.current, targetEndPosRef.current, easeT);
+      
+      if (t < 0.8) {
+        const spiralAngle = (1 - t) * Math.PI * 1.5;
+        currentPos.x += Math.sin(spiralAngle) * (1 - t) * 4.0;
+        currentPos.z += Math.cos(spiralAngle) * (1 - t) * 2.0;
+      }
+
+      camera.position.copy(currentPos);
+      camera.lookAt(0, 0, 0);
+
+      if (t >= 1.0) {
+        isAnimatingRef.current = false;
+        if (controlsRef.current) {
+          controlsRef.current.enabled = true;
+          controlsRef.current.update();
+        }
+        if (onFlyInComplete) {
+          onFlyInComplete();
+        }
+      }
+    } 
+    // 2. Smooth Focus interpolation to targeted pin / Mapbox location
+    else if (isFocusingRef.current) {
+      camera.position.lerp(focusTargetPosRef.current, 0.08);
+      if (camera.position.distanceTo(focusTargetPosRef.current) < 0.04) {
+        isFocusingRef.current = false;
+      }
+      if (controlsRef.current) {
+        controlsRef.current.update();
+      }
+    }
+  });
+
+  return null;
+};
