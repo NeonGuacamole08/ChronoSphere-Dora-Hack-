@@ -50,11 +50,11 @@ export const GlobeControlsOverlay: React.FC<GlobeControlsOverlayProps> = ({
 
   return (
     <>
-      {/* 1. CENTER BOTTOM: Real-time Clock & Judge Fast-Forward Toolbar */}
-      <div className="absolute bottom-3 sm:bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 z-40 pointer-events-auto flex items-center justify-center select-none w-[calc(100%-20px)] sm:w-auto max-w-[94vw] px-1 pb-[env(safe-area-inset-bottom,0px)]">
-        <div className="flex flex-col sm:flex-row items-center gap-1.5 sm:gap-2 md:gap-2.5 p-1.5 sm:p-2 rounded-2xl bg-[#0c1626]/95 backdrop-blur-md border border-cyan-500/40 shadow-[0_4px_25px_rgba(0,0,0,0.6)] w-full sm:w-auto">
+      {/* 1. CENTER BOTTOM: Real-time Clock & Fast-Forward Toolbar */}
+      <div className="absolute bottom-3 sm:bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 z-40 pointer-events-auto flex items-center justify-center select-none w-auto max-w-[96vw] px-1 pb-[env(safe-area-inset-bottom,0px)]">
+        <div className="flex flex-col sm:flex-row items-center gap-1.5 sm:gap-2.5 px-2.5 py-2 sm:px-3.5 sm:py-2 rounded-2xl bg-[#0c1626]/95 backdrop-blur-md border border-cyan-500/40 shadow-[0_4px_25px_rgba(0,0,0,0.6)] w-auto shrink-0">
           {/* Purple/Magenta Realtime Clock Badge */}
-          <div className="flex items-center justify-center gap-2 sm:gap-2.5 px-2.5 sm:px-3 md:px-3.5 py-1 sm:py-1.5 rounded-xl bg-gradient-to-r from-[#3e135e] to-[#250d40] border border-purple-500/40 shadow-inner w-full sm:w-auto shrink-0">
+          <div className="flex items-center justify-center gap-2 sm:gap-2.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-gradient-to-r from-[#3e135e] to-[#250d40] border border-purple-500/40 shadow-inner shrink-0">
             <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-fuchsia-300 shrink-0" />
             <div className="flex flex-col text-center sm:text-left">
               <span className="text-[8px] sm:text-[9px] font-mono font-bold text-fuchsia-300/90 tracking-wider uppercase leading-none">
@@ -67,11 +67,11 @@ export const GlobeControlsOverlay: React.FC<GlobeControlsOverlayProps> = ({
           </div>
 
           {/* Quick Time Travel Fast-Forward Buttons: +1h, +1d, +1w, +1y */}
-          <div className="flex items-center justify-center gap-1 sm:gap-1.5 flex-wrap shrink-0">
+          <div className="flex items-center justify-center gap-1 sm:gap-1.5 flex-nowrap shrink-0 pr-0.5">
             <button
               type="button"
               onClick={() => onFastForward(1)}
-              className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-[#101c2e] hover:bg-cyan-950/80 text-cyan-200 border border-cyan-500/30 text-[10px] sm:text-xs font-mono font-bold transition cursor-pointer hover:border-cyan-400 shadow-sm"
+              className="px-2 py-1 sm:px-2.5 sm:py-1 rounded-lg bg-[#101c2e] hover:bg-cyan-950/80 text-cyan-200 border border-cyan-500/30 text-[10px] sm:text-xs font-mono font-bold transition cursor-pointer hover:border-cyan-400 shadow-sm"
               title="Advance time by +1 Hour"
             >
               +1h
@@ -79,7 +79,7 @@ export const GlobeControlsOverlay: React.FC<GlobeControlsOverlayProps> = ({
             <button
               type="button"
               onClick={() => onFastForward(24)}
-              className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-[#101c2e] hover:bg-cyan-950/80 text-cyan-200 border border-cyan-500/30 text-[10px] sm:text-xs font-mono font-bold transition cursor-pointer hover:border-cyan-400 shadow-sm"
+              className="px-2 py-1 sm:px-2.5 sm:py-1 rounded-lg bg-[#101c2e] hover:bg-cyan-950/80 text-cyan-200 border border-cyan-500/30 text-[10px] sm:text-xs font-mono font-bold transition cursor-pointer hover:border-cyan-400 shadow-sm"
               title="Advance time by +1 Day (24 Hours)"
             >
               +1d
@@ -87,7 +87,7 @@ export const GlobeControlsOverlay: React.FC<GlobeControlsOverlayProps> = ({
             <button
               type="button"
               onClick={() => onFastForward(24 * 7)}
-              className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-[#101c2e] hover:bg-cyan-950/80 text-cyan-200 border border-cyan-500/30 text-[10px] sm:text-xs font-mono font-bold transition cursor-pointer hover:border-cyan-400 shadow-sm"
+              className="px-2 py-1 sm:px-2.5 sm:py-1 rounded-lg bg-[#101c2e] hover:bg-cyan-950/80 text-cyan-200 border border-cyan-500/30 text-[10px] sm:text-xs font-mono font-bold transition cursor-pointer hover:border-cyan-400 shadow-sm"
               title="Advance time by +1 Week"
             >
               +1w
@@ -95,7 +95,7 @@ export const GlobeControlsOverlay: React.FC<GlobeControlsOverlayProps> = ({
             <button
               type="button"
               onClick={() => onFastForward(24 * 365)}
-              className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-[#101c2e] hover:bg-cyan-950/80 text-cyan-200 border border-cyan-500/30 text-[10px] sm:text-xs font-mono font-bold transition cursor-pointer hover:border-cyan-400 shadow-sm"
+              className="px-2 py-1 sm:px-2.5 sm:py-1 rounded-lg bg-[#101c2e] hover:bg-cyan-950/80 text-cyan-200 border border-cyan-500/30 text-[10px] sm:text-xs font-mono font-bold transition cursor-pointer hover:border-cyan-400 shadow-sm"
               title="Advance time by +1 Year"
             >
               +1y
@@ -106,7 +106,7 @@ export const GlobeControlsOverlay: React.FC<GlobeControlsOverlayProps> = ({
               <button
                 type="button"
                 onClick={onResetTime}
-                className="p-1 sm:p-1.5 rounded-lg bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-500/60 transition cursor-pointer shadow-sm"
+                className="p-1 sm:p-1.5 rounded-lg bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-500/60 transition cursor-pointer shadow-sm ml-0.5"
                 title="Reset simulated time to Realtime"
               >
                 <RotateCcw className="w-3 h-3 sm:w-3.5 sm:h-3.5" />

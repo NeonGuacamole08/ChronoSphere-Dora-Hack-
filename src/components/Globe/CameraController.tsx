@@ -4,6 +4,7 @@ import { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import * as THREE from 'three';
 import { Capsule } from '../../types';
 import { latLngToVector3 } from '../../utils/coordinates';
+import { ambientSound } from '../../utils/audio';
 
 interface CameraControllerProps {
   selectedCapsule: Capsule | null;
@@ -30,6 +31,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
   const targetEndPosRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0.35, 4.85));
   const isFocusingRef = useRef<boolean>(false);
   const focusTargetPosRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 5.0));
+  const prevDistanceRef = useRef<number>(camera.position.length());
 
   // Dynamic aspect ratio & FOV adaptation on viewport resize (tablets, portrait, split-screen)
   useEffect(() => {
@@ -135,6 +137,17 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       if (controlsRef.current) {
         controlsRef.current.update();
       }
+    }
+
+    // 3. Dynamic Air-Gliding Sound Synthesis for Camera Zoom-In
+    const currentDist = camera.position.length();
+    const deltaDist = prevDistanceRef.current - currentDist;
+    prevDistanceRef.current = currentDist;
+
+    // When distance decreases (moving closer to Earth / zooming in)
+    if (deltaDist > 0.003) {
+      const zoomSpeed = deltaDist / Math.max(0.001, delta);
+      ambientSound.updateAirGlide(zoomSpeed);
     }
   });
 
