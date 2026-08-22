@@ -15,9 +15,15 @@ import {
   User,
   LogOut,
   Sparkles,
+  Music,
+  Ghost,
+  Sun,
+  Heart,
+  Radio,
 } from 'lucide-react';
 import { searchMapboxPlaces, GeocodingResult } from '../../utils/mapbox';
 import { AppUser } from '../../utils/supabase';
+import { ambientSound, SoundTheme, SOUND_THEMES } from '../../utils/audio';
 
 interface HeaderProps {
   searchQuery: string;
