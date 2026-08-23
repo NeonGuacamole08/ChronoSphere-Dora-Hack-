@@ -88,7 +88,15 @@ export default function App() {
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [flyInTrigger, setFlyInTrigger] = useState(1);
   const [isPlantingMode, setIsPlantingMode] = useState(false);
-  const [isAudioMuted, setIsAudioMuted] = useState(true);
+  const [isAudioMuted, setIsAudioMuted] = useState(false);
+
+  // Sync isAudioMuted with ambientSound engine
+  useEffect(() => {
+    const unsubscribe = ambientSound.subscribe((_, isPlaying) => {
+      setIsAudioMuted(!isPlaying);
+    });
+    return unsubscribe;
+  }, []);
 
   // 6. Modals & Panels State
   const [selectedCapsule, setSelectedCapsule] = useState<Capsule | null>(null);

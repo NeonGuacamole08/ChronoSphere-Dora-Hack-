@@ -48,10 +48,20 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
             </p>
           </div>
 
+          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-300 space-y-2">
+            <h3 className="font-serif font-bold text-sm text-emerald-950 flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-emerald-700" />
+              2. Set Your Vibe & Sound Atmosphere
+            </h3>
+            <p className="text-stone-700 leading-relaxed">
+              Background music is enabled by default to enhance your journey. Click the audio icon in the top toolbar to open the sound menu. You can mute/unmute or choose between <strong>Nostalgic</strong> (Harp & Flute), <strong>Haunting</strong> (Ethereal Glass Bells), <strong>Upbeat</strong> (Acoustic Marimba), and <strong>Sad</strong> (Melancholic Cello & Piano) to match your time capsule mood.
+            </p>
+          </div>
+
           <div className="p-4 rounded-xl bg-amber-50 border border-amber-300 space-y-2">
             <h3 className="font-serif font-bold text-sm text-amber-950 flex items-center gap-1.5">
               <Lock className="w-4 h-4 text-amber-700" />
-              2. Cryptographic Time-Lock & Arweave Storage
+              3. Cryptographic Time-Lock & Arweave Storage
             </h3>
             <p className="text-stone-700 leading-relaxed">
               Every planted capsule is sealed with Ed25519 signatures and Arweave permaweb identifiers. Memories, voice notes, photos, and Spotify tracks remain encrypted until the scheduled unlock timestamp.
@@ -61,7 +71,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
           <div className="p-4 rounded-xl bg-purple-50 border border-purple-200 space-y-2">
             <h3 className="font-serif font-bold text-sm text-purple-950 flex items-center gap-1.5">
               <Zap className="w-4 h-4 text-purple-700" />
-              3. DoraHacks Judge Fast-Forward Mode
+              4. DoraHacks Judge Fast-Forward Mode
             </h3>
             <p className="text-stone-700 leading-relaxed">
               Use the bottom time-travel buttons (<strong>[+1h]</strong>, <strong>[+1d]</strong>, <strong>[+1w]</strong>, <strong>[+1y]</strong>) to advance the internal world clock and test real-time unlocking of sealed capsules.
@@ -71,7 +81,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
           <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 space-y-2">
             <h3 className="font-serif font-bold text-sm text-blue-950 flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-blue-700" />
-              4. REST Countries Live Data
+              5. REST Countries Live Data
             </h3>
             <p className="text-stone-700 leading-relaxed">
               Clicking any territory on Earth queries the REST Countries API dynamically to display real-time capital, population, currencies, languages, and timezones in the country drawer.

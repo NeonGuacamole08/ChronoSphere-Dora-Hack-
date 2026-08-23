@@ -67,8 +67,19 @@ export const Header: React.FC<HeaderProps> = ({
   const [suggestions, setSuggestions] = useState<GeocodingResult[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showAudioMenu, setShowAudioMenu] = useState(false);
+  const [activeTheme, setActiveTheme] = useState<SoundTheme>(() => ambientSound.getTheme());
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const userDropdownRef = useRef<HTMLDivElement>(null);
+  const audioMenuRef = useRef<HTMLDivElement>(null);
+
+  // Subscribe to AmbientSound updates
+  useEffect(() => {
+    const unsubscribe = ambientSound.subscribe((theme) => {
+      setActiveTheme(theme);
+    });
+    return unsubscribe;
+  }, []);
 
   // Debounced Mapbox Geocoding Search
   useEffect(() => {
@@ -105,6 +116,12 @@ export const Header: React.FC<HeaderProps> = ({
         !userDropdownRef.current.contains(e.target as Node)
       ) {
         setShowUserDropdown(false);
+      }
+      if (
+        audioMenuRef.current &&
+        !audioMenuRef.current.contains(e.target as Node)
+      ) {
+        setShowAudioMenu(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -282,23 +299,156 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
 
-        {/* Audio / Sound Toggle Button */}
-        <button
-          type="button"
-          onClick={onToggleAudio}
-          className={`w-7 h-7 sm:w-7.5 sm:h-7.5 md:w-7.5 md:h-7.5 lg:w-8.5 lg:h-8.5 rounded-xl border flex items-center justify-center transition shadow-md cursor-pointer shrink-0 ${
-            !isAudioMuted
-              ? 'bg-cyan-950/90 text-cyan-300 border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
-              : 'bg-[#0c1626]/90 text-white border-cyan-500/40 hover:bg-[#13233a]'
-          }`}
-          title={isAudioMuted ? 'Unmute Ambient Sound' : 'Mute Ambient Sound'}
-        >
-          {!isAudioMuted ? (
-            <Volume2 className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 text-cyan-300" />
-          ) : (
-            <VolumeX className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 text-stone-300" />
+        {/* Audio / Atmosphere Sound Options Menu */}
+        <div className="relative shrink-0" ref={audioMenuRef}>
+          <button
+            type="button"
+            onClick={() => setShowAudioMenu(!showAudioMenu)}
+            className={`w-7 h-7 sm:w-7.5 sm:h-7.5 md:w-7.5 md:h-7.5 lg:w-8.5 lg:h-8.5 rounded-xl border flex items-center justify-center transition shadow-md cursor-pointer shrink-0 ${
+              !isAudioMuted
+                ? 'bg-cyan-950/90 text-cyan-300 border-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.4)] ring-1 ring-cyan-400/50'
+                : 'bg-[#0c1626]/90 text-stone-300 border-cyan-500/40 hover:bg-[#13233a]'
+            }`}
+            title="Atmosphere & Music (Click to select sound style or mute)"
+          >
+            {!isAudioMuted ? (
+              <Volume2 className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 text-cyan-300 animate-pulse" />
+            ) : (
+              <VolumeX className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 text-stone-400" />
+            )}
+          </button>
+
+          {/* Sound Choices Popover Menu */}
+          {showAudioMenu && (
+            <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 rounded-2xl bg-gradient-to-b from-[#1c120a]/95 via-[#160e08]/95 to-[#100a06]/95 backdrop-blur-md border-2 border-amber-600/60 shadow-[0_20px_50px_rgba(0,0,0,0.8)] p-3.5 z-50 text-amber-100 animate-in fade-in slide-in-from-top-2 duration-200 space-y-3">
+              {/* Header Title & Master Toggle */}
+              <div className="flex items-center justify-between border-b border-amber-800/40 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-amber-950 border border-amber-500/60 flex items-center justify-center text-amber-300">
+                    <Music className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-xs text-amber-100 flex items-center gap-1.5">
+                      Soundtrack & Vibe
+                    </h4>
+                    <p className="text-[10px] text-amber-300/70">
+                      Royalty-free procedural audio
+                    </p>
+                  </div>
+                </div>
+
+                {/* Direct Mute / Play Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    onToggleAudio();
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1.5 border cursor-pointer ${
+                    !isAudioMuted
+                      ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/60 hover:bg-emerald-900 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
+                      : 'bg-stone-900 text-stone-300 border-stone-700 hover:bg-stone-800'
+                  }`}
+                  title={!isAudioMuted ? 'Mute audio' : 'Unmute audio'}
+                >
+                  {!isAudioMuted ? (
+                    <>
+                      <Volume2 className="w-3 h-3 text-emerald-400 animate-pulse" />
+                      <span>ON</span>
+                    </>
+                  ) : (
+                    <>
+                      <VolumeX className="w-3 h-3 text-stone-400" />
+                      <span>Muted</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* 4 Music Sound Choices */}
+              <div className="space-y-1.5">
+                <p className="text-[10px] uppercase font-mono tracking-wider text-amber-300/80 px-0.5">
+                  Select Theme Track:
+                </p>
+                <div className="grid grid-cols-1 gap-1.5">
+                  {SOUND_THEMES.map((theme) => {
+                    const isSelected = activeTheme === theme.id;
+                    const isActuallyPlaying = isSelected && !isAudioMuted;
+
+                    const getThemeIcon = () => {
+                      switch (theme.id) {
+                        case 'nostalgic':
+                          return <Sparkles className="w-3.5 h-3.5 text-amber-400" />;
+                        case 'haunting':
+                          return <Ghost className="w-3.5 h-3.5 text-purple-300" />;
+                        case 'upbeat':
+                          return <Sun className="w-3.5 h-3.5 text-yellow-400" />;
+                        case 'sad':
+                          return <Heart className="w-3.5 h-3.5 text-blue-300" />;
+                      }
+                    };
+
+                    return (
+                      <button
+                        key={theme.id}
+                        type="button"
+                        onClick={() => {
+                          ambientSound.setTheme(theme.id);
+                          if (isAudioMuted) {
+                            ambientSound.start();
+                          }
+                          setShowAudioMenu(false);
+                        }}
+                        className={`w-full p-2 rounded-xl text-left transition flex items-start justify-between gap-2 border cursor-pointer ${
+                          isSelected
+                            ? 'bg-amber-900/60 border-amber-400/90 ring-1 ring-amber-400/50 shadow-md text-amber-50'
+                            : 'bg-[#140c06]/80 hover:bg-[#20140a] border-amber-900/50 text-amber-200/90'
+                        }`}
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-black/40 border border-amber-700/50 flex items-center justify-center shrink-0 mt-0.5">
+                            {getThemeIcon()}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-xs text-amber-100">
+                                {theme.name}
+                              </span>
+                              <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-950/80 text-amber-300/90 border border-amber-700/40">
+                                {theme.tag}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-amber-200/70 leading-tight mt-0.5 line-clamp-1">
+                              {theme.description}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Playing wave / check indicator */}
+                        <div className="shrink-0 pt-1">
+                          {isActuallyPlaying ? (
+                            <div className="flex items-center gap-0.5">
+                              <span className="w-1 h-3 bg-emerald-400 rounded-full animate-bounce" />
+                              <span className="w-1 h-4 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.15s]" />
+                              <span className="w-1 h-2 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.3s]" />
+                            </div>
+                          ) : isSelected ? (
+                            <Radio className="w-3.5 h-3.5 text-amber-400" />
+                          ) : null}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Dynamic Zoom Wind Hint */}
+              <div className="p-2 rounded-lg bg-black/30 border border-amber-900/40 text-[10px] text-amber-300/80 leading-tight flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
+                <span>Zooming into the 3D Earth triggers interactive aerodynamic breeze sound.</span>
+              </div>
+            </div>
           )}
-        </button>
+        </div>
 
         {/* Help Button ('?') */}
         <button
