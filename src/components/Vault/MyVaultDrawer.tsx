@@ -24,6 +24,7 @@ import {
   FileEdit,
 } from 'lucide-react';
 import { Capsule } from '../../types';
+import { AppUser } from '../../utils/supabase';
 
 interface MyVaultDrawerProps {
   isOpen: boolean;
@@ -35,6 +36,8 @@ interface MyVaultDrawerProps {
   onOpenCapsuleModal: (capsule: Capsule) => void;
   onResumeDraft?: (draft: Capsule) => void;
   onDeleteCapsule?: (capsuleId: string) => void;
+  currentUser?: AppUser | null;
+  onOpenAuthModal?: () => void;
 }
 
 // Convert 2-letter country code into flag emoji
@@ -89,6 +92,8 @@ export const MyVaultDrawer: React.FC<MyVaultDrawerProps> = ({
   onOpenCapsuleModal,
   onResumeDraft,
   onDeleteCapsule,
+  currentUser,
+  onOpenAuthModal,
 }) => {
   const [activeTab, setActiveTab] = useState<'locked' | 'unlocked' | 'drafts'>(initialTab);
   const [vaultSearch, setVaultSearch] = useState('');
@@ -289,7 +294,9 @@ export const MyVaultDrawer: React.FC<MyVaultDrawerProps> = ({
                     : 'No in-progress drafts'}
                 </h3>
                 <p className="text-xs text-stone-600 max-w-xs mx-auto leading-relaxed">
-                  {vaultSearch
+                  {!currentUser
+                    ? 'You are currently signed out. Sign in to your account to view your vault and bury personal capsules.'
+                    : vaultSearch
                     ? 'Try adjusting your search keywords.'
                     : activeTab === 'locked'
                     ? 'Plant a new time capsule anywhere on Earth to seal memories into the permaweb.'
@@ -297,6 +304,21 @@ export const MyVaultDrawer: React.FC<MyVaultDrawerProps> = ({
                     ? 'Fast-forward time with the bottom controls [+1y] to test unlocking sealed capsules!'
                     : 'When creating a capsule, choose "Save as Draft" to work on it and bury it later.'}
                 </p>
+
+                {!currentUser && onOpenAuthModal && (
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onOpenAuthModal();
+                      }}
+                      className="py-2 px-4 rounded-xl bg-gradient-to-r from-emerald-800 to-teal-900 hover:from-emerald-700 hover:to-teal-800 text-emerald-100 font-bold text-xs shadow-md transition cursor-pointer"
+                    >
+                      Sign In to Access Vault
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               displayedCapsules.map((capsule) => {

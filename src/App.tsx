@@ -30,52 +30,38 @@ const STORAGE_KEY = 'chronospheres_capsules_v8';
 const LEGACY_STORAGE_KEY = 'chronospheres_dao_capsules_v7';
 
 export default function App() {
-  // 1. Capsule State (initialized from localStorage / seeds, then synced to Supabase)
-  const [capsules, setCapsules] = useState<Capsule[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return parsed.filter((c: Capsule) => c.id !== 'cap_guide_start_here');
-      }
-    } catch (e) {
-      console.warn('Could not read from localStorage:', e);
-    }
-    return SEED_CAPSULES;
-  });
+  // 1. Capsule State (Starts empty when logged out, populated on Supabase authentication)
+  const [capsules, setCapsules] = useState<Capsule[]>([]);
 
-  // Fetch initial capsules from Supabase database on mount
-  useEffect(() => {
-    capsulesDb.fetchCapsules().then((remoteCapsules) => {
-      if (remoteCapsules && remoteCapsules.length > 0) {
-        setCapsules(remoteCapsules);
-      }
-    });
-  }, []);
-
-  // 2. Real Supabase Authentication State & Password Reset Detection
+  // 2. Real Supabase Authentication State & Password Reset Detection (Starts signed out: null)
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup' | 'forgot_password'>('signin');
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
 
-  // Load existing Supabase auth session on mount & subscribe to auth changes
+  // Helper to load capsules when authenticated
+  const loadUserCapsules = async () => {
+    const remoteCapsules = await capsulesDb.fetchCapsules();
+    if (remoteCapsules && remoteCapsules.length > 0) {
+      setCapsules(remoteCapsules);
+    } else {
+      setCapsules(SEED_CAPSULES);
+    }
+  };
+
+  // On App Initialization: Explicitly sign out to guarantee clean logged-out initial state
   useEffect(() => {
-    supabaseAuth.getUser().then((user) => {
-      if (user) {
-        setCurrentUser(user);
-      } else {
-        setCurrentUser({
-          id: 'usr_explorer_01',
-          email: 'explorer@earth.org',
-          username: '@earth_explorer',
-          avatar_url: 'https://api.dicebear.com/7.x/bottts/svg?seed=earth_explorer&backgroundColor=0c1b2f,063327',
-          role: 'user',
-          is_verified: true,
-          provider: 'email',
-        });
+    const initLoggedOutState = async () => {
+      try {
+        await supabaseAuth.signOut();
+      } catch (e) {
+        console.warn('Init signOut:', e);
       }
-    });
+      setCurrentUser(null);
+      setCapsules([]);
+    };
+
+    initLoggedOutState();
 
     // Check if the current URL points to /reset-password or has Supabase recovery tokens
     const isResetUrl =
@@ -93,8 +79,14 @@ export default function App() {
       }
       if (session?.user) {
         supabaseAuth.getUser().then((u) => {
-          if (u) setCurrentUser(u);
+          if (u) {
+            setCurrentUser(u);
+            loadUserCapsules();
+          }
         });
+      } else if (event === 'SIGNED_OUT') {
+        setCurrentUser(null);
+        setCapsules([]);
       }
     });
 
@@ -103,7 +95,7 @@ export default function App() {
     };
   }, []);
 
-  const activeUsername = currentUser?.username || '@earth_explorer';
+  const activeUsername = currentUser?.username || 'Explorer';
 
   // 3. Fast-Forward Time Travel State for Evaluation
   const [simulatedTimeOffsetMs, setSimulatedTimeOffsetMs] = useState<number>(0);
@@ -395,12 +387,20 @@ export default function App() {
     setIsAuthModalOpen(true);
   };
 
-  const handleAuthSuccess = (user: AppUser) => {
+  const handleAuthSuccess = async (user: AppUser) => {
     setCurrentUser(user);
+    await loadUserCapsules();
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    try {
+      await supabaseAuth.signOut();
+    } catch (e) {
+      console.warn('handleSignOut error:', e);
+    }
     setCurrentUser(null);
+    setCapsules([]);
+    setIsVaultOpen(false);
   };
 
   // Backend Hub: Trigger Notification Scan Simulator
@@ -504,13 +504,15 @@ export default function App() {
       <MyVaultDrawer
         isOpen={isVaultOpen}
         onClose={() => setIsVaultOpen(false)}
-        capsules={capsules}
+        capsules={currentUser ? capsules : []}
         simulatedTimeOffsetMs={simulatedTimeOffsetMs}
         initialTab={vaultInitialTab}
         onSelectCapsuleOnGlobe={handleViewVaultCapsuleOnGlobe}
         onOpenCapsuleModal={(cap) => handleSelectCapsule(cap, true)}
         onResumeDraft={handleResumeDraft}
         onDeleteCapsule={handleDeleteCapsule}
+        currentUser={currentUser}
+        onOpenAuthModal={() => handleOpenAuth('signin')}
       />
 
       {/* 6. 2-Second Dirt Burial Particle & Lock Animation Overlay */}

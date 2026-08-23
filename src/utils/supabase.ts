@@ -38,8 +38,8 @@ export function getSupabaseClient(): SupabaseClient {
     const effectiveKey = anonKey || 'placeholder_key';
     supabaseInstance = createClient(effectiveUrl, effectiveKey, {
       auth: {
-        autoRefreshToken: true,
-        persistSession: true,
+        autoRefreshToken: false,
+        persistSession: false,
         detectSessionInUrl: true,
       },
     });
@@ -70,23 +70,7 @@ export const supabaseAuth = {
     try {
       const client = getSupabaseClient();
       const { data } = client.auth.onAuthStateChange((event, session) => {
-        if (session?.user) {
-          const u = session.user;
-          const rawUsername = u.user_metadata?.username || u.user_metadata?.name || u.email?.split('@')[0] || 'Explorer';
-          const cleanUsername = rawUsername.startsWith('@') ? rawUsername : `@${rawUsername}`;
-          const mappedUser: AppUser = {
-            id: u.id,
-            email: u.email || '',
-            username: cleanUsername,
-            avatar_url: u.user_metadata?.avatar_url || getAvatarUrl(cleanUsername),
-            role: u.user_metadata?.role || 'user',
-            is_verified: true,
-            provider: (u.app_metadata?.provider as any) || 'email',
-            created_at: u.created_at,
-            last_sign_in_at: u.last_sign_in_at,
-          };
-          localStorage.setItem(LOCAL_STORAGE_AUTH_SESSION_KEY, JSON.stringify(mappedUser));
-        } else if (event === 'SIGNED_OUT') {
+        if (event === 'SIGNED_OUT') {
           localStorage.removeItem(LOCAL_STORAGE_AUTH_SESSION_KEY);
         }
         callback(event, session);
@@ -99,7 +83,7 @@ export const supabaseAuth = {
   },
 
   /**
-   * Get active logged-in user from Supabase or verified local session
+   * Get active logged-in user from Supabase
    */
   async getUser(): Promise<AppUser | null> {
     try {
@@ -121,21 +105,10 @@ export const supabaseAuth = {
           created_at: u.created_at,
           last_sign_in_at: u.last_sign_in_at,
         };
-        localStorage.setItem(LOCAL_STORAGE_AUTH_SESSION_KEY, JSON.stringify(userObj));
         return userObj;
       }
     } catch (e) {
       console.warn('Supabase client getUser check:', e);
-    }
-
-    // Check stored active verified session
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_AUTH_SESSION_KEY);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.warn('Could not read session:', e);
     }
 
     return null;
@@ -201,7 +174,7 @@ export const supabaseAuth = {
       console.warn('Supabase signup network catch:', err);
     }
 
-    // Fallback verified session creation
+    // Fallback verified session creation (in-memory only)
     const fallbackUser: AppUser = {
       id: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
       email: cleanEmail,
@@ -214,7 +187,6 @@ export const supabaseAuth = {
       last_sign_in_at: new Date().toISOString(),
     };
 
-    localStorage.setItem(LOCAL_STORAGE_AUTH_SESSION_KEY, JSON.stringify(fallbackUser));
     await this.sendLoginConfirmationEmail(cleanEmail, cleanUsername);
     return { user: fallbackUser, error: null };
   },
@@ -257,7 +229,6 @@ export const supabaseAuth = {
           created_at: u.created_at,
           last_sign_in_at: new Date().toISOString(),
         };
-        localStorage.setItem(LOCAL_STORAGE_AUTH_SESSION_KEY, JSON.stringify(loggedUser));
         await this.sendLoginConfirmationEmail(cleanEmail, username);
         return { user: loggedUser, error: null };
       }
@@ -265,7 +236,7 @@ export const supabaseAuth = {
       console.warn('Supabase signInWithPassword:', e);
     }
 
-    // Demo / offline fallback session
+    // Demo / offline fallback session (in-memory only)
     const username = `@${cleanEmail.split('@')[0]}`;
     const loggedUser: AppUser = {
       id: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
@@ -279,7 +250,6 @@ export const supabaseAuth = {
       last_sign_in_at: new Date().toISOString(),
     };
 
-    localStorage.setItem(LOCAL_STORAGE_AUTH_SESSION_KEY, JSON.stringify(loggedUser));
     await this.sendLoginConfirmationEmail(cleanEmail, username);
     return { user: loggedUser, error: null };
   },
