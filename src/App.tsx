@@ -14,27 +14,28 @@ import { CreateCapsuleModal } from './components/Modals/CreateCapsuleModal';
 import { CountryDrawer } from './components/Country/CountryDrawer';
 import { MyVaultDrawer } from './components/Vault/MyVaultDrawer';
 import { BurialAnimationOverlay } from './components/Burial/BurialAnimationOverlay';
+import { ExcavationAnimationOverlay } from './components/Burial/ExcavationAnimationOverlay';
 import { OfflineViewerModal } from './components/OfflineViewer/OfflineViewerModal';
 import { BackendHubModal } from './components/BackendHub/BackendHubModal';
 import { HelpModal } from './components/Modals/HelpModal';
 import { WelcomeGuideModal } from './components/Modals/WelcomeGuideModal';
 import { AuthModal } from './components/Modals/AuthModal';
+import { ResetPasswordModal } from './components/Modals/ResetPasswordModal';
 import { fetchCountryDetails, getCountryCodeFromCoordinates } from './utils/countries';
 import { GeocodingResult } from './utils/mapbox';
 import { ambientSound } from './utils/audio';
-import { supabaseAuth, AppUser } from './utils/supabase';
+import { supabaseAuth, capsulesDb, AppUser } from './utils/supabase';
 
 const STORAGE_KEY = 'chronospheres_capsules_v8';
 const LEGACY_STORAGE_KEY = 'chronospheres_dao_capsules_v7';
 
 export default function App() {
-  // 1. Capsule State (initialized from localStorage or seed capsules)
+  // 1. Capsule State (initialized from localStorage / seeds, then synced to Supabase)
   const [capsules, setCapsules] = useState<Capsule[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Filter out old guide pin if present
         return parsed.filter((c: Capsule) => c.id !== 'cap_guide_start_here');
       }
     } catch (e) {
@@ -43,27 +44,27 @@ export default function App() {
     return SEED_CAPSULES;
   });
 
-  // Sync to localStorage
+  // Fetch initial capsules from Supabase database on mount
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(capsules));
-    } catch (e) {
-      console.warn('Could not save to localStorage:', e);
-    }
-  }, [capsules]);
+    capsulesDb.fetchCapsules().then((remoteCapsules) => {
+      if (remoteCapsules && remoteCapsules.length > 0) {
+        setCapsules(remoteCapsules);
+      }
+    });
+  }, []);
 
-  // 2. Real Supabase Authentication State
+  // 2. Real Supabase Authentication State & Password Reset Detection
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
+  const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup' | 'forgot_password'>('signin');
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
 
-  // Load existing Supabase auth session on mount
+  // Load existing Supabase auth session on mount & subscribe to auth changes
   useEffect(() => {
     supabaseAuth.getUser().then((user) => {
       if (user) {
         setCurrentUser(user);
       } else {
-        // Default guest/explorer identity until signed in
         setCurrentUser({
           id: 'usr_explorer_01',
           email: 'explorer@earth.org',
@@ -75,6 +76,31 @@ export default function App() {
         });
       }
     });
+
+    // Check if the current URL points to /reset-password or has Supabase recovery tokens
+    const isResetUrl =
+      window.location.pathname.includes('/reset-password') ||
+      window.location.hash.includes('type=recovery') ||
+      window.location.hash.includes('access_token=');
+
+    if (isResetUrl) {
+      setIsResetPasswordModalOpen(true);
+    }
+
+    const subscription = supabaseAuth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsResetPasswordModalOpen(true);
+      }
+      if (session?.user) {
+        supabaseAuth.getUser().then((u) => {
+          if (u) setCurrentUser(u);
+        });
+      }
+    });
+
+    return () => {
+      subscription?.unsubscribe?.();
+    };
   }, []);
 
   const activeUsername = currentUser?.username || '@earth_explorer';
@@ -114,6 +140,9 @@ export default function App() {
 
   // 2-Second Burial Animation State
   const [buryingCapsule, setBuryingCapsule] = useState<Capsule | null>(null);
+
+  // 2-Second Excavation & Unsealing Animation State
+  const [excavatingCapsule, setExcavatingCapsule] = useState<Capsule | null>(null);
 
   const [selectedCountry, setSelectedCountry] = useState<CountryData | null>(null);
   const [isCountryDrawerOpen, setIsCountryDrawerOpen] = useState(false);
@@ -162,11 +191,9 @@ export default function App() {
 
   // Mapbox Geocoding Result Clicked in Search Bar
   const handleSelectLocation = async (place: GeocodingResult) => {
-    // 1. Set target coordinates for smooth 3D camera flight with zero drift
     setTargetCoordinates({ lat: place.lat, lng: place.lng });
     setSelectedCapsule(null);
 
-    // 2. Fetch REST Countries details for side drawer
     const { countryCode } = getCountryCodeFromCoordinates(place.lat, place.lng);
     const codeToFetch = place.countryCode || countryCode;
     const countryInfo = await fetchCountryDetails(codeToFetch);
@@ -176,10 +203,9 @@ export default function App() {
     }
   };
 
-  // Handle "Drop Pin" button click in Search Bar or Bottom Right
+  // Handle "Drop Pin" button click
   const handleDropPinClick = () => {
     if (targetCoordinates) {
-      // Pre-fill creation modal with current searched coordinates
       setCreateCoords({
         lat: targetCoordinates.lat,
         lng: targetCoordinates.lng,
@@ -188,33 +214,57 @@ export default function App() {
       setIsCreateModalOpen(true);
       setIsPlantingMode(false);
     } else {
-      // Toggle cursor planting mode on the 3D globe
       setIsPlantingMode((prev) => !prev);
     }
   };
 
-  // Handle capsule click: Open capsule modal and fetch country details
-  const handleSelectCapsule = async (capsule: Capsule) => {
-    setSelectedCapsule(capsule);
+  // Handle capsule click: if unlocked, trigger 2-second excavation animation; otherwise open modal directly
+  const handleSelectCapsule = async (capsule: Capsule, forceExcavate = false) => {
     setIsPlantingMode(false);
-    setIsCapsuleModalOpen(true);
 
-    // Trigger country info drawer
+    // 1. Smoothly fly camera direct to capsule coordinates
+    setTargetCoordinates({ lat: capsule.lat, lng: capsule.lng });
+
+    // 2. Fetch REST Countries details
     if (capsule.country_code) {
-      const countryInfo = await fetchCountryDetails(capsule.country_code);
-      if (countryInfo) {
-        setSelectedCountry(countryInfo);
-      }
+      fetchCountryDetails(capsule.country_code).then((info) => {
+        if (info) setSelectedCountry(info);
+      });
+    }
+
+    const effectiveTime = Date.now() + simulatedTimeOffsetMs;
+    const isUnlocked =
+      new Date(capsule.unlock_timestamp).getTime() <= effectiveTime || capsule.is_encrypted === false;
+
+    if (isUnlocked || forceExcavate) {
+      // Close any open drawers/modals first
+      setIsCapsuleModalOpen(false);
+      setIsVaultOpen(false);
+      // Play 2-second excavation unearthing sequence
+      setExcavatingCapsule(capsule);
+    } else {
+      setSelectedCapsule(capsule);
+      setIsCapsuleModalOpen(true);
     }
   };
 
-  // Delete Capsule Pin
-  const handleDeleteCapsule = (capsuleId: string) => {
+  // Complete excavation sequence & reveal unlocked capsule modal
+  const handleExcavationComplete = () => {
+    if (excavatingCapsule) {
+      setSelectedCapsule(excavatingCapsule);
+      setIsCapsuleModalOpen(true);
+      setExcavatingCapsule(null);
+    }
+  };
+
+  // Delete Capsule Pin from local state and Supabase
+  const handleDeleteCapsule = async (capsuleId: string) => {
     setCapsules((prev) => prev.filter((c) => c.id !== capsuleId));
     if (selectedCapsule && selectedCapsule.id === capsuleId) {
       setSelectedCapsule(null);
       setIsCapsuleModalOpen(false);
     }
+    await capsulesDb.deleteCapsule(capsuleId);
   };
 
   // Handle Planting modal with coordinates picked from globe
@@ -226,14 +276,16 @@ export default function App() {
   };
 
   // Save capsule as an in-progress draft (bypasses burial, stores in My Vault -> Drafts)
-  const handleSaveDraft = (draftCap: Capsule) => {
+  const handleSaveDraft = async (draftCap: Capsule) => {
     setCapsules((prev) => [draftCap, ...prev.filter((c) => c.id !== draftCap.id)]);
     setIsCreateModalOpen(false);
     setDraftToEdit(null);
     setCreateCoords(null);
-    // Open vault directly onto the Drafts tab
     setVaultInitialTab('drafts');
     setIsVaultOpen(true);
+
+    // Persist draft in Supabase database
+    await capsulesDb.saveCapsule(draftCap, currentUser?.id);
   };
 
   // Resume editing a saved draft from My Vault
@@ -249,23 +301,25 @@ export default function App() {
     setIsCreateModalOpen(true);
   };
 
-  // Add newly created capsule & initiate Burial Animation Sequence
-  const handleSaveCapsule = (newCap: Capsule) => {
-    // 1. Close auxiliary drawers and clear active draft being edited
+  // Add newly created capsule & initiate Burial Animation Sequence + Supabase Sync
+  const handleSaveCapsule = async (newCap: Capsule) => {
     setIsVaultOpen(false);
     setIsCountryDrawerOpen(false);
     setIsCapsuleModalOpen(false);
     setDraftToEdit(null);
 
-    // 2. Remove any previous draft version of this capsule if it was being finalized
+    // Remove any previous draft version
     setCapsules((prev) => prev.filter((c) => c.id !== newCap.id));
 
-    // 3. Smoothly fly 3D camera direct to capsule coordinates
-    setSearchQuery(''); // Ensure new pin is not filtered out by an active search
+    // Smoothly fly 3D camera direct to capsule coordinates
+    setSearchQuery('');
     setTargetCoordinates({ lat: newCap.lat, lng: newCap.lng });
     setIsPlantingMode(false);
 
-    // 4. Trigger 2-second Burial animation overlay
+    // Persist to Supabase database
+    await capsulesDb.saveCapsule(newCap, currentUser?.id);
+
+    // Trigger 2-second Burial animation overlay
     setBuryingCapsule(newCap);
   };
 
@@ -336,7 +390,7 @@ export default function App() {
   };
 
   // Open Auth Modal
-  const handleOpenAuth = (mode: 'signin' | 'signup' = 'signin') => {
+  const handleOpenAuth = (mode: 'signin' | 'signup' | 'forgot_password' = 'signin') => {
     setAuthModalMode(mode);
     setIsAuthModalOpen(true);
   };
@@ -360,6 +414,7 @@ export default function App() {
         if (unlockDate <= effectiveNow && !cap.notified) {
           const updated = { ...cap, notified: true };
           newlyNotified.push(updated);
+          capsulesDb.updateCapsuleNotified(cap.id);
           return updated;
         }
         return cap;
@@ -374,7 +429,7 @@ export default function App() {
 
   return (
     <div className="relative w-screen w-full h-screen h-dvh max-w-full overflow-hidden select-none bg-[#0a192f] text-stone-100">
-      {/* 1. TOP HEADER with dynamic Total Pin Count Stack Badge & Real Supabase Auth */}
+      {/* 1. TOP HEADER with Total Pin Count Stack Badge & Real Supabase Auth */}
       <Header
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -399,7 +454,7 @@ export default function App() {
         isPlantingMode={isPlantingMode}
       />
 
-      {/* 2. 3D EARTH GLOBE CANVAS VIEW with Cloud Layers, Smooth Physics & Zero-Drift Coordinate Math */}
+      {/* 2. 3D EARTH GLOBE CANVAS VIEW */}
       <GlobeView
         capsules={filteredCapsules}
         selectedCapsule={selectedCapsule}
@@ -424,7 +479,7 @@ export default function App() {
         activeUsername={activeUsername}
       />
 
-      {/* 3. BOTTOM CONTROLS: Realtime Clock + Fast-Forward [+1h, +1d, +1w, +1y] + Pin Counter */}
+      {/* 3. BOTTOM CONTROLS: Realtime Clock + Fast-Forward [+1h, +1d, +1w, +1y] */}
       <GlobeControlsOverlay
         onFastForward={handleFastForwardHours}
         onResetTime={handleResetTimeOffset}
@@ -453,7 +508,7 @@ export default function App() {
         simulatedTimeOffsetMs={simulatedTimeOffsetMs}
         initialTab={vaultInitialTab}
         onSelectCapsuleOnGlobe={handleViewVaultCapsuleOnGlobe}
-        onOpenCapsuleModal={handleSelectCapsule}
+        onOpenCapsuleModal={(cap) => handleSelectCapsule(cap, true)}
         onResumeDraft={handleResumeDraft}
         onDeleteCapsule={handleDeleteCapsule}
       />
@@ -467,10 +522,20 @@ export default function App() {
         />
       )}
 
-      {/* 7. Capsule Modal (Media, Arweave Transaction, Spotify, Delete Pin) */}
+      {/* 7. 2-Second Soil Excavation, Shovel Particles & Unsealing Animation Overlay */}
+      {excavatingCapsule && (
+        <ExcavationAnimationOverlay
+          locationName={excavatingCapsule.location_name}
+          countryName={excavatingCapsule.country_name}
+          capsuleTitle={excavatingCapsule.title}
+          onAnimationComplete={handleExcavationComplete}
+        />
+      )}
+
+      {/* 8. Capsule Modal (Media, Arweave Transaction, Spotify, Delete Pin) */}
       <CapsuleModal
         capsule={selectedCapsule}
-        isOpen={isCapsuleModalOpen && !buryingCapsule}
+        isOpen={isCapsuleModalOpen && !buryingCapsule && !excavatingCapsule}
         onClose={() => {
           setIsCapsuleModalOpen(false);
           setSelectedCapsule(null);
@@ -484,7 +549,7 @@ export default function App() {
         simulatedTimeOffsetMs={simulatedTimeOffsetMs}
       />
 
-      {/* 8. Create Capsule Modal (Planted by Authenticated User) */}
+      {/* 9. Create Capsule Modal */}
       <CreateCapsuleModal
         isOpen={isCreateModalOpen}
         onClose={() => {
@@ -500,7 +565,7 @@ export default function App() {
         currentUser={currentUser}
       />
 
-      {/* 9. Offline Standalone HTML & Arweave Payload Inspector */}
+      {/* 10. Offline Standalone HTML & Arweave Payload Inspector */}
       <OfflineViewerModal
         capsule={offlineCapsule}
         isOpen={isOfflineViewerOpen}
@@ -510,7 +575,7 @@ export default function App() {
         }}
       />
 
-      {/* 10. Light Brown Parchment Welcome & Site Guide Modal (shown after landing sequence) */}
+      {/* 11. Welcome & Site Guide Modal */}
       <WelcomeGuideModal
         isOpen={isWelcomeGuideOpen}
         onClose={() => setIsWelcomeGuideOpen(false)}
@@ -521,13 +586,13 @@ export default function App() {
         onOpenBackendHub={() => setIsBackendHubOpen(true)}
       />
 
-      {/* 11. Help / Protocol Guide Modal */}
+      {/* 12. Help / Protocol Guide Modal */}
       <HelpModal
         isOpen={isHelpModalOpen}
         onClose={() => setIsHelpModalOpen(false)}
       />
 
-      {/* 12. Real Supabase Authentication Modal (Email/Password & Google OAuth) */}
+      {/* 13. Real Supabase Authentication Modal (Email/Password & Google OAuth & Forgot Password) */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
@@ -537,7 +602,16 @@ export default function App() {
         initialMode={authModalMode}
       />
 
-      {/* 13. Backend Hub (Supabase SQL RLS + Deno Edge Function + Resend Simulator) */}
+      {/* 14. Reset Password View/Modal (Redirect from Supabase password recovery email) */}
+      <ResetPasswordModal
+        isOpen={isResetPasswordModalOpen}
+        onClose={() => setIsResetPasswordModalOpen(false)}
+        onSuccess={() => {
+          handleOpenAuth('signin');
+        }}
+      />
+
+      {/* 15. Backend Hub (Supabase SQL RLS + Deno Edge Function + Resend Simulator) */}
       <BackendHubModal
         isOpen={isBackendHubOpen}
         onClose={() => setIsBackendHubOpen(false)}
@@ -547,4 +621,5 @@ export default function App() {
     </div>
   );
 }
+
 

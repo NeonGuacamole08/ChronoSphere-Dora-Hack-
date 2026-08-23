@@ -17,7 +17,7 @@ interface AuthModalProps {
   currentUser: AppUser | null;
   onAuthSuccess: (user: AppUser) => void;
   onSignOut: () => void;
-  initialMode?: 'signin' | 'signup';
+  initialMode?: 'signin' | 'signup' | 'forgot_password';
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
@@ -28,7 +28,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onSignOut,
   initialMode = 'signin',
 }) => {
-  const [mode, setMode] = useState<'signin' | 'signup' | 'profile'>(
+  const [mode, setMode] = useState<'signin' | 'signup' | 'profile' | 'forgot_password'>(
     currentUser ? 'profile' : initialMode
   );
 
@@ -40,6 +40,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    setIsLoading(true);
+
+    const res = await supabaseAuth.resetPasswordForEmail(
+      email,
+      `${window.location.origin}/reset-password`
+    );
+    setIsLoading(false);
+
+    if (res.error) {
+      setErrorMsg(res.error);
+    } else {
+      setSuccessMsg(`A password reset link has been dispatched to ${email}. Check your inbox or spam folder.`);
+    }
+  };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +72,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       if (res.error) {
         setErrorMsg(res.error);
       } else if (res.user) {
-        setSuccessMsg(`Welcome ${res.user.username}! A confirmation email has been dispatched to ${res.user.email}.`);
+        setSuccessMsg(`Welcome ${res.user.username}! Account created and authenticated.`);
         onAuthSuccess(res.user);
         setTimeout(() => {
           onClose();
@@ -65,7 +84,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       if (res.error) {
         setErrorMsg(res.error);
       } else if (res.user) {
-        setSuccessMsg(`Signed in as ${res.user.username}! Login confirmation email dispatched.`);
+        setSuccessMsg(`Signed in as ${res.user.username}! Welcome back.`);
         onAuthSuccess(res.user);
         setTimeout(() => {
           onClose();
@@ -180,8 +199,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
           )}
 
-          {/* ACTIVE LOGGED-IN PROFILE VIEW */}
+          {/* VIEW SWITCHER */}
           {currentUser && mode === 'profile' ? (
+            /* ACTIVE LOGGED-IN PROFILE VIEW */
             <div className="space-y-4">
               <div className="p-4 rounded-2xl bg-white border border-amber-300/80 shadow-sm flex items-center gap-3">
                 <img
@@ -227,6 +247,61 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   Sign Out
                 </button>
               </div>
+            </div>
+          ) : mode === 'forgot_password' ? (
+            /* FORGOT PASSWORD FORM */
+            <div className="space-y-4">
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-stone-700 leading-relaxed">
+                Enter your account email below. We'll dispatch a cryptographic password recovery link via Supabase Auth.
+              </div>
+
+              <form onSubmit={handleForgotPassword} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-stone-800 mb-1">
+                    Your Account Email
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="explorer@earth.org"
+                      className="w-full text-xs pl-9 pr-3 py-2 rounded-xl bg-white border border-amber-300 text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-emerald-100 font-bold text-xs flex items-center justify-center gap-2 transition shadow-md cursor-pointer disabled:opacity-50"
+                >
+                  {isLoading ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <span>Dispatch Reset Link</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+
+                <div className="text-center pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode('signin');
+                      setErrorMsg(null);
+                      setSuccessMsg(null);
+                    }}
+                    className="text-xs font-bold text-stone-600 hover:text-stone-900 underline cursor-pointer"
+                  >
+                    ← Back to Sign In
+                  </button>
+                </div>
+              </form>
             </div>
           ) : (
             /* SIGN IN / SIGN UP FORM */
@@ -303,9 +378,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-stone-800 mb-1">
-                    Password
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-stone-800">
+                      Password
+                    </label>
+                    {mode === 'signin' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMode('forgot_password');
+                          setErrorMsg(null);
+                          setSuccessMsg(null);
+                        }}
+                        className="text-[11px] font-bold text-emerald-800 hover:text-emerald-950 underline cursor-pointer"
+                      >
+                        Forgot Password?
+                      </button>
+                    )}
+                  </div>
                   <div className="relative">
                     <Lock className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
                     <input

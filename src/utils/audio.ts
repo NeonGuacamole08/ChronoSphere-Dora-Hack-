@@ -823,6 +823,89 @@ class AmbientSoundManager {
       console.warn('Could not play burial sound:', e);
     }
   }
+
+  // =========================================================================
+  // EXCAVATION & UNLOCK SOUND SEQUENCE
+  // =========================================================================
+  public playExcavationUnsealSound() {
+    try {
+      const ctx = this.getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
+      // 1. Shovel Clearing Scraping Sound
+      this.playShovelDigSound();
+
+      // 2. Earth Excavation Resonance Hum (Ascending pitch)
+      const humOsc = ctx.createOscillator();
+      humOsc.type = 'sawtooth';
+      humOsc.frequency.setValueAtTime(85, now + 0.3);
+      humOsc.frequency.exponentialRampToValueAtTime(260, now + 1.4);
+
+      const humFilter = ctx.createBiquadFilter();
+      humFilter.type = 'lowpass';
+      humFilter.frequency.setValueAtTime(320, now + 0.3);
+      humFilter.frequency.linearRampToValueAtTime(800, now + 1.4);
+
+      const humGain = ctx.createGain();
+      humGain.gain.setValueAtTime(0.0001, now + 0.3);
+      humGain.gain.linearRampToValueAtTime(0.18, now + 0.6);
+      humGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.6);
+
+      humOsc.connect(humFilter);
+      humFilter.connect(humGain);
+      humGain.connect(ctx.destination);
+      humOsc.start(now + 0.3);
+      humOsc.stop(now + 1.65);
+
+      // 3. Lock Snapping Open Click
+      setTimeout(() => {
+        try {
+          if (!ctx || ctx.state === 'closed') return;
+          const snapNow = ctx.currentTime;
+          const clickOsc = ctx.createOscillator();
+          clickOsc.type = 'sine';
+          clickOsc.frequency.setValueAtTime(1400, snapNow);
+          clickOsc.frequency.exponentialRampToValueAtTime(350, snapNow + 0.15);
+
+          const clickGain = ctx.createGain();
+          clickGain.gain.setValueAtTime(0.32, snapNow);
+          clickGain.gain.exponentialRampToValueAtTime(0.001, snapNow + 0.2);
+
+          clickOsc.connect(clickGain);
+          clickGain.connect(ctx.destination);
+          clickOsc.start(snapNow);
+          clickOsc.stop(snapNow + 0.22);
+        } catch {}
+      }, 1300);
+
+      // 4. Triumph Ascending Unlock Chimes
+      const triumphNotes = [440.0, 554.37, 659.25, 880.0, 1108.73, 1318.51];
+      triumphNotes.forEach((freq, idx) => {
+        setTimeout(() => {
+          try {
+            if (!ctx || ctx.state === 'closed') return;
+            const noteNow = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, noteNow);
+
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.001, noteNow);
+            gain.gain.linearRampToValueAtTime(0.16, noteNow + 0.03);
+            gain.gain.exponentialRampToValueAtTime(0.0001, noteNow + 1.8);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(noteNow);
+            osc.stop(noteNow + 1.9);
+          } catch {}
+        }, 1400 + idx * 90);
+      });
+    } catch (e) {
+      console.warn('Could not play excavation sound:', e);
+    }
+  }
 }
 
 export const ambientSound = new AmbientSoundManager();
