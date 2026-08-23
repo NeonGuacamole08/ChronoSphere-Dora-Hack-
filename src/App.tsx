@@ -592,7 +592,7 @@ export default function App() {
         onClose={() => setIsHelpModalOpen(false)}
       />
 
-      {/* 13. Real Supabase Authentication Modal (Email/Password & Google OAuth & Forgot Password) */}
+      {/* 13. Real Supabase Authentication Modal (Email/Password & Forgot Password) */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
