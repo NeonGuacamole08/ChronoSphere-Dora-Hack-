@@ -11,7 +11,6 @@ import { CapsulePin } from './CapsulePin';
 import { HeatmapLayer } from './HeatmapLayer';
 import { CameraController } from './CameraController';
 import { generateEarthTextures } from './textureGenerator';
-import { ambientSound } from '../../utils/audio';
 
 interface GlobeSceneProps {
   capsules: Capsule[];
@@ -50,12 +49,6 @@ export const GlobeScene: React.FC<GlobeSceneProps> = ({
     <div
       className="relative w-full h-full select-none touch-none"
       style={{ touchAction: 'none' }}
-      onWheel={(e) => {
-        if (e.deltaY < 0) {
-          // Scrolling wheel up -> Zooming in towards the Earth
-          ambientSound.triggerGlideSwoosh(Math.min(1.0, Math.abs(e.deltaY) / 100));
-        }
-      }}
     >
       <Canvas
         camera={{ position: [0, 24, 18], fov: 45, near: 0.1, far: 1000 }}

@@ -24,6 +24,7 @@ export interface Capsule {
   arweave_tx_id: string;
   encryption_signature: string;
   is_encrypted: boolean;
+  is_draft?: boolean;
   notified: boolean;
   tags?: string[];
 }

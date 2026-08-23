@@ -20,6 +20,7 @@ import {
   Sun,
   Heart,
   Radio,
+  Package,
 } from 'lucide-react';
 import { searchMapboxPlaces, GeocodingResult } from '../../utils/mapbox';
 import { AppUser } from '../../utils/supabase';
@@ -30,6 +31,7 @@ interface HeaderProps {
   onSearchChange: (query: string) => void;
   onSelectLocation: (result: GeocodingResult) => void;
   onOpenCreate: () => void;
+  onOpenVault?: () => void;
   onToggleLayers: () => void;
   showHeatmap: boolean;
   isAudioMuted: boolean;
@@ -50,6 +52,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSearchChange,
   onSelectLocation,
   onOpenCreate,
+  onOpenVault,
   onToggleLayers,
   showHeatmap,
   isAudioMuted,
@@ -262,6 +265,25 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="inline lg:hidden">Plant</span>
         </button>
 
+        {/* 1. MY VAULT / CAPSULE INVENTORY DRAWER BUTTON */}
+        {onOpenVault && (
+          <button
+            type="button"
+            onClick={onOpenVault}
+            className="flex items-center gap-1 md:gap-1.5 px-1.5 sm:px-2 md:px-2.5 lg:px-3 py-1 md:py-1.5 lg:py-2 rounded-xl bg-[#121c2b]/95 hover:bg-[#1c2c43] text-amber-200 border border-amber-500/60 hover:border-amber-400 text-[11px] md:text-xs font-bold transition shadow-md hover:shadow-[0_0_14px_rgba(245,158,11,0.35)] cursor-pointer shrink-0"
+            title="My Vault: Locked & Unlocked Capsule Inventory Drawer"
+          >
+            <Package className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">My Vault</span>
+            <span
+              id="my-vault-capsule-badge"
+              className="text-[9px] md:text-[10px] px-1.5 py-0.2 rounded-full bg-amber-950/90 text-amber-300 border border-amber-600/60 font-mono font-bold shadow-inner"
+            >
+              {totalCapsulesCount}
+            </span>
+          </button>
+        )}
+
         {/* 3. TOTAL PIN COUNT STACK BADGE & HEATMAP TOGGLE */}
         <button
           type="button"
@@ -304,17 +326,28 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={() => setShowAudioMenu(!showAudioMenu)}
-            className={`w-7 h-7 sm:w-7.5 sm:h-7.5 md:w-7.5 md:h-7.5 lg:w-8.5 lg:h-8.5 rounded-xl border flex items-center justify-center transition shadow-md cursor-pointer shrink-0 ${
+            className={`w-7 h-7 sm:w-7.5 sm:h-7.5 md:w-7.5 md:h-7.5 lg:w-8.5 lg:h-8.5 rounded-xl border flex items-center justify-center transition shadow-md cursor-pointer shrink-0 relative ${
               !isAudioMuted
                 ? 'bg-cyan-950/90 text-cyan-300 border-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.4)] ring-1 ring-cyan-400/50'
-                : 'bg-[#0c1626]/90 text-stone-300 border-cyan-500/40 hover:bg-[#13233a]'
+                : 'bg-stone-900/90 text-rose-400 border-rose-800/60 hover:bg-stone-800 hover:border-rose-500/80 shadow-[0_0_8px_rgba(244,63,94,0.15)] ring-1 ring-rose-500/30'
             }`}
-            title="Atmosphere & Music (Click to select sound style or mute)"
+            title={
+              !isAudioMuted
+                ? `Music & Atmosphere: ON (${activeTheme}) — Click to change track or mute`
+                : 'Music & Atmosphere: OFF (Muted) — Click to choose music or unmute'
+            }
           >
             {!isAudioMuted ? (
-              <Volume2 className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 text-cyan-300 animate-pulse" />
+              <>
+                <Volume2 className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 text-cyan-300 animate-pulse" />
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 ring-1 ring-black animate-ping" />
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 ring-1 ring-black" />
+              </>
             ) : (
-              <VolumeX className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 text-stone-400" />
+              <>
+                <VolumeX className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 text-rose-400" />
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-rose-500 ring-1 ring-black" />
+              </>
             )}
           </button>
 
@@ -346,9 +379,9 @@ export const Header: React.FC<HeaderProps> = ({
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1.5 border cursor-pointer ${
                     !isAudioMuted
                       ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/60 hover:bg-emerald-900 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
-                      : 'bg-stone-900 text-stone-300 border-stone-700 hover:bg-stone-800'
+                      : 'bg-rose-950/90 text-rose-300 border-rose-600/60 hover:bg-rose-900 shadow-[0_0_8px_rgba(244,63,94,0.3)]'
                   }`}
-                  title={!isAudioMuted ? 'Mute audio' : 'Unmute audio'}
+                  title={!isAudioMuted ? 'Click to Mute Audio' : 'Click to Unmute Audio'}
                 >
                   {!isAudioMuted ? (
                     <>
@@ -357,8 +390,8 @@ export const Header: React.FC<HeaderProps> = ({
                     </>
                   ) : (
                     <>
-                      <VolumeX className="w-3 h-3 text-stone-400" />
-                      <span>Muted</span>
+                      <VolumeX className="w-3 h-3 text-rose-400" />
+                      <span>OFF (Muted)</span>
                     </>
                   )}
                 </button>
@@ -439,12 +472,6 @@ export const Header: React.FC<HeaderProps> = ({
                     );
                   })}
                 </div>
-              </div>
-
-              {/* Dynamic Zoom Wind Hint */}
-              <div className="p-2 rounded-lg bg-black/30 border border-amber-900/40 text-[10px] text-amber-300/80 leading-tight flex items-center gap-1.5">
-                <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
-                <span>Zooming into the 3D Earth triggers interactive aerodynamic breeze sound.</span>
               </div>
             </div>
           )}

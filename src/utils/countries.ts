@@ -474,6 +474,24 @@ const ACCURATE_COUNTRY_FALLBACKS: Record<string, CountryData> = {
     languages: { spa: 'Spanish' },
     timezones: ['UTC-06:00', 'UTC-04:00', 'UTC-03:00'],
     latlng: [-35.6751, -71.5430],
+  },
+  CD: {
+    name: { common: 'DR Congo', official: 'Democratic Republic of the Congo' },
+    cca2: 'CD',
+    cca3: 'COD',
+    capital: ['Kinshasa'],
+    region: 'Africa',
+    subregion: 'Middle Africa',
+    population: 89561404,
+    flags: {
+      png: 'https://flagcdn.com/w320/cd.png',
+      svg: 'https://flagcdn.com/cd.svg',
+      alt: 'Flag of the Democratic Republic of the Congo',
+    },
+    currencies: { CDF: { name: 'Congolese franc', symbol: 'FC' } },
+    languages: { fra: 'French', lin: 'Lingala', kon: 'Kongo', swa: 'Swahili' },
+    timezones: ['UTC+01:00', 'UTC+02:00'],
+    latlng: [-4.0383, 21.7587],
   }
 };
 
@@ -664,6 +682,11 @@ export function getCountryCodeFromCoordinates(lat: number, lng: number): { count
   // South Africa (ZA)
   if (lat >= -35 && lat <= -22 && lng >= 16 && lng <= 33) {
     return { countryCode: 'ZA', countryName: 'South Africa' };
+  }
+
+  // Democratic Republic of the Congo (CD)
+  if (lat >= -13.5 && lat <= 5.5 && lng >= 12.0 && lng <= 31.5) {
+    return { countryCode: 'CD', countryName: 'Democratic Republic of the Congo' };
   }
 
   // Japan (JP)

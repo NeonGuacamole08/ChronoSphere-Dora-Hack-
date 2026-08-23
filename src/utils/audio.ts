@@ -1,4 +1,4 @@
-// Royalty-free 100% Web Audio soundscape engine with 4 distinct ambient themes:
+// 100% Royalty-free Web Audio soundscape engine with 4 distinct ambient themes:
 // 1. Nostalgic (Peaceful celestial Harp & Flute)
 // 2. Haunting (Mystical, eerie glass bells & ethereal atmosphere)
 // 3. Upbeat (Joyful acoustic marimba & bright melodic arpeggios)
@@ -53,30 +53,22 @@ export const SOUND_THEMES: SoundThemeInfo[] = [
 class AmbientSoundManager {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
-  private isPlaying: boolean = false;
+  private isPlaying: boolean = true; // ON by default
   private currentTheme: SoundTheme = 'nostalgic';
 
   private primaryLoopTimer: number | null = null;
   private secondaryLoopTimer: number | null = null;
   private stepIndex: number = 0;
 
-  // Air Gliding Wind Nodes (Only active during active zoom-in motion)
-  private windGain: GainNode | null = null;
-  private windFilter: BiquadFilterNode | null = null;
-  private windNoiseSource: AudioBufferSourceNode | null = null;
-  private windStopTimeout: number | null = null;
-
-  // Listeners for UI state synchronizations
+  // Listeners for UI state synchronization
   private listeners: Array<(theme: SoundTheme, isPlaying: boolean) => void> = [];
 
   constructor() {
-    // Attempt auto-resume on first user interaction in browser
+    // Attempt auto-start on first user interaction in browser (due to autoplay policy)
     if (typeof window !== 'undefined') {
       const handleUserGesture = () => {
-        if (!this.isPlaying) {
-          this.start();
-        } else if (this.ctx && this.ctx.state === 'suspended') {
-          this.ctx.resume().catch(() => {});
+        if (this.isPlaying) {
+          this.ensurePlaying();
         }
         window.removeEventListener('click', handleUserGesture);
         window.removeEventListener('keydown', handleUserGesture);
@@ -90,6 +82,8 @@ class AmbientSoundManager {
 
   public subscribe(callback: (theme: SoundTheme, isPlaying: boolean) => void) {
     this.listeners.push(callback);
+    // Immediately notify current state
+    callback(this.currentTheme, this.isPlaying);
     return () => {
       this.listeners = this.listeners.filter((cb) => cb !== callback);
     };
@@ -143,6 +137,29 @@ class AmbientSoundManager {
     if (this.secondaryLoopTimer !== null) {
       clearTimeout(this.secondaryLoopTimer);
       this.secondaryLoopTimer = null;
+    }
+  }
+
+  private ensurePlaying() {
+    try {
+      const ctx = this.getAudioContext();
+      if (!ctx) return;
+
+      if (!this.masterGain) {
+        this.masterGain = ctx.createGain();
+        this.masterGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        this.masterGain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.8);
+        this.masterGain.connect(ctx.destination);
+      } else {
+        this.masterGain.gain.cancelScheduledValues(ctx.currentTime);
+        this.masterGain.gain.setValueAtTime(this.masterGain.gain.value, ctx.currentTime);
+        this.masterGain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.3);
+      }
+
+      this.clearTimers();
+      this.startThemeLoops();
+    } catch (e) {
+      console.warn('Audio start error:', e);
     }
   }
 
@@ -220,7 +237,7 @@ class AmbientSoundManager {
       lfo.connect(osc.frequency);
 
       const noteGain = ctx.createGain();
-      const peak = 0.15;
+      const peak = 0.14;
       noteGain.gain.setValueAtTime(0.0001, now);
       noteGain.gain.linearRampToValueAtTime(peak, now + 0.4);
       noteGain.gain.setValueAtTime(peak * 0.85, now + duration - 0.6);
@@ -263,27 +280,24 @@ class AmbientSoundManager {
     if (!ctx || !this.masterGain || !this.isPlaying) return;
     try {
       const now = ctx.currentTime;
-      // High chime bell oscillator
       const osc1 = ctx.createOscillator();
       osc1.type = 'sine';
       osc1.frequency.setValueAtTime(freq, now);
 
-      // Glass inharmonic overtone (ratio 2.76)
       const osc2 = ctx.createOscillator();
       osc2.type = 'sine';
       osc2.frequency.setValueAtTime(freq * 2.756, now);
 
-      // Shimmering metallic 5th overtone
       const osc3 = ctx.createOscillator();
       osc3.type = 'sine';
       osc3.frequency.setValueAtTime(freq * 4.02, now);
 
       const noteGain = ctx.createGain();
-      const peak = 0.14 * velocity;
+      const peak = 0.13 * velocity;
       noteGain.gain.setValueAtTime(0.0001, now);
       noteGain.gain.linearRampToValueAtTime(peak, now + 0.008);
       noteGain.gain.exponentialRampToValueAtTime(peak * 0.4, now + 0.5);
-      noteGain.gain.exponentialRampToValueAtTime(0.0001, now + 3.4);
+      noteGain.gain.exponentialRampToValueAtTime(0.0001, now + 3.2);
 
       const bandFilter = ctx.createBiquadFilter();
       bandFilter.type = 'bandpass';
@@ -311,9 +325,9 @@ class AmbientSoundManager {
       osc1.start(now);
       osc2.start(now);
       osc3.start(now);
-      osc1.stop(now + 3.5);
-      osc2.stop(now + 3.5);
-      osc3.stop(now + 3.5);
+      osc1.stop(now + 3.3);
+      osc2.stop(now + 3.3);
+      osc3.stop(now + 3.3);
     } catch {}
   }
 
@@ -326,13 +340,12 @@ class AmbientSoundManager {
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(freq, now);
 
-      // Slow mystical chorus detune
       const oscDetune = ctx.createOscillator();
       oscDetune.type = 'sine';
       oscDetune.frequency.setValueAtTime(freq * 1.003, now);
 
       const noteGain = ctx.createGain();
-      const peak = 0.09;
+      const peak = 0.08;
       noteGain.gain.setValueAtTime(0.0001, now);
       noteGain.gain.linearRampToValueAtTime(peak, now + 1.1);
       noteGain.gain.setValueAtTime(peak * 0.9, now + duration - 0.8);
@@ -376,18 +389,16 @@ class AmbientSoundManager {
     if (!ctx || !this.masterGain || !this.isPlaying) return;
     try {
       const now = ctx.currentTime;
-      // Woody wooden bar impact
       const osc1 = ctx.createOscillator();
       osc1.type = 'sine';
       osc1.frequency.setValueAtTime(freq, now);
 
-      // Bright mallet contact
       const osc2 = ctx.createOscillator();
       osc2.type = 'triangle';
       osc2.frequency.setValueAtTime(freq * 3, now);
 
       const noteGain = ctx.createGain();
-      const peak = 0.17 * velocity;
+      const peak = 0.15 * velocity;
       noteGain.gain.setValueAtTime(0.0001, now);
       noteGain.gain.linearRampToValueAtTime(peak, now + 0.005);
       noteGain.gain.exponentialRampToValueAtTime(peak * 0.2, now + 0.12);
@@ -495,7 +506,6 @@ class AmbientSoundManager {
       osc2.type = 'sine';
       osc2.frequency.setValueAtTime(freq, now);
 
-      // Deep expressive cello vibrato (4.2 Hz)
       const lfo = ctx.createOscillator();
       const lfoGain = ctx.createGain();
       lfo.frequency.setValueAtTime(4.2, now);
@@ -504,13 +514,12 @@ class AmbientSoundManager {
       lfo.connect(osc2.frequency);
 
       const noteGain = ctx.createGain();
-      const peak = 0.12;
+      const peak = 0.11;
       noteGain.gain.setValueAtTime(0.0001, now);
-      noteGain.gain.linearRampToValueAtTime(peak, now + 0.6); // slow bow attack
+      noteGain.gain.linearRampToValueAtTime(peak, now + 0.6);
       noteGain.gain.setValueAtTime(peak * 0.9, now + duration - 0.7);
       noteGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
-      // Warm cello body filter
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
       filter.frequency.setValueAtTime(950, now);
@@ -559,7 +568,6 @@ class AmbientSoundManager {
   private runNostalgicLoop() {
     if (!this.isPlaying || this.currentTheme !== 'nostalgic') return;
 
-    // Harp cascade
     const chord = [
       this.nostalgicHarpScale[Math.floor(Math.random() * 3)],
       this.nostalgicHarpScale[3 + Math.floor(Math.random() * 3)],
@@ -574,7 +582,6 @@ class AmbientSoundManager {
       }, idx * 210);
     });
 
-    // Flute phrase every other cascade
     if (this.stepIndex % 2 === 0) {
       const fluteNote = this.nostalgicFluteMelody[Math.floor(Math.random() * this.nostalgicFluteMelody.length)];
       setTimeout(() => {
@@ -590,7 +597,6 @@ class AmbientSoundManager {
   private runHauntingLoop() {
     if (!this.isPlaying || this.currentTheme !== 'haunting') return;
 
-    // Eerie glass bell chime
     const bellNotes = [
       this.hauntingScale[Math.floor(Math.random() * 3)],
       this.hauntingScale[4 + Math.floor(Math.random() * 3)],
@@ -604,7 +610,6 @@ class AmbientSoundManager {
       }, idx * 450);
     });
 
-    // Atmospheric minor drone swell
     if (this.stepIndex % 2 === 0) {
       const padFreq = this.hauntingScale[Math.floor(Math.random() * 4)];
       setTimeout(() => {
@@ -620,7 +625,6 @@ class AmbientSoundManager {
   private runUpbeatLoop() {
     if (!this.isPlaying || this.currentTheme !== 'upbeat') return;
 
-    // Rhythmic syncopated marimba groove
     const pattern = [
       this.upbeatScale[Math.floor(Math.random() * 3)],
       this.upbeatScale[2 + Math.floor(Math.random() * 3)],
@@ -644,12 +648,10 @@ class AmbientSoundManager {
   private runSadLoop() {
     if (!this.isPlaying || this.currentTheme !== 'sad') return;
 
-    // Gentle emotional piano chord
     const chordIndex = this.stepIndex % this.sadPianoChords.length;
     const chord = this.sadPianoChords[chordIndex];
     this.playSadPianoChord(chord);
 
-    // Poignant solo cello counter-melody
     const celloFreq = this.sadCelloNotes[Math.floor(Math.random() * this.sadCelloNotes.length)];
     setTimeout(() => {
       if (!this.isPlaying || this.currentTheme !== 'sad') return;
@@ -661,124 +663,25 @@ class AmbientSoundManager {
   }
 
   // =========================================================================
-  // DYNAMIC AIR GLIDE (WIND ON ACTIVE ZOOM)
-  // =========================================================================
-  private initWindNodes(ctx: AudioContext) {
-    if (this.windGain && this.windFilter) return;
-    try {
-      this.windGain = ctx.createGain();
-      this.windGain.gain.setValueAtTime(0.00001, ctx.currentTime);
-
-      this.windFilter = ctx.createBiquadFilter();
-      this.windFilter.type = 'bandpass';
-      this.windFilter.frequency.setValueAtTime(800, ctx.currentTime);
-      this.windFilter.Q.setValueAtTime(2.2, ctx.currentTime);
-
-      const bufferSize = ctx.sampleRate * 2;
-      const buffer = ctx.createBuffer(2, bufferSize, ctx.sampleRate);
-      for (let channel = 0; channel < 2; channel++) {
-        const data = buffer.getChannelData(channel);
-        let b0 = 0, b1 = 0, b2 = 0;
-        for (let i = 0; i < bufferSize; i++) {
-          const white = Math.random() * 2 - 1;
-          b0 = 0.96 * b0 + white * 0.08;
-          b1 = 0.94 * b1 + white * 0.12;
-          b2 = 0.88 * b2 + white * 0.22;
-          data[i] = (b0 + b1 + b2) * 0.08;
-        }
-      }
-
-      this.windNoiseSource = ctx.createBufferSource();
-      this.windNoiseSource.buffer = buffer;
-      this.windNoiseSource.loop = true;
-
-      this.windNoiseSource.connect(this.windFilter);
-      this.windFilter.connect(this.windGain);
-      this.windGain.connect(ctx.destination);
-
-      this.windNoiseSource.start();
-    } catch {}
-  }
-
-  public updateAirGlide(zoomSpeed: number) {
-    const ctx = this.getAudioContext();
-    if (!ctx) return;
-
-    if (!this.windGain || !this.windFilter) {
-      this.initWindNodes(ctx);
-    }
-
-    if (this.windStopTimeout !== null) {
-      clearTimeout(this.windStopTimeout);
-      this.windStopTimeout = null;
-    }
-
-    const now = ctx.currentTime;
-    const intensity = Math.min(1.0, Math.max(0.05, zoomSpeed * 0.25));
-    const targetFreq = 750 + intensity * 1200;
-    const targetVolume = 0.03 + intensity * 0.09;
-
-    try {
-      if (this.windGain && this.windFilter) {
-        this.windFilter.frequency.setTargetAtTime(targetFreq, now, 0.08);
-        this.windGain.gain.setTargetAtTime(targetVolume, now, 0.05);
-      }
-    } catch {}
-
-    this.windStopTimeout = window.setTimeout(() => {
-      this.stopAirGlide();
-    }, 200);
-  }
-
-  public stopAirGlide() {
-    if (!this.windGain || !this.ctx) return;
-    try {
-      const now = this.ctx.currentTime;
-      this.windGain.gain.setTargetAtTime(0.00001, now, 0.2);
-    } catch {}
-  }
-
-  public triggerGlideSwoosh(intensity: number = 0.7) {
-    this.updateAirGlide(intensity * 3.2);
-  }
-
-  // =========================================================================
   // LIFECYCLE CONTROLS
   // =========================================================================
   public start() {
-    if (this.isPlaying) return;
-    try {
-      const ctx = this.getAudioContext();
-      if (!ctx) return;
-
-      this.masterGain = ctx.createGain();
-      this.masterGain.gain.setValueAtTime(0.0001, ctx.currentTime);
-      this.masterGain.gain.exponentialRampToValueAtTime(0.11, ctx.currentTime + 1.2);
-      this.masterGain.connect(ctx.destination);
-
-      this.isPlaying = true;
-      this.stepIndex = 0;
-      this.startThemeLoops();
-      this.notify();
-    } catch (e) {
-      console.warn('Audio Context start blocked:', e);
-    }
+    this.isPlaying = true;
+    this.ensurePlaying();
+    this.notify();
   }
 
   public stop() {
-    if (!this.isPlaying) return;
     this.isPlaying = false;
     this.clearTimers();
 
     if (this.masterGain && this.ctx) {
       try {
-        this.masterGain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.5);
-        setTimeout(() => {
-          this.masterGain = null;
-        }, 550);
-      } catch {
-        this.masterGain = null;
-      }
+        const now = this.ctx.currentTime;
+        this.masterGain.gain.cancelScheduledValues(now);
+        this.masterGain.gain.setValueAtTime(this.masterGain.gain.value, now);
+        this.masterGain.gain.linearRampToValueAtTime(0.0001, now + 0.3);
+      } catch {}
     }
     this.notify();
   }
@@ -790,6 +693,134 @@ class AmbientSoundManager {
     } else {
       this.start();
       return false; // isMuted = false
+    }
+  }
+
+  // =========================================================================
+  // BURIAL & LOCK SOUND SEQUENCE
+  // =========================================================================
+  public playShovelDigSound() {
+    try {
+      const ctx = this.getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
+      // Filtered noise burst for soil scraping
+      const bufferSize = ctx.sampleRate * 0.35;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const bandpass = ctx.createBiquadFilter();
+      bandpass.type = 'bandpass';
+      bandpass.frequency.setValueAtTime(450, now);
+      bandpass.Q.setValueAtTime(1.8, now);
+
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.001, now);
+      noiseGain.gain.linearRampToValueAtTime(0.25, now + 0.06);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+      noise.connect(bandpass);
+      bandpass.connect(noiseGain);
+      noiseGain.connect(ctx.destination);
+      noise.start(now);
+      noise.stop(now + 0.36);
+    } catch (e) {
+      console.warn('Could not play shovel sound:', e);
+    }
+  }
+
+  public playSoilPatSound() {
+    try {
+      const ctx = this.getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(110, now);
+      osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.2);
+    } catch (e) {
+      console.warn('Could not play soil pat sound:', e);
+    }
+  }
+
+  public playBurialLockSound() {
+    try {
+      const ctx = this.getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
+      // 1. Heavy Metallic Lock Click / Snap
+      const snapOsc = ctx.createOscillator();
+      snapOsc.type = 'triangle';
+      snapOsc.frequency.setValueAtTime(800, now);
+      snapOsc.frequency.exponentialRampToValueAtTime(80, now + 0.12);
+
+      const snapGain = ctx.createGain();
+      snapGain.gain.setValueAtTime(0.35, now);
+      snapGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+      snapOsc.connect(snapGain);
+      snapGain.connect(ctx.destination);
+      snapOsc.start(now);
+      snapOsc.stop(now + 0.2);
+
+      // 2. Earth Soil Impact / Deep Rumble Thud
+      const thudOsc = ctx.createOscillator();
+      thudOsc.type = 'sine';
+      thudOsc.frequency.setValueAtTime(140, now + 0.05);
+      thudOsc.frequency.exponentialRampToValueAtTime(45, now + 0.7);
+
+      const thudGain = ctx.createGain();
+      thudGain.gain.setValueAtTime(0.001, now);
+      thudGain.gain.linearRampToValueAtTime(0.4, now + 0.08);
+      thudGain.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
+
+      const lowpass = ctx.createBiquadFilter();
+      lowpass.type = 'lowpass';
+      lowpass.frequency.setValueAtTime(180, now);
+
+      thudOsc.connect(thudGain);
+      thudGain.connect(lowpass);
+      lowpass.connect(ctx.destination);
+      thudOsc.start(now + 0.05);
+      thudOsc.stop(now + 0.9);
+
+      // 3. Shimmering Cryptographic Seal Chime
+      const chimeFreqs = [523.25, 659.25, 783.99, 1046.5];
+      chimeFreqs.forEach((freq, i) => {
+        const cOsc = ctx.createOscillator();
+        cOsc.type = 'sine';
+        cOsc.frequency.setValueAtTime(freq, now + 0.2 + i * 0.07);
+
+        const cGain = ctx.createGain();
+        cGain.gain.setValueAtTime(0.001, now + 0.2 + i * 0.07);
+        cGain.gain.linearRampToValueAtTime(0.12, now + 0.22 + i * 0.07);
+        cGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.4 + i * 0.07);
+
+        cOsc.connect(cGain);
+        cGain.connect(ctx.destination);
+        cOsc.start(now + 0.2 + i * 0.07);
+        cOsc.stop(now + 1.5 + i * 0.07);
+      });
+    } catch (e) {
+      console.warn('Could not play burial sound:', e);
     }
   }
 }

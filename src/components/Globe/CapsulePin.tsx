@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
@@ -28,6 +28,13 @@ export const CapsulePin: React.FC<CapsulePinProps> = ({
   const ringRef = useRef<THREE.Mesh>(null);
   const beamRef = useRef<THREE.Mesh>(null);
   const pedestalRef = useRef<THREE.Mesh>(null);
+
+  // Clean up cursor if unmounted while hovered
+  useEffect(() => {
+    return () => {
+      document.body.style.cursor = 'auto';
+    };
+  }, []);
 
   // Determine if active user has permission to access this capsule's content
   const hasAccess = useMemo(() => {

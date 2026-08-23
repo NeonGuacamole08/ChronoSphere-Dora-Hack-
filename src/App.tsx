@@ -12,6 +12,8 @@ import { GlobeView } from './components/Globe/GlobeView';
 import { CapsuleModal } from './components/Modals/CapsuleModal';
 import { CreateCapsuleModal } from './components/Modals/CreateCapsuleModal';
 import { CountryDrawer } from './components/Country/CountryDrawer';
+import { MyVaultDrawer } from './components/Vault/MyVaultDrawer';
+import { BurialAnimationOverlay } from './components/Burial/BurialAnimationOverlay';
 import { OfflineViewerModal } from './components/OfflineViewer/OfflineViewerModal';
 import { BackendHubModal } from './components/BackendHub/BackendHubModal';
 import { HelpModal } from './components/Modals/HelpModal';
@@ -104,6 +106,14 @@ export default function App() {
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createCoords, setCreateCoords] = useState<Coordinates | null>(null);
+  const [draftToEdit, setDraftToEdit] = useState<Capsule | null>(null);
+
+  // My Vault Drawer State
+  const [isVaultOpen, setIsVaultOpen] = useState(false);
+  const [vaultInitialTab, setVaultInitialTab] = useState<'locked' | 'unlocked' | 'drafts'>('locked');
+
+  // 2-Second Burial Animation State
+  const [buryingCapsule, setBuryingCapsule] = useState<Capsule | null>(null);
 
   const [selectedCountry, setSelectedCountry] = useState<CountryData | null>(null);
   const [isCountryDrawerOpen, setIsCountryDrawerOpen] = useState(false);
@@ -115,11 +125,12 @@ export default function App() {
   const [isWelcomeGuideOpen, setIsWelcomeGuideOpen] = useState(false);
   const [isBackendHubOpen, setIsBackendHubOpen] = useState(false);
 
-  // Filtered capsules accounting for search query
+  // Filtered capsules accounting for search query and excluding in-progress drafts from globe view
   const filteredCapsules = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
 
     return capsules.filter((cap) => {
+      if (cap.is_draft) return false;
       if (!query) return true;
       return (
         cap.title.toLowerCase().includes(query) ||
@@ -208,19 +219,72 @@ export default function App() {
 
   // Handle Planting modal with coordinates picked from globe
   const handleOpenCreateWithCoords = (coords: Coordinates) => {
+    setDraftToEdit(null);
     setCreateCoords(coords);
     setIsCreateModalOpen(true);
     setIsPlantingMode(false);
   };
 
-  // Add newly created capsule
+  // Save capsule as an in-progress draft (bypasses burial, stores in My Vault -> Drafts)
+  const handleSaveDraft = (draftCap: Capsule) => {
+    setCapsules((prev) => [draftCap, ...prev.filter((c) => c.id !== draftCap.id)]);
+    setIsCreateModalOpen(false);
+    setDraftToEdit(null);
+    setCreateCoords(null);
+    // Open vault directly onto the Drafts tab
+    setVaultInitialTab('drafts');
+    setIsVaultOpen(true);
+  };
+
+  // Resume editing a saved draft from My Vault
+  const handleResumeDraft = (draft: Capsule) => {
+    setIsVaultOpen(false);
+    setDraftToEdit(draft);
+    setCreateCoords({
+      lat: draft.lat,
+      lng: draft.lng,
+      name: draft.location_name,
+      country: draft.country_name,
+    });
+    setIsCreateModalOpen(true);
+  };
+
+  // Add newly created capsule & initiate Burial Animation Sequence
   const handleSaveCapsule = (newCap: Capsule) => {
-    setCapsules((prev) => [newCap, ...prev]);
+    // 1. Close auxiliary drawers and clear active draft being edited
+    setIsVaultOpen(false);
+    setIsCountryDrawerOpen(false);
+    setIsCapsuleModalOpen(false);
+    setDraftToEdit(null);
+
+    // 2. Remove any previous draft version of this capsule if it was being finalized
+    setCapsules((prev) => prev.filter((c) => c.id !== newCap.id));
+
+    // 3. Smoothly fly 3D camera direct to capsule coordinates
     setSearchQuery(''); // Ensure new pin is not filtered out by an active search
-    setTargetCoordinates({ lat: newCap.lat, lng: newCap.lng }); // Fly 3D camera to the newly planted pin
-    setSelectedCapsule(newCap);
-    setIsCapsuleModalOpen(true);
+    setTargetCoordinates({ lat: newCap.lat, lng: newCap.lng });
     setIsPlantingMode(false);
+
+    // 4. Trigger 2-second Burial animation overlay
+    setBuryingCapsule(newCap);
+  };
+
+  // Complete burial sequence & settle camera on placed pin
+  const handleBurialAnimationComplete = () => {
+    if (buryingCapsule) {
+      setCapsules((prev) => [buryingCapsule, ...prev]);
+      setSelectedCapsule(buryingCapsule);
+      setIsCapsuleModalOpen(true);
+      setBuryingCapsule(null);
+    }
+  };
+
+  // Handle "View on Globe" from My Vault Drawer
+  const handleViewVaultCapsuleOnGlobe = (capsule: Capsule) => {
+    setIsVaultOpen(false);
+    setSearchQuery('');
+    setTargetCoordinates({ lat: capsule.lat, lng: capsule.lng });
+    setSelectedCapsule(capsule);
   };
 
   // Fast-Forward / Test Unlock override
@@ -319,6 +383,7 @@ export default function App() {
           setCreateCoords(null);
           setIsCreateModalOpen(true);
         }}
+        onOpenVault={() => setIsVaultOpen(true)}
         onToggleLayers={() => setShowHeatmap((prev) => !prev)}
         showHeatmap={showHeatmap}
         isAudioMuted={isAudioMuted}
@@ -380,10 +445,32 @@ export default function App() {
         onPlantInCountry={handlePlantInCountry}
       />
 
-      {/* 5. Capsule Modal (Media, Arweave Transaction, Spotify, Delete Pin) */}
+      {/* 5. 'My Vault' / Capsule Inventory Slide-out Drawer */}
+      <MyVaultDrawer
+        isOpen={isVaultOpen}
+        onClose={() => setIsVaultOpen(false)}
+        capsules={capsules}
+        simulatedTimeOffsetMs={simulatedTimeOffsetMs}
+        initialTab={vaultInitialTab}
+        onSelectCapsuleOnGlobe={handleViewVaultCapsuleOnGlobe}
+        onOpenCapsuleModal={handleSelectCapsule}
+        onResumeDraft={handleResumeDraft}
+        onDeleteCapsule={handleDeleteCapsule}
+      />
+
+      {/* 6. 2-Second Dirt Burial Particle & Lock Animation Overlay */}
+      {buryingCapsule && (
+        <BurialAnimationOverlay
+          locationName={buryingCapsule.location_name}
+          countryName={buryingCapsule.country_name}
+          onAnimationComplete={handleBurialAnimationComplete}
+        />
+      )}
+
+      {/* 7. Capsule Modal (Media, Arweave Transaction, Spotify, Delete Pin) */}
       <CapsuleModal
         capsule={selectedCapsule}
-        isOpen={isCapsuleModalOpen}
+        isOpen={isCapsuleModalOpen && !buryingCapsule}
         onClose={() => {
           setIsCapsuleModalOpen(false);
           setSelectedCapsule(null);
@@ -397,20 +484,23 @@ export default function App() {
         simulatedTimeOffsetMs={simulatedTimeOffsetMs}
       />
 
-      {/* 6. Create Capsule Modal (Planted by Authenticated User) */}
+      {/* 8. Create Capsule Modal (Planted by Authenticated User) */}
       <CreateCapsuleModal
         isOpen={isCreateModalOpen}
         onClose={() => {
           setIsCreateModalOpen(false);
           setCreateCoords(null);
+          setDraftToEdit(null);
         }}
         onSaveCapsule={handleSaveCapsule}
+        onSaveDraft={handleSaveDraft}
+        draftToEdit={draftToEdit}
         initialCoords={createCoords}
         activeUsername={activeUsername}
         currentUser={currentUser}
       />
 
-      {/* 7. Offline Standalone HTML & Arweave Payload Inspector */}
+      {/* 9. Offline Standalone HTML & Arweave Payload Inspector */}
       <OfflineViewerModal
         capsule={offlineCapsule}
         isOpen={isOfflineViewerOpen}
@@ -420,7 +510,7 @@ export default function App() {
         }}
       />
 
-      {/* 8. Light Brown Parchment Welcome & Site Guide Modal (shown after landing sequence) */}
+      {/* 10. Light Brown Parchment Welcome & Site Guide Modal (shown after landing sequence) */}
       <WelcomeGuideModal
         isOpen={isWelcomeGuideOpen}
         onClose={() => setIsWelcomeGuideOpen(false)}
@@ -431,13 +521,13 @@ export default function App() {
         onOpenBackendHub={() => setIsBackendHubOpen(true)}
       />
 
-      {/* 9. Help / Protocol Guide Modal */}
+      {/* 11. Help / Protocol Guide Modal */}
       <HelpModal
         isOpen={isHelpModalOpen}
         onClose={() => setIsHelpModalOpen(false)}
       />
 
-      {/* 10. Real Supabase Authentication Modal (Email/Password & Google OAuth) */}
+      {/* 12. Real Supabase Authentication Modal (Email/Password & Google OAuth) */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
@@ -447,7 +537,7 @@ export default function App() {
         initialMode={authModalMode}
       />
 
-      {/* 11. Backend Hub (Supabase SQL RLS + Deno Edge Function + Resend Simulator) */}
+      {/* 13. Backend Hub (Supabase SQL RLS + Deno Edge Function + Resend Simulator) */}
       <BackendHubModal
         isOpen={isBackendHubOpen}
         onClose={() => setIsBackendHubOpen(false)}
@@ -457,3 +547,4 @@ export default function App() {
     </div>
   );
 }
+
