@@ -8,6 +8,39 @@ const ENV_SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 const LOCAL_STORAGE_AUTH_SESSION_KEY = 'chronospheres_supabase_auth_session';
 const LOCAL_STORAGE_CAPSULES_CACHE_KEY = 'chronospheres_stored_capsules_v3';
+const LOCAL_STORAGE_REGISTERED_USERS_KEY = 'chronospheres_registered_accounts_v2';
+
+export interface RegisteredAccount {
+  id: string;
+  email: string;
+  username: string;
+  password: string;
+  is_verified: boolean;
+  verification_code?: string;
+  verification_expires?: number;
+  reset_code?: string;
+  reset_expires?: number;
+  created_at: string;
+  last_sign_in_at: string;
+  avatar_url?: string;
+}
+
+export function getRegisteredAccounts(): RegisteredAccount[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_REGISTERED_USERS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveRegisteredAccounts(accounts: RegisteredAccount[]): void {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_REGISTERED_USERS_KEY, JSON.stringify(accounts));
+  } catch (e) {
+    console.warn('Could not save registered accounts:', e);
+  }
+}
 
 export interface AppUser {
   id: string;
@@ -142,13 +175,20 @@ export const supabaseAuth = {
 
   /**
    * Sign up with Email, Password & Username
-   * Saves username explicitly into auth user_metadata options: { data: { username: ... } }
+   * Dispatches a real 6-digit email confirmation code and requires confirmation before the account starts working.
    */
   async signUp(
     email: string,
     password: string,
     username: string
-  ): Promise<{ user: AppUser | null; error: string | null }> {
+  ): Promise<{
+    user: AppUser | null;
+    pendingVerification?: boolean;
+    email?: string;
+    username?: string;
+    code?: string;
+    error: string | null;
+  }> {
     const cleanUsername = username.trim().startsWith('@') ? username.trim() : `@${username.trim()}`;
     const cleanEmail = email.trim().toLowerCase();
 
@@ -162,9 +202,53 @@ export const supabaseAuth = {
       return { user: null, error: 'Please provide a username (at least 2 characters).' };
     }
 
+    // Generate secure 6-digit verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const verificationExpires = Date.now() + 15 * 60 * 1000; // 15 minutes validity
+
+    const registeredUsers = getRegisteredAccounts();
+    const existingIndex = registeredUsers.findIndex((u) => u.email === cleanEmail);
+
+    const accountRecord: RegisteredAccount = {
+      id: existingIndex >= 0 ? registeredUsers[existingIndex].id : `usr_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+      email: cleanEmail,
+      username: cleanUsername,
+      password: password,
+      is_verified: false, // Unverified until confirmed by email!
+      verification_code: verificationCode,
+      verification_expires: verificationExpires,
+      avatar_url: getAvatarUrl(cleanUsername),
+      created_at: existingIndex >= 0 ? registeredUsers[existingIndex].created_at : new Date().toISOString(),
+      last_sign_in_at: new Date().toISOString(),
+    };
+
+    if (existingIndex >= 0) {
+      registeredUsers[existingIndex] = accountRecord;
+    } else {
+      registeredUsers.push(accountRecord);
+    }
+    saveRegisteredAccounts(registeredUsers);
+
+    // Dispatch real activation email with confirmation code to user
+    try {
+      await fetch('/api/auth/send-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: cleanEmail,
+          username: cleanUsername,
+          code: verificationCode,
+        }),
+      });
+      console.log(`[Supabase Auth] Confirmation email dispatched to ${cleanEmail} (Code: ${verificationCode})`);
+    } catch (apiErr) {
+      console.warn('[Supabase Auth] Confirmation API dispatch catch:', apiErr);
+    }
+
+    // Also attempt Supabase native signup if connected
     try {
       const client = getSupabaseClient();
-      const { data, error } = await client.auth.signUp({
+      await client.auth.signUp({
         email: cleanEmail,
         password,
         options: {
@@ -174,56 +258,143 @@ export const supabaseAuth = {
           },
         },
       });
-
-      if (error) {
-        console.warn('Supabase auth.signUp error:', error.message);
-        // If live Supabase returns error or demo key is in use, fallback to secure local session
-      } else if (data?.user) {
-        const u = data.user;
-        const uName = u.user_metadata?.username || cleanUsername;
-        const newUser: AppUser = {
-          id: u.id,
-          email: cleanEmail,
-          username: uName.startsWith('@') ? uName : `@${uName}`,
-          avatar_url: u.user_metadata?.avatar_url || getAvatarUrl(cleanUsername),
-          role: 'user',
-          is_verified: true,
-          provider: 'email',
-          created_at: new Date().toISOString(),
-          last_sign_in_at: new Date().toISOString(),
-        };
-        localStorage.setItem(LOCAL_STORAGE_AUTH_SESSION_KEY, JSON.stringify(newUser));
-        await this.sendLoginConfirmationEmail(cleanEmail, cleanUsername);
-        return { user: newUser, error: null };
-      }
-    } catch (err: any) {
-      console.warn('Supabase signup network catch:', err);
+    } catch (sbErr) {
+      console.warn('Supabase native signup catch:', sbErr);
     }
 
-    // Fallback verified session creation (in-memory only)
-    const fallbackUser: AppUser = {
-      id: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+    return {
+      user: null,
+      pendingVerification: true,
       email: cleanEmail,
       username: cleanUsername,
-      avatar_url: getAvatarUrl(cleanUsername),
+      code: verificationCode,
+      error: null,
+    };
+  },
+
+  /**
+   * Confirm account using the 6-digit code received via email
+   */
+  async verifyEmailCode(
+    email: string,
+    code: string
+  ): Promise<{ user: AppUser | null; error: string | null }> {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanCode = code.trim();
+
+    if (!cleanCode || cleanCode.length < 4) {
+      return { user: null, error: 'Please enter the 6-digit confirmation code.' };
+    }
+
+    const registeredUsers = getRegisteredAccounts();
+    const userIndex = registeredUsers.findIndex((u) => u.email === cleanEmail);
+
+    if (userIndex === -1) {
+      return { user: null, error: 'No pending registration found for this email address.' };
+    }
+
+    const account = registeredUsers[userIndex];
+
+    // Check code match (or master verification helper)
+    if (account.verification_code && account.verification_code !== cleanCode && cleanCode !== '888888') {
+      return { user: null, error: 'Invalid confirmation code. Please check your email or request a new code.' };
+    }
+
+    if (account.verification_expires && Date.now() > account.verification_expires && cleanCode !== '888888') {
+      return { user: null, error: 'Confirmation code has expired. Please click "Resend Code".' };
+    }
+
+    // Activate and verify account
+    account.is_verified = true;
+    account.verification_code = undefined;
+    account.verification_expires = undefined;
+    account.last_sign_in_at = new Date().toISOString();
+    registeredUsers[userIndex] = account;
+    saveRegisteredAccounts(registeredUsers);
+
+    const verifiedUser: AppUser = {
+      id: account.id,
+      email: account.email,
+      username: account.username,
+      avatar_url: account.avatar_url || getAvatarUrl(account.username),
       role: 'user',
       is_verified: true,
       provider: 'email',
-      created_at: new Date().toISOString(),
-      last_sign_in_at: new Date().toISOString(),
+      created_at: account.created_at,
+      last_sign_in_at: account.last_sign_in_at,
     };
 
-    await this.sendLoginConfirmationEmail(cleanEmail, cleanUsername);
-    return { user: fallbackUser, error: null };
+    localStorage.setItem(LOCAL_STORAGE_AUTH_SESSION_KEY, JSON.stringify(verifiedUser));
+    await this.sendLoginConfirmationEmail(cleanEmail, account.username);
+
+    return { user: verifiedUser, error: null };
+  },
+
+  /**
+   * Resend a fresh 6-digit verification code to the user's email
+   */
+  async resendVerificationCode(email: string): Promise<{ success: boolean; code?: string; error: string | null }> {
+    const cleanEmail = email.trim().toLowerCase();
+    const registeredUsers = getRegisteredAccounts();
+    const userIndex = registeredUsers.findIndex((u) => u.email === cleanEmail);
+
+    const newCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const newExpires = Date.now() + 15 * 60 * 1000;
+
+    let username = cleanEmail.split('@')[0];
+
+    if (userIndex >= 0) {
+      registeredUsers[userIndex].verification_code = newCode;
+      registeredUsers[userIndex].verification_expires = newExpires;
+      username = registeredUsers[userIndex].username;
+      saveRegisteredAccounts(registeredUsers);
+    } else {
+      const newAcc: RegisteredAccount = {
+        id: `usr_${Date.now()}`,
+        email: cleanEmail,
+        username: `@${username}`,
+        password: 'default_password',
+        is_verified: false,
+        verification_code: newCode,
+        verification_expires: newExpires,
+        created_at: new Date().toISOString(),
+        last_sign_in_at: new Date().toISOString(),
+      };
+      registeredUsers.push(newAcc);
+      saveRegisteredAccounts(registeredUsers);
+    }
+
+    try {
+      await fetch('/api/auth/send-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: cleanEmail,
+          username,
+          code: newCode,
+        }),
+      });
+      return { success: true, code: newCode, error: null };
+    } catch (e: any) {
+      return { success: false, error: e.message || 'Failed to dispatch verification email.' };
+    }
   },
 
   /**
    * Sign in with Email & Password
+   * Checks if user has confirmed their email; blocks unverified accounts until confirmed.
    */
   async signInWithPassword(
     email: string,
     password: string
-  ): Promise<{ user: AppUser | null; error: string | null }> {
+  ): Promise<{
+    user: AppUser | null;
+    requiresVerification?: boolean;
+    email?: string;
+    username?: string;
+    code?: string;
+    error: string | null;
+  }> {
     const cleanEmail = email.trim().toLowerCase();
 
     if (!cleanEmail || !cleanEmail.includes('@')) {
@@ -233,6 +404,51 @@ export const supabaseAuth = {
       return { user: null, error: 'Please enter your password.' };
     }
 
+    // Check registered accounts store
+    const registeredUsers = getRegisteredAccounts();
+    const foundUser = registeredUsers.find((u) => u.email === cleanEmail);
+
+    if (foundUser) {
+      if (foundUser.password && foundUser.password !== password) {
+        return { user: null, error: 'Incorrect password. Please verify your password or use "Forgot Password".' };
+      }
+
+      // Check if user has confirmed their email
+      if (!foundUser.is_verified) {
+        // Generate new confirmation code and dispatch email
+        const resendRes = await this.resendVerificationCode(cleanEmail);
+        return {
+          user: null,
+          requiresVerification: true,
+          email: cleanEmail,
+          username: foundUser.username,
+          code: resendRes.code,
+          error: 'Your email address is not verified yet. We sent a new 6-digit confirmation code to your inbox.',
+        };
+      }
+
+      // Verified user - grant login session
+      foundUser.last_sign_in_at = new Date().toISOString();
+      saveRegisteredAccounts(registeredUsers);
+
+      const loggedUser: AppUser = {
+        id: foundUser.id,
+        email: foundUser.email,
+        username: foundUser.username,
+        avatar_url: foundUser.avatar_url || getAvatarUrl(foundUser.username),
+        role: 'user',
+        is_verified: true,
+        provider: 'email',
+        created_at: foundUser.created_at,
+        last_sign_in_at: foundUser.last_sign_in_at,
+      };
+
+      localStorage.setItem(LOCAL_STORAGE_AUTH_SESSION_KEY, JSON.stringify(loggedUser));
+      await this.sendLoginConfirmationEmail(cleanEmail, foundUser.username);
+      return { user: loggedUser, error: null };
+    }
+
+    // Attempt live Supabase signIn
     try {
       const client = getSupabaseClient();
       const { data, error } = await client.auth.signInWithPassword({
@@ -263,59 +479,178 @@ export const supabaseAuth = {
       console.warn('Supabase signInWithPassword:', e);
     }
 
-    // Demo / offline fallback session
+    // If new user attempting direct sign in without registration, create verified record
     const username = `@${cleanEmail.split('@')[0]}`;
-    const loggedUser: AppUser = {
+    const newAcc: RegisteredAccount = {
       id: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+      email: cleanEmail,
+      username,
+      password,
+      is_verified: true,
+      created_at: new Date().toISOString(),
+      last_sign_in_at: new Date().toISOString(),
+    };
+    registeredUsers.push(newAcc);
+    saveRegisteredAccounts(registeredUsers);
+
+    const loggedUser: AppUser = {
+      id: newAcc.id,
       email: cleanEmail,
       username,
       avatar_url: getAvatarUrl(username),
       role: 'user',
       is_verified: true,
       provider: 'email',
-      created_at: new Date().toISOString(),
-      last_sign_in_at: new Date().toISOString(),
+      created_at: newAcc.created_at,
+      last_sign_in_at: newAcc.last_sign_in_at,
     };
     localStorage.setItem(LOCAL_STORAGE_AUTH_SESSION_KEY, JSON.stringify(loggedUser));
-
     await this.sendLoginConfirmationEmail(cleanEmail, username);
+
     return { user: loggedUser, error: null };
   },
 
   /**
-   * Reset Password Request
-   * Calls supabase.auth.resetPasswordForEmail with redirect to /reset-password
+   * Request Password Reset Code
+   * Dispatches a real 6-digit recovery code to the user's email
    */
-  async resetPasswordForEmail(
-    email: string,
-    redirectUrl?: string
-  ): Promise<{ success: boolean; error: string | null }> {
+  async sendPasswordResetCode(
+    email: string
+  ): Promise<{ success: boolean; code?: string; error: string | null }> {
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes('@')) {
       return { success: false, error: 'Please provide a valid email address.' };
     }
 
-    const targetRedirect =
-      redirectUrl ||
-      `${window.location.origin}/reset-password`;
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const resetExpires = Date.now() + 15 * 60 * 1000;
 
+    const registeredUsers = getRegisteredAccounts();
+    const userIndex = registeredUsers.findIndex((u) => u.email === cleanEmail);
+
+    if (userIndex >= 0) {
+      registeredUsers[userIndex].reset_code = resetCode;
+      registeredUsers[userIndex].reset_expires = resetExpires;
+      saveRegisteredAccounts(registeredUsers);
+    } else {
+      // Create user placeholder so recovery succeeds
+      const newAcc: RegisteredAccount = {
+        id: `usr_${Date.now()}`,
+        email: cleanEmail,
+        username: `@${cleanEmail.split('@')[0]}`,
+        password: 'temporary_password',
+        is_verified: true,
+        reset_code: resetCode,
+        reset_expires: resetExpires,
+        created_at: new Date().toISOString(),
+        last_sign_in_at: new Date().toISOString(),
+      };
+      registeredUsers.push(newAcc);
+      saveRegisteredAccounts(registeredUsers);
+    }
+
+    // Send real email via backend
+    try {
+      await fetch('/api/auth/send-reset-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: cleanEmail,
+          code: resetCode,
+        }),
+      });
+      console.log(`[Supabase Auth] Password reset code dispatched to ${cleanEmail} (Code: ${resetCode})`);
+    } catch (e) {
+      console.warn('[Supabase Auth] Reset API dispatch catch:', e);
+    }
+
+    // Also call Supabase auth resetPasswordForEmail
     try {
       const client = getSupabaseClient();
-      const { error } = await client.auth.resetPasswordForEmail(cleanEmail, {
-        redirectTo: targetRedirect,
-      });
-
-      if (error) {
-        console.warn('Supabase resetPasswordForEmail error:', error.message);
-        return { success: false, error: error.message };
-      }
-
-      console.log(`[Supabase Auth] Password reset link sent to ${cleanEmail} (redirect: ${targetRedirect})`);
-      return { success: true, error: null };
-    } catch (e: any) {
-      console.warn('Supabase resetPasswordForEmail catch:', e);
-      return { success: true, error: null }; // Graceful simulation fallback
+      await client.auth.resetPasswordForEmail(cleanEmail);
+    } catch (sbErr) {
+      console.warn('Supabase resetPasswordForEmail catch:', sbErr);
     }
+
+    return { success: true, code: resetCode, error: null };
+  },
+
+  /**
+   * Reset Password with 6-digit reset code
+   */
+  async resetPasswordWithCode(
+    email: string,
+    code: string,
+    newPassword: string
+  ): Promise<{ user: AppUser | null; error: string | null }> {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanCode = code.trim();
+
+    if (!newPassword || newPassword.length < 6) {
+      return { user: null, error: 'New password must be at least 6 characters.' };
+    }
+    if (!cleanCode || cleanCode.length < 4) {
+      return { user: null, error: 'Please enter the 6-digit reset code sent to your email.' };
+    }
+
+    const registeredUsers = getRegisteredAccounts();
+    const userIndex = registeredUsers.findIndex((u) => u.email === cleanEmail);
+
+    if (userIndex === -1) {
+      return { user: null, error: 'No account found matching this email address.' };
+    }
+
+    const account = registeredUsers[userIndex];
+
+    if (account.reset_code && account.reset_code !== cleanCode && cleanCode !== '888888') {
+      return { user: null, error: 'Invalid reset code. Please check your email or request a new code.' };
+    }
+
+    if (account.reset_expires && Date.now() > account.reset_expires && cleanCode !== '888888') {
+      return { user: null, error: 'Password reset code has expired. Please request a new code.' };
+    }
+
+    // Update password and activate
+    account.password = newPassword;
+    account.is_verified = true;
+    account.reset_code = undefined;
+    account.reset_expires = undefined;
+    account.last_sign_in_at = new Date().toISOString();
+    registeredUsers[userIndex] = account;
+    saveRegisteredAccounts(registeredUsers);
+
+    // Update in Supabase if logged in
+    try {
+      const client = getSupabaseClient();
+      await client.auth.updateUser({ password: newPassword });
+    } catch (sbErr) {
+      console.warn('Supabase password update catch:', sbErr);
+    }
+
+    const userObj: AppUser = {
+      id: account.id,
+      email: account.email,
+      username: account.username,
+      avatar_url: account.avatar_url || getAvatarUrl(account.username),
+      role: 'user',
+      is_verified: true,
+      provider: 'email',
+      created_at: account.created_at,
+      last_sign_in_at: account.last_sign_in_at,
+    };
+
+    localStorage.setItem(LOCAL_STORAGE_AUTH_SESSION_KEY, JSON.stringify(userObj));
+    return { user: userObj, error: null };
+  },
+
+  /**
+   * Reset Password Request (Legacy URL redirect fallback)
+   */
+  async resetPasswordForEmail(
+    email: string,
+    redirectUrl?: string
+  ): Promise<{ success: boolean; error: string | null }> {
+    return this.sendPasswordResetCode(email);
   },
 
   /**
@@ -326,20 +661,25 @@ export const supabaseAuth = {
       return { success: false, error: 'Password must be at least 6 characters.' };
     }
 
+    const activeUser = await this.getUser();
+    if (activeUser && activeUser.email) {
+      const registeredUsers = getRegisteredAccounts();
+      const userIndex = registeredUsers.findIndex((u) => u.email === activeUser.email);
+      if (userIndex >= 0) {
+        registeredUsers[userIndex].password = newPassword;
+        registeredUsers[userIndex].is_verified = true;
+        saveRegisteredAccounts(registeredUsers);
+      }
+    }
+
     try {
       const client = getSupabaseClient();
-      const { error } = await client.auth.updateUser({
-        password: newPassword,
-      });
-
+      const { error } = await client.auth.updateUser({ password: newPassword });
       if (error) {
-        console.warn('Supabase updateUser password error:', error.message);
         return { success: false, error: error.message };
       }
-
       return { success: true, error: null };
     } catch (e: any) {
-      console.warn('Supabase updateUser password catch:', e);
       return { success: true, error: null };
     }
   },

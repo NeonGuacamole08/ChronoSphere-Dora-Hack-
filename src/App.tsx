@@ -35,8 +35,8 @@ export default function App() {
   // 1. Capsule State (Loads all public worldwide capsules and user's pins)
   const [capsules, setCapsules] = useState<Capsule[]>([]);
 
-  // 2. Real Supabase Authentication State & Session Persistence
-  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
+  // 2. Real Supabase Authentication State & Session Persistence (Defaults to Guest Mode)
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(() => createGuestUser());
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup' | 'forgot_password'>('signin');
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
@@ -51,16 +51,19 @@ export default function App() {
     }
   };
 
-  // On App Initialization: Restore session if present, otherwise load public world pins
+  // On App Initialization: Check for existing verified session, otherwise ensure Guest Explorer mode
   useEffect(() => {
     const initSession = async () => {
       try {
         const u = await supabaseAuth.getUser();
-        if (u) {
+        if (u && !u.isGuest && u.is_verified) {
           setCurrentUser(u);
+        } else {
+          setCurrentUser(createGuestUser());
         }
       } catch (e) {
         console.warn('Init session check:', e);
+        setCurrentUser(createGuestUser());
       }
       // Always load public capsules so world map is interactive immediately
       loadUserCapsules();
@@ -486,7 +489,7 @@ export default function App() {
     } catch (e) {
       console.warn('handleSignOut error:', e);
     }
-    setCurrentUser(null);
+    setCurrentUser(createGuestUser());
     loadUserCapsules();
     setIsVaultOpen(false);
   };
@@ -542,28 +545,32 @@ export default function App() {
         isPlantingMode={isPlantingMode}
       />
 
-      {/* Guest Mode Active Floating Notice - Automatically disappears after 7 seconds */}
+      {/* Guest Mode Active Floating Notice - Slender, elegant pill design matching desktop */}
       {currentUser?.isGuest && showGuestBanner && (
-        <div className="absolute top-18 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-950/95 border border-amber-500/80 text-amber-200 text-xs shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 max-w-[95vw] whitespace-normal">
-          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-          <span className="leading-tight text-[11px] sm:text-xs">
-            <strong>Guest Mode:</strong> None of your data, pins, vaults, or shares will be saved.
-          </span>
-          <button
-            type="button"
-            onClick={() => handleOpenAuth('signup')}
-            className="ml-1 px-2.5 py-0.5 rounded-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-[10px] sm:text-[11px] transition shadow-xs cursor-pointer shrink-0"
-          >
-            Sign Up
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowGuestBanner(false)}
-            className="ml-0.5 p-1 rounded-full text-amber-400/70 hover:text-amber-200 transition cursor-pointer"
-            title="Dismiss notice"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
+        <div className="absolute top-14 sm:top-16 md:top-18 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 sm:gap-2.5 py-1 px-2.5 sm:px-3.5 rounded-full bg-[#140e06]/95 border border-amber-500/70 text-amber-100 text-[10.5px] sm:text-xs shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 max-w-[96vw] w-auto whitespace-nowrap">
+          <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="font-bold text-amber-300">Guest Mode:</span>
+            <span className="text-amber-100/90 sm:hidden">Pins won't be saved</span>
+            <span className="text-amber-100/90 hidden sm:inline">None of your data, pins, or vaults will be saved.</span>
+          </div>
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 pl-1 border-l border-amber-500/30">
+            <button
+              type="button"
+              onClick={() => handleOpenAuth('signup')}
+              className="px-2 sm:px-2.5 py-0.5 rounded-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-[10px] sm:text-[11px] transition shadow-xs cursor-pointer active:scale-95"
+            >
+              Sign Up
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowGuestBanner(false)}
+              className="p-0.5 rounded-full text-amber-400/70 hover:text-amber-100 transition cursor-pointer"
+              title="Dismiss notice"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
         </div>
       )}
 

@@ -176,6 +176,213 @@ app.all('/api/cron/check-unlocks', async (req, res) => {
 });
 
 /**
+ * Backend Endpoint /api/auth/send-confirmation
+ * Sends a 6-digit account activation confirmation email to the user
+ */
+app.post('/api/auth/send-confirmation', async (req, res) => {
+  try {
+    const { email, username, code } = req.body || {};
+
+    if (!email || !code) {
+      return res.status(400).json({ success: false, error: 'Email and code are required' });
+    }
+
+    const targetEmail = String(email).trim().toLowerCase();
+    const cleanUsername = String(username || targetEmail.split('@')[0]);
+    const resend = getResendClient();
+
+    console.log(`[Auth API] Sending confirmation code ${code} to ${targetEmail} for user ${cleanUsername}`);
+
+    const htmlContent = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0c1524; color: #f8fafc; padding: 40px 20px;">
+        <div style="max-width: 560px; margin: 0 auto; background-color: #152238; border: 2px solid #059669; border-radius: 16px; padding: 32px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7);">
+          <div style="display: inline-block; padding: 6px 14px; background: rgba(16,185,129,0.15); border: 1px solid #10b981; border-radius: 999px; color: #34d399; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 16px;">
+            🌍 TreasureFest Earth Identity
+          </div>
+          
+          <h2 style="font-size: 24px; color: #34d399; margin: 0 0 8px 0;">Activate Your Account</h2>
+          <p style="font-size: 14px; color: #94a3b8; margin: 0 0 24px 0;">
+            Hello <strong>${cleanUsername}</strong>, thank you for creating an account on TreasureFest! Please confirm your email address before your account starts working.
+          </p>
+
+          <div style="background-color: #0b111e; border: 2px dashed #10b981; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 24px;">
+            <span style="display: block; font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">
+              Your 6-Digit Verification Code
+            </span>
+            <div style="font-family: monospace; font-size: 36px; font-weight: bold; letter-spacing: 0.25em; color: #34d399; padding: 6px 0;">
+              ${code}
+            </div>
+            <span style="display: block; font-size: 11px; color: #64748b; margin-top: 8px;">
+              This code will expire in 15 minutes.
+            </span>
+          </div>
+
+          <p style="font-size: 13px; color: #cbd5e1; line-height: 1.6; margin: 0 0 20px 0;">
+            Enter this confirmation code in the TreasureFest window to unlock permanent memory vault storage, 3D global pin placement, and encrypted secret letters.
+          </p>
+
+          <div style="border-top: 1px solid #1e293b; padding-top: 16px; font-size: 11px; color: #64748b;">
+            <p style="margin: 0;">If you did not request this account, you can safely ignore this email.</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // 1. Send via Resend if available
+    let resendSent = false;
+    if (resend) {
+      try {
+        await resend.emails.send({
+          from: 'TreasureFest Security <verify@chronospheres.io>',
+          to: targetEmail,
+          subject: `✨ [TreasureFest] Your Activation Code is ${code}`,
+          html: htmlContent,
+        });
+        resendSent = true;
+        console.log(`[Auth API] Resend confirmation email sent to ${targetEmail}`);
+      } catch (mailErr: any) {
+        console.warn(`[Auth API] Resend email warning:`, mailErr?.message);
+      }
+    }
+
+    // 2. Also send via FormSubmit transporter for guaranteed zero-config delivery
+    try {
+      await fetch(`https://formsubmit.co/ajax/${targetEmail}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          _subject: `✨ [TreasureFest] Account Activation Code: ${code}`,
+          _template: 'table',
+          Action: 'Account Confirmation Required',
+          Username: cleanUsername,
+          Confirmation_Code: code,
+          Instructions: 'Enter this 6-digit code on the TreasureFest verification screen to start using your account.',
+          Expires: 'In 15 minutes',
+        }),
+      });
+      console.log(`[Auth API] FormSubmit confirmation dispatched to ${targetEmail}`);
+    } catch (fsErr: any) {
+      console.warn(`[Auth API] FormSubmit notice:`, fsErr?.message);
+    }
+
+    return res.json({
+      success: true,
+      message: `Confirmation email dispatched to ${targetEmail}`,
+      code,
+      resendSent,
+    });
+  } catch (err: any) {
+    console.error('[Auth API Error]:', err);
+    return res.status(500).json({
+      success: false,
+      error: err.message || 'Failed to send confirmation email',
+    });
+  }
+});
+
+/**
+ * Backend Endpoint /api/auth/send-reset-code
+ * Sends a 6-digit password recovery code to the user's email
+ */
+app.post('/api/auth/send-reset-code', async (req, res) => {
+  try {
+    const { email, code } = req.body || {};
+
+    if (!email || !code) {
+      return res.status(400).json({ success: false, error: 'Email and reset code are required' });
+    }
+
+    const targetEmail = String(email).trim().toLowerCase();
+    const resend = getResendClient();
+
+    console.log(`[Auth API] Sending password reset code ${code} to ${targetEmail}`);
+
+    const htmlContent = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0c1524; color: #f8fafc; padding: 40px 20px;">
+        <div style="max-width: 560px; margin: 0 auto; background-color: #152238; border: 2px solid #d97706; border-radius: 16px; padding: 32px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7);">
+          <div style="display: inline-block; padding: 6px 14px; background: rgba(245,158,11,0.15); border: 1px solid #f59e0b; border-radius: 999px; color: #fbbf24; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 16px;">
+            🔑 TreasureFest Security
+          </div>
+          
+          <h2 style="font-size: 24px; color: #fbbf24; margin: 0 0 8px 0;">Reset Your Password</h2>
+          <p style="font-size: 14px; color: #94a3b8; margin: 0 0 24px 0;">
+            We received a request to reset the password for your TreasureFest account (<strong style="color: #cbd5e1;">${targetEmail}</strong>).
+          </p>
+
+          <div style="background-color: #0b111e; border: 2px dashed #f59e0b; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 24px;">
+            <span style="display: block; font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">
+              Your 6-Digit Password Reset Code
+            </span>
+            <div style="font-family: monospace; font-size: 36px; font-weight: bold; letter-spacing: 0.25em; color: #fbbf24; padding: 6px 0;">
+              ${code}
+            </div>
+            <span style="display: block; font-size: 11px; color: #64748b; margin-top: 8px;">
+              Valid for 15 minutes.
+            </span>
+          </div>
+
+          <p style="font-size: 13px; color: #cbd5e1; line-height: 1.6; margin: 0 0 20px 0;">
+            Enter this code on the Password Reset screen in TreasureFest to set a new password and recover your memory vaults.
+          </p>
+
+          <div style="border-top: 1px solid #1e293b; padding-top: 16px; font-size: 11px; color: #64748b;">
+            <p style="margin: 0;">If you did not request a password reset, please change your security settings immediately.</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    if (resend) {
+      try {
+        await resend.emails.send({
+          from: 'TreasureFest Security <security@chronospheres.io>',
+          to: targetEmail,
+          subject: `🔑 [TreasureFest] Your Password Reset Code is ${code}`,
+          html: htmlContent,
+        });
+      } catch (err: any) {
+        console.warn('[Auth API] Resend reset warning:', err?.message);
+      }
+    }
+
+    try {
+      await fetch(`https://formsubmit.co/ajax/${targetEmail}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          _subject: `🔑 [TreasureFest] Password Reset Code: ${code}`,
+          _template: 'table',
+          Action: 'Password Reset Request',
+          Target_Email: targetEmail,
+          Reset_Code: code,
+          Expires: 'In 15 minutes',
+        }),
+      });
+    } catch (fsErr: any) {
+      console.warn('[Auth API] FormSubmit reset notice:', fsErr?.message);
+    }
+
+    return res.json({
+      success: true,
+      message: `Password reset code dispatched to ${targetEmail}`,
+      code,
+    });
+  } catch (err: any) {
+    console.error('[Auth API Reset Error]:', err);
+    return res.status(500).json({
+      success: false,
+      error: err.message || 'Failed to send reset code',
+    });
+  }
+});
+
+/**
  * Backend Endpoint /api/send-recommendation
  * Receives mandatory guest recommendation & feedback after first pin placement
  * Sends structured email directly to masiala.felicia@gmail.com

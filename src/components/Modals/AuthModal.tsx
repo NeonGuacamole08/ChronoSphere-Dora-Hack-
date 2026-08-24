@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Lock,
@@ -10,6 +10,10 @@ import {
   ArrowRight,
   Compass,
   AlertTriangle,
+  RotateCcw,
+  Sparkles,
+  KeyRound,
+  Inbox,
 } from 'lucide-react';
 import { supabaseAuth, AppUser } from '../../utils/supabase';
 
@@ -32,71 +36,185 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onContinueAsGuest,
   initialMode = 'signin',
 }) => {
-  const [mode, setMode] = useState<'signin' | 'signup' | 'profile' | 'forgot_password'>(
-    currentUser ? 'profile' : initialMode
-  );
+  const [mode, setMode] = useState<
+    'signin' | 'signup' | 'verify_email' | 'forgot_password' | 'reset_password_code' | 'profile'
+  >(currentUser && !currentUser.isGuest ? 'profile' : initialMode);
 
+  // Form Fields
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [lastDispatchedCode, setLastDispatchedCode] = useState<string | null>(null);
+
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (currentUser && !currentUser.isGuest) {
+      setMode('profile');
+    } else {
+      setMode(initialMode);
+    }
+    setErrorMsg(null);
+    setSuccessMsg(null);
+  }, [isOpen, currentUser, initialMode]);
+
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   if (!isOpen) return null;
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
+  // 1. Handle Sign Up -> Triggers real confirmation email with 6-digit code
+  const handleSignUpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
     setIsLoading(true);
 
-    const res = await supabaseAuth.resetPasswordForEmail(
-      email,
-      `${window.location.origin}/reset-password`
-    );
+    const res = await supabaseAuth.signUp(email, password, username);
+    setIsLoading(false);
+
+    if (res.error) {
+      setErrorMsg(res.error);
+    } else if (res.pendingVerification) {
+      setLastDispatchedCode(res.code || null);
+      setSuccessMsg(
+        `Confirmation email dispatched to ${res.email}! Please enter the 6-digit code below to activate your account.`
+      );
+      setResendCooldown(30);
+      setMode('verify_email');
+    } else if (res.user) {
+      setSuccessMsg(`Welcome ${res.user.username}! Account created and verified.`);
+      onAuthSuccess(res.user);
+      setTimeout(() => {
+        onClose();
+      }, 1500);
+    }
+  };
+
+  // 2. Handle Confirm Email Code -> Activates account
+  const handleVerifyEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    setIsLoading(true);
+
+    const res = await supabaseAuth.verifyEmailCode(email, verificationCode);
+    setIsLoading(false);
+
+    if (res.error) {
+      setErrorMsg(res.error);
+    } else if (res.user) {
+      setSuccessMsg(`🎉 Account verified & activated! Welcome, ${res.user.username}.`);
+      onAuthSuccess(res.user);
+      setTimeout(() => {
+        onClose();
+      }, 1400);
+    }
+  };
+
+  // 3. Handle Resend Confirmation Code
+  const handleResendCode = async () => {
+    if (resendCooldown > 0 || !email) return;
+    setIsLoading(true);
+    setErrorMsg(null);
+
+    const res = await supabaseAuth.resendVerificationCode(email);
     setIsLoading(false);
 
     if (res.error) {
       setErrorMsg(res.error);
     } else {
-      setSuccessMsg(`A password reset link has been dispatched to ${email}. Check your inbox or spam folder.`);
+      if (res.code) setLastDispatchedCode(res.code);
+      setSuccessMsg(`A fresh 6-digit confirmation code has been dispatched to ${email}.`);
+      setResendCooldown(30);
     }
   };
 
-  const handleEmailAuth = async (e: React.FormEvent) => {
+  // 4. Handle Sign In -> If unverified, prompts for verification code
+  const handleSignInSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
     setIsLoading(true);
 
-    if (mode === 'signup') {
-      const res = await supabaseAuth.signUp(email, password, username);
-      setIsLoading(false);
-      if (res.error) {
-        setErrorMsg(res.error);
-      } else if (res.user) {
-        setSuccessMsg(`Welcome ${res.user.username}! Account created and authenticated.`);
-        onAuthSuccess(res.user);
-        setTimeout(() => {
-          onClose();
-        }, 1500);
-      }
-    } else {
-      const res = await supabaseAuth.signInWithPassword(email, password);
-      setIsLoading(false);
-      if (res.error) {
-        setErrorMsg(res.error);
-      } else if (res.user) {
-        setSuccessMsg(`Signed in as ${res.user.username}! Welcome back.`);
-        onAuthSuccess(res.user);
-        setTimeout(() => {
-          onClose();
-        }, 1200);
-      }
+    const res = await supabaseAuth.signInWithPassword(email, password);
+    setIsLoading(false);
+
+    if (res.requiresVerification) {
+      setLastDispatchedCode(res.code || null);
+      setErrorMsg(res.error || 'Your email address is not verified yet.');
+      setMode('verify_email');
+      setResendCooldown(30);
+    } else if (res.error) {
+      setErrorMsg(res.error);
+    } else if (res.user) {
+      setSuccessMsg(`Signed in as ${res.user.username}! Welcome back.`);
+      onAuthSuccess(res.user);
+      setTimeout(() => {
+        onClose();
+      }, 1200);
     }
   };
 
+  // 5. Handle Forgot Password (Send Reset Code)
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    setIsLoading(true);
+
+    const res = await supabaseAuth.sendPasswordResetCode(email);
+    setIsLoading(false);
+
+    if (res.error) {
+      setErrorMsg(res.error);
+    } else {
+      if (res.code) setLastDispatchedCode(res.code);
+      setSuccessMsg(`A 6-digit password reset code has been sent to ${email}. Enter it below to set a new password.`);
+      setMode('reset_password_code');
+      setResendCooldown(30);
+    }
+  };
+
+  // 6. Handle Reset Password with Code
+  const handleResetPasswordWithCodeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    if (newPassword !== confirmPassword) {
+      setErrorMsg('Passwords do not match. Please verify both fields.');
+      return;
+    }
+
+    setIsLoading(true);
+    const res = await supabaseAuth.resetPasswordWithCode(email, verificationCode, newPassword);
+    setIsLoading(false);
+
+    if (res.error) {
+      setErrorMsg(res.error);
+    } else if (res.user) {
+      setSuccessMsg('🎉 Password successfully reset and account activated! Welcome back.');
+      onAuthSuccess(res.user);
+      setTimeout(() => {
+        onClose();
+      }, 1500);
+    }
+  };
+
+  // 7. Sign Out
   const handleSignOutClick = async () => {
     await supabaseAuth.signOut();
     onSignOut();
@@ -104,10 +222,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md flex flex-col rounded-2xl parchment-card border-2 border-amber-800/40 shadow-2xl overflow-hidden">
-        {/* Header */}
-        <div className="tree-bark-banner px-6 py-4 flex items-center justify-between text-amber-50 shadow-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto">
+      <div className="relative w-full max-w-md my-auto flex flex-col rounded-2xl parchment-card border-2 border-amber-800/40 shadow-2xl overflow-hidden">
+        {/* Header Banner */}
+        <div className="tree-bark-banner px-5 py-4 flex items-center justify-between text-amber-50 shadow-md">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-cyan-500 to-emerald-500 p-0.5 shadow-[0_0_15px_rgba(6,182,212,0.5)] shrink-0 flex items-center justify-center">
               <div className="w-full h-full rounded-full bg-[#0c1626] flex items-center justify-center">
@@ -115,13 +233,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
             </div>
             <div>
-              <h3 className="font-serif font-bold text-lg text-white leading-tight">
-                {currentUser && mode === 'profile'
-                  ? 'Authenticated User Profile'
-                  : 'Supabase Authentication'}
+              <h3 className="font-serif font-bold text-base sm:text-lg text-white leading-tight">
+                {mode === 'profile'
+                  ? 'Authenticated Explorer'
+                  : mode === 'verify_email'
+                  ? 'Email Confirmation'
+                  : mode === 'forgot_password' || mode === 'reset_password_code'
+                  ? 'Password Recovery'
+                  : mode === 'signup'
+                  ? 'Create Explorer Account'
+                  : 'Explorer Sign In'}
               </h3>
-              <p className="text-xs text-amber-200/80">
-                Secure Cryptographic Earth Identity
+              <p className="text-[11px] sm:text-xs text-amber-200/80">
+                TreasureFest Secure Earth Identity
               </p>
             </div>
           </div>
@@ -129,13 +253,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <button
             onClick={onClose}
             className="p-1.5 rounded-full hover:bg-amber-950/60 text-amber-200 hover:text-white transition cursor-pointer"
+            title="Close"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Tab switcher for unauthenticated users: ONLY Sign In & Create Account */}
-        {!currentUser && (
+        {/* Tab Switcher for Unauthenticated States */}
+        {(!currentUser || currentUser.isGuest) && (mode === 'signin' || mode === 'signup') && (
           <div className="flex border-b border-amber-200/80 bg-amber-50/90 px-4 pt-2.5 gap-2 text-xs font-bold">
             <button
               onClick={() => {
@@ -169,25 +294,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         )}
 
         {/* Modal Body */}
-        <div className="p-6 space-y-4">
-          {/* Status Messages */}
+        <div className="p-5 sm:p-6 space-y-4">
+          {/* Status Notifications */}
           {errorMsg && (
-            <div className="p-3 rounded-xl bg-rose-50 border border-rose-300 text-rose-900 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-              <span>{errorMsg}</span>
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-300 text-rose-900 text-xs flex items-start gap-2 shadow-xs">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <div className="leading-snug">{errorMsg}</div>
             </div>
           )}
 
           {successMsg && (
-            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs flex items-center gap-2 animate-in fade-in">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>{successMsg}</span>
+            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs flex items-start gap-2 animate-in fade-in shadow-xs">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <div className="leading-snug">{successMsg}</div>
             </div>
           )}
 
-          {/* VIEW SWITCHER */}
-          {currentUser && mode === 'profile' ? (
-            /* ACTIVE LOGGED-IN PROFILE VIEW */
+          {/* VIEW 1: AUTHENTICATED PROFILE */}
+          {mode === 'profile' && currentUser && !currentUser.isGuest ? (
             <div className="space-y-4">
               <div className="p-4 rounded-2xl bg-white border border-amber-300/80 shadow-sm flex items-center gap-3">
                 <img
@@ -200,27 +324,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     <h4 className="font-bold text-stone-900 text-base truncate">
                       {currentUser.username}
                     </h4>
-                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 uppercase">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 uppercase flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                       Verified
                     </span>
                   </div>
-                  <p className="text-xs text-stone-600 truncate mt-0.5">
+                  <p className="text-xs text-stone-600 truncate mt-0.5 font-medium">
                     {currentUser.email}
                   </p>
                   <p className="text-[10px] font-mono text-stone-500 mt-1">
-                    Provider: {currentUser.provider === 'google' ? 'Google OAuth' : 'Supabase Email Auth'}
+                    Account Type: Permanent Verified Vault
                   </p>
                 </div>
               </div>
 
-              {/* Security confirmation notice */}
               <div className="p-3 bg-cyan-50 rounded-xl border border-cyan-200 text-xs text-cyan-950 space-y-1">
-                <div className="font-bold flex items-center gap-1.5">
+                <div className="font-bold flex items-center gap-1.5 text-cyan-900">
                   <ShieldCheck className="w-4 h-4 text-cyan-600" />
-                  Cryptographic Session Secured
+                  Your Account Is Fully Active & Secured
                 </div>
-                <p className="text-[11px] text-cyan-900 leading-relaxed">
-                  Only your account possesses decryption privileges for your planted private memory tokens. Automated confirmation notifications are sent on active sign-ins.
+                <p className="text-[11px] text-cyan-900/90 leading-relaxed">
+                  All memory vaults, photos, voice recordings, and planted pins are permanently preserved under your verified email.
                 </p>
               </div>
 
@@ -234,14 +358,99 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </button>
               </div>
             </div>
-          ) : mode === 'forgot_password' ? (
-            /* FORGOT PASSWORD FORM */
+          ) : mode === 'verify_email' ? (
+            /* VIEW 2: EMAIL CONFIRMATION CODE (MANDATORY BEFORE ACCOUNT STARTS WORKING) */
             <div className="space-y-4">
-              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-stone-700 leading-relaxed">
-                Enter your account email below. We'll dispatch a cryptographic password recovery link via Supabase Auth.
+              <div className="p-3.5 bg-gradient-to-br from-emerald-950 to-[#0c1e18] text-emerald-100 rounded-xl border border-emerald-500/60 shadow-inner space-y-2">
+                <div className="flex items-center gap-2 text-emerald-300 font-bold text-xs">
+                  <Inbox className="w-4 h-4 text-emerald-400" />
+                  Confirmation Email Sent to Your Inbox
+                </div>
+                <p className="text-[11px] text-emerald-100/90 leading-relaxed">
+                  We sent a 6-digit confirmation code to <strong className="text-emerald-300 font-mono">{email}</strong>. Please enter the code below before your account starts working.
+                </p>
               </div>
 
-              <form onSubmit={handleForgotPassword} className="space-y-3">
+              <form onSubmit={handleVerifyEmailSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-stone-800 mb-1.5 text-center">
+                    Enter 6-Digit Confirmation Code
+                  </label>
+                  <div className="relative max-w-[240px] mx-auto">
+                    <input
+                      type="text"
+                      required
+                      maxLength={6}
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                      placeholder="• • • • • •"
+                      className="w-full text-center font-mono text-2xl font-bold tracking-[0.3em] py-2.5 px-3 rounded-xl bg-white border-2 border-emerald-600 text-emerald-950 shadow-inner focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading || verificationCode.length < 4}
+                  className="w-full py-3 px-4 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-emerald-100 font-bold text-xs flex items-center justify-center gap-2 transition shadow-md cursor-pointer disabled:opacity-50"
+                >
+                  {isLoading ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 text-emerald-300" />
+                      <span>Confirm & Activate Account</span>
+                    </>
+                  )}
+                </button>
+              </form>
+
+              {/* Resend code & fallback helper */}
+              <div className="pt-2 border-t border-amber-200/80 flex flex-col items-center gap-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-stone-600 text-[11px]">Didn't get the code?</span>
+                  <button
+                    type="button"
+                    onClick={handleResendCode}
+                    disabled={resendCooldown > 0 || isLoading}
+                    className="font-bold text-emerald-800 hover:text-emerald-950 underline disabled:opacity-50 cursor-pointer flex items-center gap-1 text-[11px]"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend Confirmation Email'}
+                  </button>
+                </div>
+
+                {lastDispatchedCode && (
+                  <button
+                    type="button"
+                    onClick={() => setVerificationCode(lastDispatchedCode)}
+                    className="text-[10px] text-stone-500 hover:text-stone-800 bg-amber-100/70 hover:bg-amber-200/80 px-2.5 py-1 rounded-full border border-amber-300 transition cursor-pointer"
+                  >
+                    Instant Auto-Fill Code: <strong>{lastDispatchedCode}</strong>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode('signup');
+                    setErrorMsg(null);
+                    setSuccessMsg(null);
+                  }}
+                  className="text-[11px] font-medium text-stone-600 hover:text-stone-900 underline mt-1 cursor-pointer"
+                >
+                  ← Edit Account Details / Try Another Email
+                </button>
+              </div>
+            </div>
+          ) : mode === 'forgot_password' ? (
+            /* VIEW 3: FORGOT PASSWORD (REQUEST RESET CODE) */
+            <div className="space-y-4">
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-stone-700 leading-relaxed">
+                Enter your account email below. We'll send a 6-digit password recovery code to your inbox.
+              </div>
+
+              <form onSubmit={handleForgotPasswordSubmit} className="space-y-3">
                 <div>
                   <label className="block text-xs font-bold text-stone-800 mb-1">
                     Your Account Email
@@ -254,7 +463,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="explorer@earth.org"
-                      className="w-full text-xs pl-9 pr-3 py-2 rounded-xl bg-white border border-amber-300 text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full text-xs pl-9 pr-3 py-2.5 rounded-xl bg-white border border-amber-300 text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
                 </div>
@@ -268,7 +477,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>
-                      <span>Dispatch Reset Link</span>
+                      <span>Send Recovery Code</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
@@ -289,10 +498,96 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </div>
               </form>
             </div>
-          ) : (
-            /* SIGN IN / SIGN UP FORM */
+          ) : mode === 'reset_password_code' ? (
+            /* VIEW 4: ENTER RESET CODE & SET NEW PASSWORD */
             <div className="space-y-4">
-              <form onSubmit={handleEmailAuth} className="space-y-3">
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-stone-700 leading-relaxed">
+                Enter the 6-digit code sent to <strong className="text-stone-900 font-mono">{email}</strong> along with your new password.
+              </div>
+
+              <form onSubmit={handleResetPasswordWithCodeSubmit} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-stone-800 mb-1 text-center">
+                    6-Digit Reset Code
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="• • • • • •"
+                    className="w-full text-center font-mono text-xl font-bold tracking-[0.25em] py-2 px-3 rounded-xl bg-white border border-amber-300 text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  {lastDispatchedCode && (
+                    <div className="text-center mt-1">
+                      <button
+                        type="button"
+                        onClick={() => setVerificationCode(lastDispatchedCode)}
+                        className="text-[10px] text-stone-500 underline cursor-pointer"
+                      >
+                        Auto-fill code: {lastDispatchedCode}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-stone-800 mb-1">
+                    New Password (min 6 characters)
+                  </label>
+                  <div className="relative">
+                    <KeyRound className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
+                    <input
+                      type="password"
+                      required
+                      minLength={6}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full text-xs pl-9 pr-3 py-2 rounded-xl bg-white border border-amber-300 text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-stone-800 mb-1">
+                    Confirm New Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
+                    <input
+                      type="password"
+                      required
+                      minLength={6}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full text-xs pl-9 pr-3 py-2 rounded-xl bg-white border border-amber-300 text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-emerald-100 font-bold text-xs flex items-center justify-center gap-2 transition shadow-md cursor-pointer disabled:opacity-50 mt-3"
+                >
+                  {isLoading ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <span>Save New Password & Sign In</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+          ) : (
+            /* VIEW 5: SIGN IN / SIGN UP FORM */
+            <div className="space-y-4">
+              <form onSubmit={mode === 'signup' ? handleSignUpSubmit : handleSignInSubmit} className="space-y-3">
                 {mode === 'signup' && (
                   <div>
                     <label className="block text-xs font-bold text-stone-800 mb-1">
@@ -371,7 +666,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>
-                      <span>{mode === 'signup' ? 'Create Supabase Account' : 'Sign In'}</span>
+                      <span>{mode === 'signup' ? 'Create Account & Send Verification Email' : 'Sign In'}</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
@@ -395,7 +690,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       Guest Mode: None of your data, pins, vaults, or shares will be saved.
                     </span>
                     <span className="text-amber-800 text-[10px]">
-                      You can explore the global map, test creating temporary pins, and view public time capsules.
+                      Create an account above to permanently save pins, encrypt photos, and keep voice recordings.
                     </span>
                   </div>
                 </div>
