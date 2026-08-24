@@ -21,11 +21,12 @@ import { HelpModal } from './components/Modals/HelpModal';
 import { WelcomeGuideModal } from './components/Modals/WelcomeGuideModal';
 import { AuthModal } from './components/Modals/AuthModal';
 import { ResetPasswordModal } from './components/Modals/ResetPasswordModal';
+import { GuestRecommendationModal } from './components/Modals/GuestRecommendationModal';
 import { fetchCountryDetails, getCountryCodeFromCoordinates } from './utils/countries';
 import { GeocodingResult } from './utils/mapbox';
 import { ambientSound } from './utils/audio';
 import { supabaseAuth, capsulesDb, AppUser, createGuestUser } from './utils/supabase';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, X } from 'lucide-react';
 
 const STORAGE_KEY = 'chronospheres_capsules_v8';
 const LEGACY_STORAGE_KEY = 'chronospheres_dao_capsules_v7';
@@ -177,6 +178,32 @@ export default function App() {
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [isWelcomeGuideOpen, setIsWelcomeGuideOpen] = useState(false);
   const [isBackendHubOpen, setIsBackendHubOpen] = useState(false);
+
+  // Floating Guest Warning Banner State with 7-second auto-dismiss
+  const [showGuestBanner, setShowGuestBanner] = useState(false);
+
+  useEffect(() => {
+    if (currentUser?.isGuest) {
+      setShowGuestBanner(true);
+      const timer = setTimeout(() => {
+        setShowGuestBanner(false);
+      }, 7000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowGuestBanner(false);
+    }
+  }, [currentUser?.isGuest, currentUser?.id]);
+
+  // Mandatory Guest Recommendation Modal (triggers on guest's 1st pin placement)
+  const [isGuestRecommendationOpen, setIsGuestRecommendationOpen] = useState(false);
+  const [guestFirstPlantedCapsule, setGuestFirstPlantedCapsule] = useState<Capsule | null>(null);
+  const [hasCompletedGuestFeedback, setHasCompletedGuestFeedback] = useState<boolean>(() => {
+    try {
+      return Boolean(localStorage.getItem('treasurefest_guest_recommendation_completed'));
+    } catch {
+      return false;
+    }
+  });
 
   // Filtered capsules accounting for search query and excluding in-progress drafts from globe view
   const filteredCapsules = useMemo(() => {
@@ -350,10 +377,33 @@ export default function App() {
   // Complete burial sequence & settle camera on placed pin
   const handleBurialAnimationComplete = () => {
     if (buryingCapsule) {
+      const isGuest = Boolean(
+        currentUser?.isGuest ||
+        currentUser?.role === 'guest' ||
+        buryingCapsule.creator_username.toLowerCase().includes('guest') ||
+        buryingCapsule.id.startsWith('guest_')
+      );
+
       setCapsules((prev) => [buryingCapsule, ...prev]);
-      setSelectedCapsule(buryingCapsule);
-      setIsCapsuleModalOpen(true);
+
+      // If guest and hasn't yet submitted mandatory recommendation review
+      if (isGuest && !hasCompletedGuestFeedback) {
+        setGuestFirstPlantedCapsule(buryingCapsule);
+        setIsGuestRecommendationOpen(true);
+      } else {
+        setSelectedCapsule(buryingCapsule);
+        setIsCapsuleModalOpen(true);
+      }
       setBuryingCapsule(null);
+    }
+  };
+
+  const handleCloseGuestRecommendation = () => {
+    setIsGuestRecommendationOpen(false);
+    setHasCompletedGuestFeedback(true);
+    if (guestFirstPlantedCapsule) {
+      setSelectedCapsule(guestFirstPlantedCapsule);
+      setIsCapsuleModalOpen(true);
     }
   };
 
@@ -492,8 +542,8 @@ export default function App() {
         isPlantingMode={isPlantingMode}
       />
 
-      {/* Guest Mode Active Floating Notice */}
-      {currentUser?.isGuest && (
+      {/* Guest Mode Active Floating Notice - Automatically disappears after 7 seconds */}
+      {currentUser?.isGuest && showGuestBanner && (
         <div className="absolute top-18 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-950/95 border border-amber-500/80 text-amber-200 text-xs shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 max-w-[95vw] whitespace-normal">
           <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
           <span className="leading-tight text-[11px] sm:text-xs">
@@ -505,6 +555,14 @@ export default function App() {
             className="ml-1 px-2.5 py-0.5 rounded-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-[10px] sm:text-[11px] transition shadow-xs cursor-pointer shrink-0"
           >
             Sign Up
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowGuestBanner(false)}
+            className="ml-0.5 p-1 rounded-full text-amber-400/70 hover:text-amber-200 transition cursor-pointer"
+            title="Dismiss notice"
+          >
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
@@ -675,6 +733,14 @@ export default function App() {
         onClose={() => setIsBackendHubOpen(false)}
         capsules={capsules}
         onTriggerNotificationScan={handleTriggerNotificationScan}
+      />
+
+      {/* 16. Mandatory Guest Recommendation & Review Modal (Post 1st-Pin Burial) */}
+      <GuestRecommendationModal
+        isOpen={isGuestRecommendationOpen}
+        onClose={handleCloseGuestRecommendation}
+        capsuleJustPlanted={guestFirstPlantedCapsule}
+        onOpenSignUp={() => handleOpenAuth('signup')}
       />
     </div>
   );

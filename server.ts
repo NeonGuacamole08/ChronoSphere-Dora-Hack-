@@ -175,6 +175,164 @@ app.all('/api/cron/check-unlocks', async (req, res) => {
   }
 });
 
+/**
+ * Backend Endpoint /api/send-recommendation
+ * Receives mandatory guest recommendation & feedback after first pin placement
+ * Sends structured email directly to masiala.felicia@gmail.com
+ */
+app.post('/api/send-recommendation', async (req, res) => {
+  try {
+    const {
+      rating,
+      npsScore,
+      favoriteFeatures,
+      feedback,
+      willSignUp,
+      guestName,
+      guestEmail,
+      pinTitle,
+      pinLocation,
+      submittedAt,
+    } = req.body || {};
+
+    const targetEmail = 'masiala.felicia@gmail.com';
+    const timestamp = submittedAt || new Date().toISOString();
+    const resend = getResendClient();
+
+    console.log(`[Recommendation API] Received feedback from Guest "${guestName || 'Explorer'}" for pin "${pinTitle || 'First Pin'}"`);
+
+    const starsDisplay = '⭐'.repeat(Math.max(1, Math.min(5, Number(rating) || 5)));
+    const featuresList = Array.isArray(favoriteFeatures) && favoriteFeatures.length > 0
+      ? favoriteFeatures.map((f: string) => `<li>${f}</li>`).join('')
+      : '<li>No specific features selected</li>';
+
+    const htmlContent = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0d1520; color: #f8fafc; padding: 40px 20px;">
+        <div style="max-width: 620px; margin: 0 auto; background-color: #162235; border: 2px solid #d97706; border-radius: 16px; padding: 32px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7);">
+          <div style="display: inline-block; padding: 6px 14px; background: rgba(245,158,11,0.15); border: 1px solid #f59e0b; border-radius: 999px; color: #fbbf24; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 16px;">
+            🌟 New Guest Recommendation & Rating
+          </div>
+          
+          <h2 style="font-size: 24px; color: #fbbf24; margin: 0 0 8px 0;">TreasureFest Guest Feedback</h2>
+          <p style="font-size: 14px; color: #94a3b8; margin: 0 0 24px 0;">
+            A guest explorer just planted their first time capsule and completed the mandatory recommendation form.
+          </p>
+
+          <div style="background-color: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px solid #1e293b; padding-bottom: 12px;">
+              <span style="font-size: 14px; color: #94a3b8;"><strong>App Rating:</strong></span>
+              <span style="font-size: 16px; color: #fbbf24; font-weight: bold;">${starsDisplay} (${rating || 5}/5)</span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px solid #1e293b; padding-bottom: 12px;">
+              <span style="font-size: 14px; color: #94a3b8;"><strong>Recommend to Friends (NPS):</strong></span>
+              <span style="font-size: 15px; color: #34d399; font-weight: bold;">${npsScore || 10}/10</span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px solid #1e293b; padding-bottom: 12px;">
+              <span style="font-size: 14px; color: #94a3b8;"><strong>Will Create Account:</strong></span>
+              <span style="font-size: 14px; color: #60a5fa; font-weight: bold;">${willSignUp || 'Interested'}</span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px solid #1e293b; padding-bottom: 12px;">
+              <span style="font-size: 14px; color: #94a3b8;"><strong>First Pin Title:</strong></span>
+              <span style="font-size: 14px; color: #f1f5f9;">${pinTitle || 'First Memory Capsule'}</span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span style="font-size: 14px; color: #94a3b8;"><strong>Planted Location:</strong></span>
+              <span style="font-size: 14px; color: #f1f5f9;">${pinLocation || 'Global Coordinates'}</span>
+            </div>
+          </div>
+
+          <div style="background-color: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+            <h4 style="font-size: 14px; color: #fbbf24; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.05em;">
+              Favorite Features Selected:
+            </h4>
+            <ul style="margin: 0; padding-left: 20px; color: #cbd5e1; font-size: 13px; line-height: 1.6;">
+              ${featuresList}
+            </ul>
+          </div>
+
+          <div style="background-color: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+            <h4 style="font-size: 14px; color: #fbbf24; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.05em;">
+              Detailed User Feedback & Suggestions:
+            </h4>
+            <p style="margin: 0; font-size: 14px; color: #f8fafc; line-height: 1.6; white-space: pre-wrap; font-style: italic; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px;">
+              "${feedback || 'No written comments provided.'}"
+            </p>
+          </div>
+
+          <div style="border-top: 1px solid #1e293b; padding-top: 16px; font-size: 12px; color: #64748b;">
+            <p style="margin: 4px 0;"><strong>Guest Name / Handle:</strong> ${guestName || 'Anonymous Guest'}</p>
+            <p style="margin: 4px 0;"><strong>Guest Email:</strong> ${guestEmail || 'Not provided'}</p>
+            <p style="margin: 4px 0;"><strong>Submission Time:</strong> ${new Date(timestamp).toLocaleString()}</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // 1. Attempt delivery via Resend if configured
+    let resendSent = false;
+    if (resend) {
+      try {
+        await resend.emails.send({
+          from: 'TreasureFest Feedback <feedback@chronospheres.io>',
+          to: targetEmail,
+          subject: `🌟 [TreasureFest Guest Rating ${rating}/5] from ${guestName || 'Guest Explorer'}`,
+          html: htmlContent,
+        });
+        resendSent = true;
+        console.log(`[Recommendation API] Resend email sent to ${targetEmail}`);
+      } catch (mailErr: any) {
+        console.warn(`[Recommendation API] Resend email warning:`, mailErr?.message);
+      }
+    }
+
+    // 2. Also forward to FormSubmit as a zero-config guaranteed email transporter
+    try {
+      await fetch(`https://formsubmit.co/ajax/${targetEmail}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          _subject: `🌟 [TreasureFest Guest Rating ${rating}/5] from ${guestName || 'Guest Explorer'}`,
+          _template: 'table',
+          Rating: `${rating} / 5 stars`,
+          NPS_Recommendation_Score: `${npsScore} / 10`,
+          Favorite_Features: Array.isArray(favoriteFeatures) ? favoriteFeatures.join(', ') : favoriteFeatures,
+          User_Feedback: feedback || 'No comments',
+          Will_Sign_Up: willSignUp,
+          First_Pin_Title: pinTitle,
+          Pin_Location: pinLocation,
+          Guest_Name: guestName || 'Guest Explorer',
+          Guest_Email: guestEmail || 'None',
+          Timestamp: new Date(timestamp).toISOString(),
+        }),
+      });
+      console.log(`[Recommendation API] FormSubmit backup delivery dispatched to ${targetEmail}`);
+    } catch (fsErr: any) {
+      console.warn(`[Recommendation API] FormSubmit backup notice:`, fsErr?.message);
+    }
+
+    return res.json({
+      success: true,
+      message: 'Feedback received and routed to masiala.felicia@gmail.com',
+      resendSent,
+      targetEmail,
+      timestamp,
+    });
+  } catch (err: any) {
+    console.error('[Recommendation API Error]:', err);
+    return res.status(500).json({
+      success: false,
+      error: err.message || 'Failed to submit recommendation',
+    });
+  }
+});
+
 async function startServer() {
   // Vite middleware in development
   if (process.env.NODE_ENV !== 'production') {
