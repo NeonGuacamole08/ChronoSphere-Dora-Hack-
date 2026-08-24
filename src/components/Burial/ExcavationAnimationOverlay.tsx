@@ -375,9 +375,10 @@ export const ExcavationAnimationOverlay: React.FC<ExcavationAnimationOverlayProp
 
       {/* 4. Center 3D Ascending Capsule & Snapping Lock Visual */}
       <div
+        style={{ willChange: 'transform, opacity' }}
         className={`relative z-20 flex flex-col items-center justify-center transition-all duration-700 ${
           animStage === 'clearing'
-            ? 'translate-y-48 scale-75 opacity-40'
+            ? 'translate-y-36 sm:translate-y-48 scale-75 opacity-40'
             : animStage === 'ascending'
             ? 'translate-y-0 scale-100 opacity-100'
             : 'translate-y-0 scale-105 opacity-100'
@@ -387,7 +388,10 @@ export const ExcavationAnimationOverlay: React.FC<ExcavationAnimationOverlayProp
         <div className="absolute -inset-10 bg-gradient-to-r from-emerald-500/30 via-amber-400/30 to-teal-500/30 rounded-full blur-2xl animate-pulse pointer-events-none" />
 
         {/* Outer Cylinder Body */}
-        <div className="relative w-44 h-60 rounded-3xl bg-gradient-to-b from-stone-800 via-amber-950 to-stone-900 border-2 border-amber-400/70 shadow-2xl p-4 flex flex-col items-center justify-between overflow-hidden">
+        <div
+          style={{ willChange: 'transform, opacity' }}
+          className="relative w-36 h-48 sm:w-44 sm:h-60 rounded-3xl bg-gradient-to-b from-stone-800 via-amber-950 to-stone-900 border-2 border-amber-400/70 shadow-2xl p-3.5 sm:p-4 flex flex-col items-center justify-between overflow-hidden"
+        >
           {/* Metallic Ribbing Lines */}
           <div className="absolute inset-x-0 top-6 h-0.5 bg-amber-500/40" />
           <div className="absolute inset-x-0 bottom-6 h-0.5 bg-amber-500/40" />
@@ -395,7 +399,7 @@ export const ExcavationAnimationOverlay: React.FC<ExcavationAnimationOverlayProp
 
           {/* Top Status LED */}
           <div className="w-full flex items-center justify-between px-1">
-            <span className="text-[9px] font-mono text-amber-400 font-bold uppercase tracking-wider">
+            <span className="text-[8px] sm:text-[9px] font-mono text-amber-400 font-bold uppercase tracking-wider">
               ARWEAVE VAULT
             </span>
             <div
@@ -410,22 +414,23 @@ export const ExcavationAnimationOverlay: React.FC<ExcavationAnimationOverlayProp
           {/* Central Glowing Lock Emblem (Transitions from locked to unlocked) */}
           <div className="relative my-auto flex flex-col items-center">
             <div
-              className={`w-20 h-20 rounded-2xl flex items-center justify-center border-2 transition-all duration-500 shadow-xl ${
+              style={{ willChange: 'transform' }}
+              className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center border-2 transition-all duration-500 shadow-xl ${
                 isLockUnlocked
                   ? 'bg-emerald-950/90 border-emerald-400 text-emerald-300 scale-110 shadow-[0_0_24px_rgba(52,211,153,0.6)]'
                   : 'bg-amber-950/90 border-amber-400 text-amber-300 scale-100'
               }`}
             >
               {isLockUnlocked ? (
-                <Unlock className="w-10 h-10 text-emerald-300 animate-bounce" />
+                <Unlock className="w-8 h-8 sm:w-10 sm:h-10 text-emerald-300 animate-bounce" />
               ) : (
-                <Unlock className="w-10 h-10 text-amber-300 rotate-12" />
+                <Unlock className="w-8 h-8 sm:w-10 sm:h-10 text-amber-300 rotate-12" />
               )}
             </div>
 
             {/* Status Label */}
             <span
-              className={`mt-2 font-mono text-xs font-bold tracking-widest uppercase transition-colors ${
+              className={`mt-1.5 sm:mt-2 font-mono text-[10px] sm:text-xs font-bold tracking-widest uppercase transition-colors ${
                 isLockUnlocked ? 'text-emerald-300' : 'text-amber-300'
               }`}
             >
@@ -434,13 +439,13 @@ export const ExcavationAnimationOverlay: React.FC<ExcavationAnimationOverlayProp
           </div>
 
           {/* Bottom coordinates badge */}
-          <div className="text-[9px] font-mono text-stone-400 text-center truncate max-w-full">
+          <div className="text-[8px] sm:text-[9px] font-mono text-stone-400 text-center truncate max-w-full">
             MEMORIES SECURED
           </div>
         </div>
 
         {/* Bottom Sequence Progress Hint */}
-        <div className="mt-4 flex items-center gap-2 text-xs font-mono text-amber-200/90 bg-black/50 px-3 py-1 rounded-full border border-amber-500/30">
+        <div className="mt-3 sm:mt-4 flex items-center gap-2 text-xs font-mono text-amber-200/90 bg-black/50 px-3 py-1 rounded-full border border-amber-500/30">
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
           <span>Opening Vault Contents...</span>
         </div>

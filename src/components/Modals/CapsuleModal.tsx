@@ -20,8 +20,13 @@ import {
   Trash2,
   AlertTriangle,
   HelpCircle,
+  Image as ImageIcon,
+  FileText,
+  File,
+  FileCheck,
+  ExternalLink,
 } from 'lucide-react';
-import { Capsule } from '../../types';
+import { Capsule, CapsuleAttachment } from '../../types';
 import { SpotifyEmbed } from '../Spotify/SpotifyEmbed';
 import { generateOfflineHtmlViewer } from '../../utils/crypto';
 
@@ -52,6 +57,9 @@ export const CapsuleModal: React.FC<CapsuleModalProps> = ({
 }) => {
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [playingAttAudioId, setPlayingAttAudioId] = useState<string | null>(null);
+  const [activeAttAudio, setActiveAttAudio] = useState<HTMLAudioElement | null>(null);
+  const [expandedPhoto, setExpandedPhoto] = useState<string | null>(null);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [timeLeft, setTimeLeft] = useState<{
     days: number;
@@ -65,6 +73,12 @@ export const CapsuleModal: React.FC<CapsuleModalProps> = ({
   // Reset delete confirmation on open/change
   useEffect(() => {
     setIsConfirmingDelete(false);
+    setExpandedPhoto(null);
+    if (activeAttAudio) {
+      activeAttAudio.pause();
+      setActiveAttAudio(null);
+      setPlayingAttAudioId(null);
+    }
   }, [capsule, isOpen]);
 
   // Calculate unlock status with Judge mode and time-travel offset support
@@ -167,6 +181,21 @@ export const CapsuleModal: React.FC<CapsuleModalProps> = ({
         audioElement.play();
         setIsPlayingAudio(true);
       }
+    }
+  };
+
+  const toggleAttachmentAudio = (att: CapsuleAttachment) => {
+    if (!att.data_url) return;
+    if (playingAttAudioId === att.id) {
+      if (activeAttAudio) activeAttAudio.pause();
+      setPlayingAttAudioId(null);
+    } else {
+      if (activeAttAudio) activeAttAudio.pause();
+      const audio = new Audio(att.data_url);
+      setActiveAttAudio(audio);
+      setPlayingAttAudioId(att.id);
+      audio.play().catch((e) => console.error('Audio play error:', e));
+      audio.onended = () => setPlayingAttAudioId(null);
     }
   };
 
@@ -420,48 +449,225 @@ export const CapsuleModal: React.FC<CapsuleModalProps> = ({
                 </p>
               </div>
 
-              {/* Photo Memory */}
-              {capsule.photo_url && (
-                <div className="rounded-2xl overflow-hidden border-2 border-amber-300/80 shadow-md">
-                  <img
-                    src={capsule.photo_url}
-                    alt={capsule.title}
-                    className="w-full max-h-80 object-cover"
-                  />
+              {/* Tagged Friends / Recipient Info if any */}
+              {(capsule.recipient_username || (capsule.tagged_users && capsule.tagged_users.length > 0)) && (
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-xs flex flex-wrap items-center gap-2">
+                  <span className="font-bold text-amber-950 font-mono">👥 Tagged Explorers:</span>
+                  {capsule.recipient_username && (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 font-bold border border-amber-300">
+                      Recipient: @{capsule.recipient_username}
+                    </span>
+                  )}
+                  {capsule.tagged_users?.map((handle) => (
+                    <span key={handle} className="px-2 py-0.5 rounded-full bg-white text-stone-800 border border-amber-300">
+                      @{handle}
+                    </span>
+                  ))}
                 </div>
               )}
 
-              {/* Spoken Voice Note Audio Player */}
-              {capsule.audio_url && (
-                <div className="p-4 rounded-xl parchment-subtle border border-amber-300/80 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={toggleAudio}
-                      className="w-11 h-11 rounded-full bg-amber-800 hover:bg-amber-900 text-amber-100 flex items-center justify-center transition shadow-md cursor-pointer"
-                    >
-                      {isPlayingAudio ? (
-                        <Pause className="w-5 h-5" />
-                      ) : (
-                        <Play className="w-5 h-5 translate-x-0.5" />
-                      )}
-                    </button>
-                    <div>
-                      <h4 className="text-xs font-bold text-stone-900 flex items-center gap-1.5">
-                        <Volume2 className="w-3.5 h-3.5 text-amber-700" />
-                        Original Voice Recording
-                      </h4>
-                      <span className="text-[11px] text-stone-500">
-                        {capsule.audio_duration ? `${capsule.audio_duration} seconds • ` : ''}
-                        Captured at {capsule.location_name}
-                      </span>
+              {/* MULTI-PHOTO GALLERY (Attachments or primary photo_url) */}
+              {(() => {
+                const photos = capsule.attachments?.filter((a) => a.type === 'photo' && a.data_url) || [];
+                if (photos.length === 0 && capsule.photo_url) {
+                  photos.push({
+                    id: 'primary_photo',
+                    type: 'photo',
+                    title: capsule.title,
+                    data_url: capsule.photo_url,
+                  });
+                }
+                if (photos.length === 0) return null;
+
+                return (
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5 font-mono uppercase">
+                      <ImageIcon className="w-3.5 h-3.5 text-purple-700" />
+                      Attached Photos ({photos.length})
+                    </span>
+                    <div className={`grid gap-2.5 ${photos.length === 1 ? 'grid-cols-1' : photos.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
+                      {photos.map((photo) => (
+                        <div
+                          key={photo.id}
+                          onClick={() => photo.data_url && setExpandedPhoto(photo.data_url)}
+                          className="relative rounded-xl overflow-hidden border-2 border-amber-300/80 shadow-md cursor-pointer group bg-stone-900 aspect-video sm:aspect-4/3"
+                        >
+                          <img
+                            src={photo.data_url}
+                            alt={photo.title || 'Memory Photo'}
+                            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent opacity-0 group-hover:opacity-100 transition flex items-end p-2">
+                            <span className="text-[11px] text-white font-medium truncate">
+                              {photo.title || 'Click to enlarge'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
+                );
+              })()}
 
-                  <span className="text-xs font-mono text-amber-900 font-bold bg-amber-100 px-2 py-1 rounded">
-                    {isPlayingAudio ? 'PLAYING 🎙️' : 'AUDIO READY'}
-                  </span>
+              {/* Photo Lightbox Zoom Modal */}
+              {expandedPhoto && (
+                <div
+                  onClick={() => setExpandedPhoto(null)}
+                  className="fixed inset-0 z-60 bg-black/90 flex items-center justify-center p-4 cursor-zoom-out animate-in fade-in"
+                >
+                  <div className="relative max-w-4xl max-h-[90vh]">
+                    <img
+                      src={expandedPhoto}
+                      alt="Enlarged Memory"
+                      className="max-w-full max-h-[88vh] rounded-2xl object-contain shadow-2xl border border-amber-400/40"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setExpandedPhoto(null)}
+                      className="absolute top-3 right-3 p-2 rounded-full bg-black/60 text-white hover:bg-black/90 transition"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
               )}
+
+              {/* MULTI-VOICE MEMOS / AUDIO ATTACHMENTS */}
+              {(() => {
+                const audioMemos = capsule.attachments?.filter((a) => a.type === 'audio' && a.data_url) || [];
+                if (audioMemos.length === 0 && capsule.audio_url) {
+                  audioMemos.push({
+                    id: 'primary_audio',
+                    type: 'audio',
+                    title: 'Original Voice Recording',
+                    data_url: capsule.audio_url,
+                    duration: capsule.audio_duration,
+                  });
+                }
+                if (audioMemos.length === 0) return null;
+
+                return (
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5 font-mono uppercase">
+                      <Volume2 className="w-3.5 h-3.5 text-amber-700" />
+                      Voice Recordings ({audioMemos.length})
+                    </span>
+                    <div className="space-y-2">
+                      {audioMemos.map((memo) => {
+                        const isPlayingThis = memo.id === 'primary_audio' ? isPlayingAudio : playingAttAudioId === memo.id;
+                        return (
+                          <div
+                            key={memo.id}
+                            className="p-3.5 rounded-xl parchment-subtle border border-amber-300/80 flex items-center justify-between gap-3 shadow-xs"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <button
+                                type="button"
+                                onClick={() => (memo.id === 'primary_audio' ? toggleAudio() : toggleAttachmentAudio(memo))}
+                                className="w-10 h-10 rounded-full bg-amber-800 hover:bg-amber-900 text-amber-100 flex items-center justify-center transition shadow-md cursor-pointer shrink-0"
+                              >
+                                {isPlayingThis ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 translate-x-0.5" />}
+                              </button>
+                              <div className="min-w-0">
+                                <h4 className="text-xs font-bold text-stone-900 truncate">
+                                  {memo.title || 'Voice Memo'}
+                                </h4>
+                                <span className="text-[10px] text-stone-500 font-mono">
+                                  {memo.duration ? `${memo.duration}s recording • ` : ''}
+                                  Preserved from {capsule.location_name}
+                                </span>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-mono font-bold px-2 py-1 rounded bg-amber-100 text-amber-900 shrink-0">
+                              {isPlayingThis ? 'PLAYING 🎙️' : 'READY'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* WRITTEN SECRET LETTERS & REFLECTIONS */}
+              {(() => {
+                const letters = capsule.attachments?.filter((a) => a.type === 'letter' && a.text_content) || [];
+                if (letters.length === 0) return null;
+
+                return (
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5 font-mono uppercase">
+                      <FileText className="w-3.5 h-3.5 text-blue-700" />
+                      Attached Written Letters ({letters.length})
+                    </span>
+                    <div className="space-y-2.5">
+                      {letters.map((letter) => (
+                        <div
+                          key={letter.id}
+                          className="p-4 rounded-xl bg-amber-50/70 border border-amber-300 space-y-1.5 shadow-xs"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-xs text-amber-950 font-serif">
+                              📜 {letter.title}
+                            </span>
+                            <span className="text-[10px] uppercase font-mono text-amber-800 bg-amber-100 px-2 py-0.5 rounded">
+                              Secret Entry
+                            </span>
+                          </div>
+                          <p className="font-serif text-xs text-stone-800 whitespace-pre-wrap leading-relaxed">
+                            {letter.text_content}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* DOCUMENTS & ATTACHED FILES */}
+              {(() => {
+                const documents = capsule.attachments?.filter((a) => a.type === 'document') || [];
+                if (documents.length === 0) return null;
+
+                return (
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5 font-mono uppercase">
+                      <File className="w-3.5 h-3.5 text-cyan-700" />
+                      Attached Documents ({documents.length})
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {documents.map((doc) => (
+                        <div
+                          key={doc.id}
+                          className="p-3 rounded-xl bg-white border border-amber-300 flex items-center justify-between gap-2 shadow-xs"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-8 h-8 rounded bg-cyan-100 text-cyan-800 flex items-center justify-center shrink-0">
+                              <FileCheck className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-bold text-xs text-stone-900 truncate">{doc.title}</div>
+                              <div className="text-[10px] text-stone-500 font-mono">
+                                {doc.file_name || 'Document'}
+                              </div>
+                            </div>
+                          </div>
+                          {doc.data_url && (
+                            <a
+                              href={doc.data_url}
+                              download={doc.file_name || doc.title}
+                              className="px-2.5 py-1 rounded bg-amber-800 text-amber-100 text-xs font-bold hover:bg-amber-900 transition flex items-center gap-1 shrink-0"
+                            >
+                              <Download className="w-3 h-3" />
+                              <span>Save</span>
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Spotify Soundtrack Player */}
               {capsule.spotify_uri && (

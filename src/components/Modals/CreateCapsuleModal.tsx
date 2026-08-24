@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   MapPin,
@@ -14,11 +14,20 @@ import {
   Mic,
   Music,
   FileText,
+  File,
   ArrowLeft,
   CheckCircle2,
   Bookmark,
+  Plus,
+  Trash2,
+  Play,
+  Pause,
+  Upload,
+  Link as LinkIcon,
+  AlertCircle,
+  FileCheck,
 } from 'lucide-react';
-import { Capsule, Coordinates } from '../../types';
+import { Capsule, CapsuleAttachment, Coordinates } from '../../types';
 import { VoiceRecorder } from '../Audio/VoiceRecorder';
 import { SpotifyEmbed } from '../Spotify/SpotifyEmbed';
 import { generateArweaveTxId } from '../../utils/crypto';
@@ -50,6 +59,79 @@ function getCountryFlagEmoji(countryCode?: string): string {
   }
 }
 
+// Format file size in KB/MB
+function formatFileSize(bytes?: number): string {
+  if (!bytes || bytes <= 0) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// Safe client-side image compression to prevent laptop browser memory leaks or upload crashes
+async function safelyProcessImage(file: File): Promise<{ dataUrl: string; size: number }> {
+  return new Promise((resolve, reject) => {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      return reject(new Error('Selected file is not an image.'));
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Failed to read image file.'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Failed to parse image data.'));
+      img.onload = () => {
+        try {
+          const maxDim = 1400;
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            return resolve({ dataUrl: reader.result as string, size: file.size });
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          resolve({ dataUrl: compressedDataUrl, size: Math.round(compressedDataUrl.length * 0.75) });
+        } catch {
+          resolve({ dataUrl: reader.result as string, size: file.size });
+        }
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Safely process document or audio files
+async function safelyProcessFile(file: File): Promise<{ dataUrl: string; size: number }> {
+  return new Promise((resolve, reject) => {
+    // 15MB limit check
+    if (file.size > 15 * 1024 * 1024) {
+      return reject(new Error('File size exceeds the 15MB safety limit.'));
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Failed to read file.'));
+    reader.onload = () => {
+      resolve({ dataUrl: reader.result as string, size: file.size });
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
   isOpen,
   onClose,
@@ -76,15 +158,14 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
   const [accessType, setAccessType] = useState<'public' | 'private'>('private');
   const [recipientUsername, setRecipientUsername] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
+  const [taggedUsersInput, setTaggedUsersInput] = useState('');
   const [unlockDate, setUnlockDate] = useState(() => {
     const d = new Date();
     d.setFullYear(d.getFullYear() + 1); // Default to +1 year in future
     return d.toISOString().slice(0, 16);
   });
 
-  // Media
-  const [photoUrl, setPhotoUrl] = useState('');
-  const [audioData, setAudioData] = useState<{ url: string; duration: number } | null>(null);
+  // Spotify Track
   const [spotifyTrack, setSpotifyTrack] = useState<{
     uri: string;
     id: string;
@@ -92,21 +173,34 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
     artist: string;
   } | null>(null);
 
+  // Multi-Media Attachments Array (Unlimited Photos, Audio Memos, Letters, Documents)
+  const [attachments, setAttachments] = useState<CapsuleAttachment[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isProcessingUpload, setIsProcessingUpload] = useState(false);
+
+  // Quick Photo URL Input
+  const [imageUrlInput, setImageUrlInput] = useState('');
+
+  // Written Letter Entry Form State
+  const [showAddLetterModal, setShowAddLetterModal] = useState(false);
+  const [letterTitle, setLetterTitle] = useState('');
+  const [letterContent, setLetterContent] = useState('');
+
+  // Audio Playback in preview list
+  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+
   // Synchronize coordinates and reset or populate form fields whenever modal opens
   useEffect(() => {
     if (isOpen) {
       setStep('form');
+      setUploadError(null);
+      setShowAddLetterModal(false);
 
       if (draftToEdit) {
         // Load draft contents
         setTitle(draftToEdit.title || '');
         setMessage(draftToEdit.message || '');
-        setPhotoUrl(draftToEdit.photo_url || '');
-        setAudioData(
-          draftToEdit.audio_url
-            ? { url: draftToEdit.audio_url, duration: draftToEdit.audio_duration || 0 }
-            : null
-        );
         setSpotifyTrack(
           draftToEdit.spotify_uri
             ? {
@@ -120,6 +214,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
         setAccessType(draftToEdit.access_type || 'private');
         setRecipientUsername(draftToEdit.recipient_username || '');
         setRecipientEmail(draftToEdit.recipient_email || '');
+        setTaggedUsersInput(draftToEdit.tagged_users ? draftToEdit.tagged_users.join(', ') : '');
         setUnlockDate(
           draftToEdit.unlock_timestamp
             ? draftToEdit.unlock_timestamp.slice(0, 16)
@@ -130,16 +225,41 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
         setLocationName(draftToEdit.location_name);
         setCountryName(draftToEdit.country_name);
         setCountryCode(draftToEdit.country_code || 'US');
+
+        // Populate attachments from draft
+        const initialAttachments: CapsuleAttachment[] = [];
+        if (draftToEdit.attachments && draftToEdit.attachments.length > 0) {
+          initialAttachments.push(...draftToEdit.attachments);
+        } else {
+          if (draftToEdit.photo_url) {
+            initialAttachments.push({
+              id: `att_photo_${Date.now()}`,
+              type: 'photo',
+              title: 'Primary Photo',
+              data_url: draftToEdit.photo_url,
+            });
+          }
+          if (draftToEdit.audio_url) {
+            initialAttachments.push({
+              id: `att_audio_${Date.now()}`,
+              type: 'audio',
+              title: 'Voice Recording',
+              data_url: draftToEdit.audio_url,
+              duration: draftToEdit.audio_duration,
+            });
+          }
+        }
+        setAttachments(initialAttachments);
       } else {
         // Reset fresh
         setTitle('');
         setMessage('');
-        setPhotoUrl('');
-        setAudioData(null);
+        setAttachments([]);
         setSpotifyTrack(null);
         setAccessType('private');
         setRecipientUsername('');
         setRecipientEmail('');
+        setTaggedUsersInput('');
 
         // Reset default unlock date to +1 year
         const d = new Date();
@@ -172,6 +292,16 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
     }
   }, [isOpen, initialCoords, draftToEdit]);
 
+  // Clean up audio on unmount or close
+  useEffect(() => {
+    return () => {
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+        audioPlayerRef.current = null;
+      }
+    };
+  }, []);
+
   if (!isOpen) return null;
 
   // Preset Date Buttons
@@ -185,16 +315,160 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
     setUnlockDate(now.toISOString().slice(0, 16));
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoUrl(reader.result as string);
+  // Safe Multi-File Image/Photo Upload Handler
+  const handleMultiplePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsProcessingUpload(true);
+    setUploadError(null);
+
+    const newAttachments: CapsuleAttachment[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      try {
+        const { dataUrl, size } = await safelyProcessImage(file);
+        newAttachments.push({
+          id: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+          type: 'photo',
+          title: file.name.replace(/\.[^/.]+$/, '') || `Photo ${attachments.length + i + 1}`,
+          file_name: file.name,
+          data_url: dataUrl,
+          size_bytes: size,
+        });
+      } catch (err: any) {
+        console.error('Error processing photo:', err);
+        setUploadError(err.message || 'Failed to process image attachment.');
+      }
+    }
+
+    if (newAttachments.length > 0) {
+      setAttachments((prev) => [...prev, ...newAttachments]);
+    }
+    setIsProcessingUpload(false);
+    // Reset file input value so same files can be re-selected if desired
+    e.target.value = '';
+  };
+
+  // Add Photo via URL
+  const handleAddImageUrl = () => {
+    if (!imageUrlInput.trim()) return;
+    const newAtt: CapsuleAttachment = {
+      id: `photo_url_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      type: 'photo',
+      title: `Web Image ${attachments.filter((a) => a.type === 'photo').length + 1}`,
+      data_url: imageUrlInput.trim(),
+    };
+    setAttachments((prev) => [...prev, newAtt]);
+    setImageUrlInput('');
+  };
+
+  // Safe Multi-File Document / File Upload Handler
+  const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsProcessingUpload(true);
+    setUploadError(null);
+
+    const newAttachments: CapsuleAttachment[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      try {
+        const { dataUrl, size } = await safelyProcessFile(file);
+        newAttachments.push({
+          id: `doc_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+          type: 'document',
+          title: file.name,
+          file_name: file.name,
+          data_url: dataUrl,
+          size_bytes: size,
+        });
+      } catch (err: any) {
+        console.error('Error processing document:', err);
+        setUploadError(err.message || 'Failed to process document attachment.');
+      }
+    }
+
+    if (newAttachments.length > 0) {
+      setAttachments((prev) => [...prev, ...newAttachments]);
+    }
+    setIsProcessingUpload(false);
+    e.target.value = '';
+  };
+
+  // Add Audio Recording from VoiceRecorder component
+  const handleAudioRecordingReady = (data: { url: string; duration: number }) => {
+    if (!data.url) return;
+    const audioCount = attachments.filter((a) => a.type === 'audio').length + 1;
+    const newAtt: CapsuleAttachment = {
+      id: `audio_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      type: 'audio',
+      title: `Voice Memo #${audioCount} (${data.duration}s)`,
+      data_url: data.url,
+      duration: data.duration,
+    };
+    setAttachments((prev) => [...prev, newAtt]);
+  };
+
+  // Add Written Secret Letter / Reflection
+  const handleAddWrittenLetter = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!letterTitle.trim() || !letterContent.trim()) return;
+
+    const newAtt: CapsuleAttachment = {
+      id: `letter_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      type: 'letter',
+      title: letterTitle.trim(),
+      text_content: letterContent.trim(),
+    };
+    setAttachments((prev) => [...prev, newAtt]);
+    setLetterTitle('');
+    setLetterContent('');
+    setShowAddLetterModal(false);
+  };
+
+  // Remove an attachment by ID
+  const handleRemoveAttachment = (id: string) => {
+    if (playingAudioId === id && audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+      setPlayingAudioId(null);
+    }
+    setAttachments((prev) => prev.filter((att) => att.id !== id));
+  };
+
+  // Toggle audio playback preview in attachment list
+  const handleTogglePlayAudio = (att: CapsuleAttachment) => {
+    if (!att.data_url) return;
+
+    if (playingAudioId === att.id) {
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+      }
+      setPlayingAudioId(null);
+    } else {
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+      }
+      const audio = new Audio(att.data_url);
+      audioPlayerRef.current = audio;
+      setPlayingAudioId(att.id);
+      audio.play().catch((err) => console.error('Audio play error:', err));
+      audio.onended = () => {
+        setPlayingAudioId(null);
       };
-      reader.readAsDataURL(file);
     }
   };
+
+  // Parse tagged users
+  const parsedTaggedUsers = taggedUsersInput
+    .split(',')
+    .map((u) => u.trim().replace(/^@/, ''))
+    .filter(Boolean);
+
+  // Extract primary photo and primary audio for backward compatibility
+  const primaryPhoto = attachments.find((a) => a.type === 'photo')?.data_url;
+  const primaryAudio = attachments.find((a) => a.type === 'audio');
 
   // Step 1 Save as In-Progress Draft in My Vault
   const handleSaveAsDraft = () => {
@@ -227,9 +501,11 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
         accessType === 'private' && recipientEmail.trim()
           ? recipientEmail.trim()
           : undefined,
-      photo_url: photoUrl || undefined,
-      audio_url: audioData?.url || undefined,
-      audio_duration: audioData?.duration,
+      tagged_users: parsedTaggedUsers.length > 0 ? parsedTaggedUsers : undefined,
+      attachments: attachments.length > 0 ? attachments : undefined,
+      photo_url: primaryPhoto || undefined,
+      audio_url: primaryAudio?.data_url || undefined,
+      audio_duration: primaryAudio?.duration,
       spotify_uri: spotifyTrack?.uri,
       spotify_track_id: spotifyTrack?.id,
       spotify_title: spotifyTrack?.title,
@@ -291,9 +567,11 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
         accessType === 'private' && recipientEmail.trim()
           ? recipientEmail.trim()
           : undefined,
-      photo_url: photoUrl || undefined,
-      audio_url: audioData?.url || undefined,
-      audio_duration: audioData?.duration,
+      tagged_users: parsedTaggedUsers.length > 0 ? parsedTaggedUsers : undefined,
+      attachments: attachments.length > 0 ? attachments : undefined,
+      photo_url: primaryPhoto || undefined,
+      audio_url: primaryAudio?.data_url || undefined,
+      audio_duration: primaryAudio?.duration,
       spotify_uri: spotifyTrack?.uri,
       spotify_track_id: spotifyTrack?.id,
       spotify_title: spotifyTrack?.title,
@@ -310,43 +588,41 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
     onClose();
   };
 
-  // Calculate items manifest summary
-  const itemsCount = {
-    photos: photoUrl ? 1 : 0,
-    voiceNotes: audioData?.url ? 1 : 0,
-    spotifyTracks: spotifyTrack?.uri ? 1 : 0,
-    messageWords: message.trim().split(/\s+/).filter(Boolean).length,
-  };
+  // Counts of each media type
+  const photosCount = attachments.filter((a) => a.type === 'photo').length;
+  const audioCount = attachments.filter((a) => a.type === 'audio').length;
+  const lettersCount = attachments.filter((a) => a.type === 'letter').length;
+  const docsCount = attachments.filter((a) => a.type === 'document').length;
+  const messageWords = message.trim().split(/\s+/).filter(Boolean).length;
 
-  const unlockDateObj = new Date(unlockDate);
-  const formattedUnlockDate = unlockDateObj.toLocaleDateString(undefined, {
-    weekday: 'short',
+  const formattedUnlockDate = new Date(unlockDate).toLocaleString(undefined, {
+    year: 'numeric',
     month: 'short',
     day: 'numeric',
-    year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl max-h-[95dvh] sm:max-h-[90vh] flex flex-col rounded-2xl parchment-card border-2 border-amber-800/40 shadow-2xl overflow-hidden">
-        {/* Wood Header */}
-        <div className="wood-trim px-3.5 py-3 sm:px-6 sm:py-4 flex items-center justify-between text-amber-50 shadow-md shrink-0">
-          <div className="flex items-center gap-2 sm:gap-2.5">
-            <span className="wax-seal w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white font-serif font-black text-xs sm:text-sm ring-2 ring-amber-300/40">
-              TF
-            </span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="relative w-full max-w-2xl max-h-[92vh] flex flex-col rounded-2xl parchment-card border-2 border-amber-500/80 shadow-2xl overflow-hidden">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 bg-gradient-to-r from-amber-900 via-amber-950 to-stone-900 text-amber-100 border-b border-amber-500/50">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="text-xl sm:text-2xl">{getCountryFlagEmoji(countryCode)}</span>
             <div>
-              <h2 className="font-serif font-bold text-sm sm:text-lg text-amber-100 leading-none">
-                {step === 'confirm'
-                  ? 'Confirm Burial & Time-Lock'
-                  : 'Plant a New Earth Time Capsule'}
+              <h2 className="font-serif font-bold text-base sm:text-lg text-amber-100 flex items-center gap-1.5 sm:gap-2 leading-tight">
+                <span>{step === 'form' ? 'Plant Earth Time Capsule' : 'Confirm Capsule Manifest'}</span>
+                {draftToEdit?.is_draft && (
+                  <span className="text-[10px] bg-amber-500/30 text-amber-200 px-2 py-0.5 rounded-full border border-amber-400/40">
+                    Draft
+                  </span>
+                )}
               </h2>
-              <span className="text-[9px] sm:text-[11px] text-amber-300/80">
-                {step === 'confirm'
-                  ? 'Review attached memories before sealing into Earth'
-                  : 'Sealed Cryptographically & Anchored to Arweave'}
+              <span className="text-[10px] sm:text-xs text-amber-200/80 font-mono">
+                {step === 'form'
+                  ? 'Seal secret memories & unlimited media on Earth'
+                  : 'Review cryptographic lock & attachments before burial'}
               </span>
             </div>
           </div>
@@ -366,7 +642,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
             onSubmit={handleProceedToLock}
             className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-3.5 sm:space-y-5"
           >
-            {/* Title & Story */}
+            {/* Title & Primary Story */}
             <div className="space-y-3 sm:space-y-4">
               <div>
                 <label className="block text-[10px] sm:text-xs font-bold text-amber-950 uppercase tracking-wider mb-1">
@@ -384,7 +660,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
 
               <div>
                 <label className="block text-[10px] sm:text-xs font-bold text-amber-950 uppercase tracking-wider mb-1">
-                  Memory Text & Secret Letter
+                  Primary Memory Story & Secret Letter
                 </label>
                 <textarea
                   required
@@ -454,42 +730,42 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setPresetDate('hour')}
-                  className="text-[10px] px-2 py-0.5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition"
+                  className="text-[10px] px-2 py-0.5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition cursor-pointer"
                 >
                   +1 Hour
                 </button>
                 <button
                   type="button"
                   onClick={() => setPresetDate('week')}
-                  className="text-[10px] px-2 py-0.5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition"
+                  className="text-[10px] px-2 py-0.5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition cursor-pointer"
                 >
                   +1 Week
                 </button>
                 <button
                   type="button"
                   onClick={() => setPresetDate('month')}
-                  className="text-[10px] px-2 py-0.5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition"
+                  className="text-[10px] px-2 py-0.5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition cursor-pointer"
                 >
                   +1 Month
                 </button>
                 <button
                   type="button"
                   onClick={() => setPresetDate('year')}
-                  className="text-[10px] px-2 py-0.5 rounded-md bg-amber-200 hover:bg-amber-300 text-amber-950 font-bold border border-amber-400 transition"
+                  className="text-[10px] px-2 py-0.5 rounded-md bg-amber-200 hover:bg-amber-300 text-amber-950 font-bold border border-amber-400 transition cursor-pointer"
                 >
                   +1 Year
                 </button>
                 <button
                   type="button"
                   onClick={() => setPresetDate('decade')}
-                  className="text-[10px] px-2 py-0.5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition"
+                  className="text-[10px] px-2 py-0.5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition cursor-pointer"
                 >
                   +10 Years
                 </button>
               </div>
             </div>
 
-            {/* Access Control: Public vs Private */}
+            {/* Access Control: Public vs Private & Tagged Recipients */}
             <div className="p-3 sm:p-3.5 rounded-xl parchment-subtle border border-amber-300/80 space-y-2.5">
               <label className="text-[11px] sm:text-xs font-bold text-amber-950 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
@@ -537,33 +813,270 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                 </button>
               </div>
 
-              {accessType === 'private' && (
-                <div className="space-y-2 pt-1 border-t border-amber-200/80">
-                  <span className="text-[10px] font-bold text-amber-900">
-                    Optional Designated Recipient:
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {/* Designated Recipient & Tagged Users */}
+              <div className="space-y-2 pt-1 border-t border-amber-200/80">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[10px] font-bold text-amber-900 block mb-0.5">
+                      Designated Recipient (Optional):
+                    </span>
                     <input
                       type="text"
                       value={recipientUsername}
                       onChange={(e) => setRecipientUsername(e.target.value)}
-                      placeholder="Recipient username (@handle)"
-                      className="text-xs px-2.5 py-1.5 rounded-lg bg-white border border-amber-300 text-stone-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      placeholder="@username handle"
+                      className="w-full text-xs px-2.5 py-1.5 rounded-lg bg-white border border-amber-300 text-stone-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
                     />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-amber-900 block mb-0.5">
+                      Recipient Email (Optional Notification):
+                    </span>
                     <input
                       type="email"
                       value={recipientEmail}
                       onChange={(e) => setRecipientEmail(e.target.value)}
-                      placeholder="Recipient email address"
-                      className="text-xs px-2.5 py-1.5 rounded-lg bg-white border border-amber-300 text-stone-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      placeholder="recipient@example.com"
+                      className="w-full text-xs px-2.5 py-1.5 rounded-lg bg-white border border-amber-300 text-stone-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
                     />
                   </div>
                 </div>
-              )}
+
+                <div>
+                  <span className="text-[10px] font-bold text-amber-900 block mb-0.5">
+                    Tag Friends & Collaborators (Comma-separated handles):
+                  </span>
+                  <input
+                    type="text"
+                    value={taggedUsersInput}
+                    onChange={(e) => setTaggedUsersInput(e.target.value)}
+                    placeholder="e.g. alice, bob_traveler, charlie"
+                    className="w-full text-xs px-2.5 py-1.5 rounded-lg bg-white border border-amber-300 text-stone-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* Voice Note Recorder */}
-            <VoiceRecorder onAudioReady={(data) => setAudioData(data)} />
+            {/* MULTI-MEDIA ATTACHMENTS SECTION */}
+            <div className="p-3.5 rounded-xl parchment-subtle border-2 border-amber-400/80 space-y-3 shadow-xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-amber-700" />
+                  <span className="text-xs font-bold text-amber-950 uppercase tracking-wide">
+                    Multi-Media Attachments ({attachments.length})
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300 font-bold">
+                  Unlimited Photos • Audio • Letters • Docs
+                </span>
+              </div>
+
+              {/* Upload error banner if any */}
+              {uploadError && (
+                <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-300 text-rose-900 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{uploadError}</span>
+                </div>
+              )}
+
+              {/* Quick Action Toolbar to Attach Items */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                {/* 1. Add Photos */}
+                <label className="p-2.5 rounded-xl bg-white hover:bg-amber-50 border border-amber-300 hover:border-amber-400 text-stone-800 flex flex-col items-center justify-center gap-1 cursor-pointer transition shadow-xs">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleMultiplePhotoUpload}
+                    className="hidden"
+                    disabled={isProcessingUpload}
+                  />
+                  <ImageIcon className="w-4 h-4 text-amber-800" />
+                  <span className="text-[11px] font-bold">+ Photos</span>
+                  <span className="text-[9px] text-stone-500">Multi-upload</span>
+                </label>
+
+                {/* 2. Add Written Letter / Text Entry */}
+                <button
+                  type="button"
+                  onClick={() => setShowAddLetterModal(true)}
+                  className="p-2.5 rounded-xl bg-white hover:bg-amber-50 border border-amber-300 hover:border-amber-400 text-stone-800 flex flex-col items-center justify-center gap-1 cursor-pointer transition shadow-xs"
+                >
+                  <FileText className="w-4 h-4 text-amber-800" />
+                  <span className="text-[11px] font-bold">+ Written Letter</span>
+                  <span className="text-[9px] text-stone-500">Secret notes</span>
+                </button>
+
+                {/* 3. Add Document / File */}
+                <label className="p-2.5 rounded-xl bg-white hover:bg-amber-50 border border-amber-300 hover:border-amber-400 text-stone-800 flex flex-col items-center justify-center gap-1 cursor-pointer transition shadow-xs">
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf,.txt,.doc,.docx,.md,.json"
+                    onChange={handleDocumentUpload}
+                    className="hidden"
+                    disabled={isProcessingUpload}
+                  />
+                  <File className="w-4 h-4 text-amber-800" />
+                  <span className="text-[11px] font-bold">+ Document</span>
+                  <span className="text-[9px] text-stone-500">PDF, TXT, MD</span>
+                </label>
+
+                {/* 4. Paste Image URL */}
+                <div className="p-2.5 rounded-xl bg-white border border-amber-300 text-stone-800 flex flex-col justify-between shadow-xs">
+                  <span className="text-[10px] font-bold text-amber-900 flex items-center gap-1">
+                    <LinkIcon className="w-3 h-3" /> Image URL
+                  </span>
+                  <div className="flex gap-1 mt-1">
+                    <input
+                      type="url"
+                      value={imageUrlInput}
+                      onChange={(e) => setImageUrlInput(e.target.value)}
+                      placeholder="https://"
+                      className="w-full text-[10px] px-1.5 py-1 rounded bg-amber-50/60 border border-amber-200 text-stone-800"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddImageUrl}
+                      disabled={!imageUrlInput.trim()}
+                      className="px-2 py-1 bg-amber-800 text-white rounded text-[10px] font-bold disabled:opacity-40 cursor-pointer"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Voice Recorder Component */}
+              <div className="pt-2">
+                <VoiceRecorder onAudioReady={handleAudioRecordingReady} />
+              </div>
+
+              {/* Interactive Add Written Letter Form Modal / Expansion */}
+              {showAddLetterModal && (
+                <div className="p-3.5 rounded-xl bg-amber-50 border-2 border-amber-400 space-y-2 animate-in fade-in">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-amber-800" />
+                      Add Written Letter or Secret Note
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddLetterModal(false)}
+                      className="text-stone-400 hover:text-stone-700"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={letterTitle}
+                    onChange={(e) => setLetterTitle(e.target.value)}
+                    placeholder="Letter Title (e.g. Letter to My Future Child, Secret Map Riddle)"
+                    className="w-full text-xs px-3 py-1.5 rounded-lg bg-white border border-amber-300 text-stone-900"
+                  />
+                  <textarea
+                    rows={3}
+                    value={letterContent}
+                    onChange={(e) => setLetterContent(e.target.value)}
+                    placeholder="Write the full text of your secret letter or reflection..."
+                    className="w-full text-xs leading-relaxed px-3 py-1.5 rounded-lg bg-white border border-amber-300 text-stone-900"
+                  />
+                  <div className="flex justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddLetterModal(false)}
+                      className="px-3 py-1 text-xs rounded bg-stone-200 text-stone-700"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAddWrittenLetter}
+                      disabled={!letterTitle.trim() || !letterContent.trim()}
+                      className="px-4 py-1 text-xs rounded bg-amber-800 text-white font-bold disabled:opacity-40"
+                    >
+                      Attach Letter
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Itemized Attachments Preview List */}
+              {attachments.length > 0 ? (
+                <div className="space-y-2 pt-2 border-t border-amber-300/80">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900 font-mono block">
+                    Attached Items Manifest ({attachments.length}):
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
+                    {attachments.map((att) => (
+                      <div
+                        key={att.id}
+                        className="p-2.5 rounded-xl bg-white/90 border border-amber-300/80 flex items-center justify-between gap-2 shadow-xs group"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {att.type === 'photo' ? (
+                            <div className="w-10 h-10 rounded-lg overflow-hidden border border-amber-300 shrink-0 bg-stone-100">
+                              <img
+                                src={att.data_url}
+                                alt={att.title}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : att.type === 'audio' ? (
+                            <button
+                              type="button"
+                              onClick={() => handleTogglePlayAudio(att)}
+                              className="w-10 h-10 rounded-lg bg-amber-800 text-amber-100 flex items-center justify-center shrink-0 hover:bg-amber-900 transition cursor-pointer"
+                            >
+                              {playingAudioId === att.id ? (
+                                <Pause className="w-4 h-4" />
+                              ) : (
+                                <Play className="w-4 h-4 translate-x-0.5" />
+                              )}
+                            </button>
+                          ) : att.type === 'letter' ? (
+                            <div className="w-10 h-10 rounded-lg bg-amber-100 border border-amber-300 text-amber-800 flex items-center justify-center shrink-0">
+                              <FileText className="w-5 h-5" />
+                            </div>
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-cyan-100 border border-cyan-300 text-cyan-800 flex items-center justify-center shrink-0">
+                              <FileCheck className="w-5 h-5" />
+                            </div>
+                          )}
+
+                          <div className="min-w-0">
+                            <span className="text-[11px] font-bold text-stone-900 truncate block leading-snug">
+                              {att.title}
+                            </span>
+                            <span className="text-[10px] text-stone-500 flex items-center gap-1 font-mono">
+                              <span className="uppercase font-bold text-amber-900">
+                                {att.type}
+                              </span>
+                              {att.duration ? `• ${att.duration}s` : ''}
+                              {att.size_bytes ? `• ${formatFileSize(att.size_bytes)}` : ''}
+                            </span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAttachment(att.id)}
+                          className="p-1.5 rounded-lg text-stone-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer shrink-0"
+                          title="Remove attachment"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 text-center rounded-xl bg-white/40 border border-dashed border-amber-300 text-stone-500 text-[11px]">
+                  No extra media attached yet. You can attach unlimited photos, voice notes, secret letters, and documents.
+                </div>
+              )}
+            </div>
 
             {/* Spotify Integration */}
             <SpotifyEmbed
@@ -571,46 +1084,6 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
               spotifyUri={spotifyTrack?.uri}
               onSelectTrack={(track) => setSpotifyTrack(track)}
             />
-
-            {/* Photo Attachment */}
-            <div className="p-3.5 rounded-xl parchment-subtle border border-amber-300/80 space-y-2.5">
-              <label className="text-xs font-bold text-amber-950 flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <ImageIcon className="w-3.5 h-3.5 text-amber-700" />
-                  Memory Photo Attachment
-                </span>
-                <span className="text-[10px] text-stone-500">File upload or URL</span>
-              </label>
-
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={photoUrl}
-                  onChange={(e) => setPhotoUrl(e.target.value)}
-                  placeholder="Paste Image URL (Unsplash, imgur, etc.)"
-                  className="flex-1 text-xs px-3 py-2 rounded-lg bg-white border border-amber-300 text-stone-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                />
-                <label className="px-3 py-2 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-medium border border-amber-300 cursor-pointer shrink-0 transition">
-                  Upload
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-
-              {photoUrl && (
-                <div className="mt-2 relative rounded-lg overflow-hidden border border-amber-300 max-h-36">
-                  <img
-                    src={photoUrl}
-                    alt="Memory Preview"
-                    className="w-full h-36 object-cover"
-                  />
-                </div>
-              )}
-            </div>
 
             {/* Arweave Permanence Stamp Notice */}
             <div className="p-3 rounded-xl bg-amber-950/5 border border-amber-300/50 flex items-start gap-2.5 text-[11px] text-stone-700">
@@ -620,9 +1093,8 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                   Arweave Permaweb & Supabase Encryption
                 </span>
                 <p className="mt-0.5 text-stone-600 leading-relaxed">
-                  When you plant this capsule, an encrypted payload is minted with an
-                  Arweave TX ID and backed up to decentralized storage, ensuring your
-                  memories survive for centuries.
+                  When you plant this capsule, all attached photos, voice memos, letters, and documents are cryptographically sealed with an
+                  Arweave TX ID and backed up to decentralized storage, ensuring your memories survive for centuries.
                 </p>
               </div>
             </div>
@@ -653,7 +1125,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                   className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-700 to-amber-900 hover:from-amber-800 hover:to-amber-950 text-amber-100 font-bold text-xs transition shadow-lg flex items-center gap-2 cursor-pointer"
                 >
                   <Lock className="w-4 h-4 text-amber-300" />
-                  <span>Lock & Review</span>
+                  <span>Lock & Review ({attachments.length + 1} Items)</span>
                 </button>
               </div>
             </div>
@@ -678,9 +1150,14 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
 
             {/* Itemized Summary Breakdown Badges */}
             <div className="p-4 rounded-xl parchment-subtle border border-amber-800/30 space-y-3.5 shadow-sm">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-amber-950 font-mono">
-                Items to be Sealed & Buried:
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-amber-950 font-mono">
+                  Items to be Sealed & Buried:
+                </h3>
+                <span className="text-xs font-mono font-bold text-amber-900 bg-amber-200/80 px-2 py-0.5 rounded-full">
+                  Total Items: {1 + attachments.length + (spotifyTrack ? 1 : 0)}
+                </span>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {/* 1. Letter Message Badge */}
@@ -688,47 +1165,67 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                   <FileText className="w-4 h-4 text-amber-800 shrink-0 mt-0.5" />
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-stone-900">
-                      1 Secret Text Letter
+                      1 Primary Memory Letter
                     </div>
                     <div className="text-[11px] text-stone-600 truncate">
-                      {itemsCount.messageWords} words • &ldquo;{title}&rdquo;
+                      {messageWords} words • &ldquo;{title}&rdquo;
                     </div>
                   </div>
                 </div>
 
-                {/* 2. Photo Attachment Badge */}
+                {/* 2. Photo Attachments Badge */}
                 <div className="p-3 rounded-lg bg-white/90 border border-amber-300/80 flex items-start gap-2.5">
                   <ImageIcon className="w-4 h-4 text-purple-700 shrink-0 mt-0.5" />
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-stone-900">
-                      {itemsCount.photos > 0 ? '1 Memory Photo' : '0 Photos'}
+                      {photosCount} Photo Attachment{photosCount === 1 ? '' : 's'}
                     </div>
                     <div className="text-[11px] text-stone-600 truncate">
-                      {itemsCount.photos > 0
-                        ? 'High-res image attached'
-                        : 'No image uploaded'}
+                      {photosCount > 0 ? 'High-res preserved imagery' : 'No photos attached'}
                     </div>
                   </div>
                 </div>
 
-                {/* 3. Voice Note Badge */}
+                {/* 3. Voice Notes Badge */}
                 <div className="p-3 rounded-lg bg-white/90 border border-amber-300/80 flex items-start gap-2.5">
                   <Mic className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-stone-900">
-                      {itemsCount.voiceNotes > 0
-                        ? `1 Voice Note (${audioData?.duration || 0}s)`
-                        : '0 Voice Notes'}
+                      {audioCount} Voice Memo{audioCount === 1 ? '' : 's'}
                     </div>
                     <div className="text-[11px] text-stone-600 truncate">
-                      {itemsCount.voiceNotes > 0
-                        ? 'Lossless WebM audio recording'
-                        : 'No audio note attached'}
+                      {audioCount > 0 ? 'Lossless audio recordings' : 'No audio notes attached'}
                     </div>
                   </div>
                 </div>
 
-                {/* 4. Spotify Track Badge */}
+                {/* 4. Written Letters & Secret Notes */}
+                <div className="p-3 rounded-lg bg-white/90 border border-amber-300/80 flex items-start gap-2.5">
+                  <FileText className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-stone-900">
+                      {lettersCount} Written Secret Letter{lettersCount === 1 ? '' : 's'}
+                    </div>
+                    <div className="text-[11px] text-stone-600 truncate">
+                      {lettersCount > 0 ? 'Time reflections & secret notes' : 'No extra letters'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5. Documents Badge */}
+                <div className="p-3 rounded-lg bg-white/90 border border-amber-300/80 flex items-start gap-2.5">
+                  <File className="w-4 h-4 text-cyan-700 shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-stone-900">
+                      {docsCount} Document / File{docsCount === 1 ? '' : 's'}
+                    </div>
+                    <div className="text-[11px] text-stone-600 truncate">
+                      {docsCount > 0 ? 'Preserved documents & records' : 'No documents attached'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 6. Spotify Track Badge */}
                 <div className="p-3 rounded-lg bg-white/90 border border-amber-300/80 flex items-start gap-2.5">
                   <Music className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
                   <div className="min-w-0">
@@ -742,19 +1239,48 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                 </div>
               </div>
 
-              {/* Photo Preview if uploaded */}
-              {photoUrl && (
-                <div className="p-2 rounded-lg bg-white/80 border border-amber-300/60 flex items-center gap-3">
-                  <img
-                    src={photoUrl}
-                    alt="Capsule Attachment"
-                    className="w-16 h-14 rounded object-cover border border-amber-400/80"
-                  />
-                  <div className="text-xs text-stone-700">
-                    <div className="font-bold text-stone-900">Photo Attachment Preview</div>
-                    <div className="text-[11px] text-stone-500">
-                      Will be preserved on Arweave permaweb storage
-                    </div>
+              {/* Itemized Attachment Previews */}
+              {attachments.length > 0 && (
+                <div className="space-y-1.5 pt-2">
+                  <span className="text-[10px] font-bold uppercase font-mono text-amber-900">
+                    Attached Artifacts Details:
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {attachments.map((att) => (
+                      <div
+                        key={att.id}
+                        className="p-2 rounded-lg bg-white/80 border border-amber-300/60 flex items-center gap-2.5 text-xs text-stone-800"
+                      >
+                        {att.type === 'photo' && att.data_url && (
+                          <img
+                            src={att.data_url}
+                            alt={att.title}
+                            className="w-10 h-10 rounded object-cover border border-amber-300 shrink-0"
+                          />
+                        )}
+                        {att.type === 'audio' && (
+                          <div className="w-8 h-8 rounded-full bg-amber-800 text-amber-100 flex items-center justify-center shrink-0">
+                            <Mic className="w-4 h-4" />
+                          </div>
+                        )}
+                        {att.type === 'letter' && (
+                          <div className="w-8 h-8 rounded bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                            <FileText className="w-4 h-4" />
+                          </div>
+                        )}
+                        {att.type === 'document' && (
+                          <div className="w-8 h-8 rounded bg-cyan-100 text-cyan-800 flex items-center justify-center shrink-0">
+                            <FileCheck className="w-4 h-4" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <div className="font-bold truncate text-xs">{att.title}</div>
+                          <div className="text-[10px] text-stone-500 font-mono uppercase">
+                            {att.type} {att.duration ? `• ${att.duration}s` : ''}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

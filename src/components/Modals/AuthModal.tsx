@@ -8,6 +8,8 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowRight,
+  Compass,
+  AlertTriangle,
 } from 'lucide-react';
 import { supabaseAuth, AppUser } from '../../utils/supabase';
 
@@ -17,6 +19,7 @@ interface AuthModalProps {
   currentUser: AppUser | null;
   onAuthSuccess: (user: AppUser) => void;
   onSignOut: () => void;
+  onContinueAsGuest?: () => void;
   initialMode?: 'signin' | 'signup' | 'forgot_password';
 }
 
@@ -26,6 +29,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   currentUser,
   onAuthSuccess,
   onSignOut,
+  onContinueAsGuest,
   initialMode = 'signin',
 }) => {
   const [mode, setMode] = useState<'signin' | 'signup' | 'profile' | 'forgot_password'>(
@@ -373,6 +377,43 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   )}
                 </button>
               </form>
+
+              {/* Guest Mode Divider & "Continue as Guest" Action */}
+              <div className="mt-4 pt-4 border-t border-amber-300/80 space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="h-px bg-amber-300/70 flex-1" />
+                  <span className="text-[10px] uppercase font-mono tracking-wider text-stone-600 font-bold">
+                    Or Explore Freely
+                  </span>
+                  <div className="h-px bg-amber-300/70 flex-1" />
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-amber-100/90 border border-amber-300 text-amber-950 text-[11px] flex items-start gap-2 shadow-xs">
+                  <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                  <div className="leading-snug">
+                    <span className="font-bold block text-amber-900">
+                      Guest Mode: None of your data, pins, or vaults will be saved.
+                    </span>
+                    <span className="text-amber-800 text-[10px]">
+                      You can explore the global map, test creating temporary pins, and view public time capsules.
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onContinueAsGuest) {
+                      onContinueAsGuest();
+                    }
+                    onClose();
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl bg-stone-800 hover:bg-stone-900 text-amber-100 font-bold text-xs flex items-center justify-center gap-2 transition shadow-sm border border-stone-700 cursor-pointer"
+                >
+                  <Compass className="w-4 h-4 text-amber-400" />
+                  <span>Continue as Guest</span>
+                </button>
+              </div>
             </div>
           )}
         </div>

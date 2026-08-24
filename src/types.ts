@@ -1,5 +1,26 @@
+export type AttachmentType = 'photo' | 'image' | 'audio' | 'letter' | 'text' | 'document';
+
+export interface CapsuleAttachment {
+  id: string;
+  type: AttachmentType;
+  title?: string;
+  name?: string;
+  file_name?: string;
+  data_url?: string;
+  url?: string;
+  text_content?: string;
+  content?: string;
+  size_bytes?: number;
+  size?: number;
+  mime_type?: string;
+  mimeType?: string;
+  duration?: number;
+  created_at?: string;
+}
+
 export interface Capsule {
   id: string;
+  user_id?: string | null;
   title: string;
   message: string;
   created_at: string;
@@ -14,9 +35,11 @@ export interface Capsule {
   access_type: 'public' | 'private';
   recipient_username?: string;
   recipient_email?: string;
+  tagged_users?: string[];
   photo_url?: string;
   audio_url?: string;
   audio_duration?: number;
+  attachments?: CapsuleAttachment[];
   spotify_uri?: string;
   spotify_track_id?: string;
   spotify_title?: string;

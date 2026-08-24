@@ -482,19 +482,21 @@ export const BurialAnimationOverlay: React.FC<BurialAnimationOverlayProps> = ({
       />
 
       {/* 3. Central Time Capsule Descending & Locking Graphic */}
-      <div className="relative z-30 flex flex-col items-center justify-center p-4 text-center select-none -translate-y-6 sm:-translate-y-10">
+      <div className="relative z-30 flex flex-col items-center justify-center p-4 text-center select-none -translate-y-4 sm:-translate-y-10 will-change-transform">
         {/* Outer Glowing Energy Seal */}
         <div
-          className={`relative w-44 h-44 sm:w-56 sm:h-56 flex items-center justify-center rounded-full transition-all duration-700 ${
+          style={{ willChange: 'transform, opacity' }}
+          className={`relative w-36 h-36 sm:w-56 sm:h-56 flex items-center justify-center rounded-full transition-all duration-700 ${
             animStage === 'descending'
-              ? 'scale-105 shadow-[0_0_90px_rgba(217,119,6,0.7)] translate-y-12'
+              ? 'scale-105 shadow-[0_0_90px_rgba(217,119,6,0.7)] translate-y-8 sm:translate-y-12'
               : animStage === 'flattening' || animStage === 'sealed'
-              ? 'scale-75 opacity-0 translate-y-24'
+              ? 'scale-75 opacity-0 translate-y-16 sm:translate-y-24'
               : 'scale-100'
           }`}
         >
           {/* Rotating Cryptographic Rune Ring */}
           <div
+            style={{ willChange: 'transform' }}
             className={`absolute inset-0 rounded-full border-2 border-dashed border-amber-400/60 transition-transform duration-1000 ${
               isLockClosed ? 'rotate-180 scale-105 border-amber-300' : 'rotate-45'
             }`}
@@ -502,47 +504,51 @@ export const BurialAnimationOverlay: React.FC<BurialAnimationOverlayProps> = ({
           <div className="absolute inset-2 rounded-full border border-amber-500/30 animate-ping opacity-25" />
 
           {/* Heavy Metallic Time Capsule Cylinder (Top & Bottom halves snapping shut) */}
-          <div className="relative w-24 h-34 sm:w-28 sm:h-40 rounded-2xl bg-gradient-to-b from-amber-700 via-amber-900 to-stone-900 border-2 border-amber-400/90 shadow-2xl overflow-hidden flex flex-col items-center justify-between p-2">
+          <div className="relative w-20 h-28 sm:w-28 sm:h-40 rounded-2xl bg-gradient-to-b from-amber-700 via-amber-900 to-stone-900 border-2 border-amber-400/90 shadow-2xl overflow-hidden flex flex-col items-center justify-between p-1.5 sm:p-2 will-change-transform">
             {/* Top Metallic Cap */}
             <div
-              className={`w-full h-10 rounded-lg bg-gradient-to-b from-amber-300 to-amber-600 border-b border-amber-800 shadow-md flex items-center justify-center transition-transform duration-300 ${
+              style={{ willChange: 'transform' }}
+              className={`w-full h-8 sm:h-10 rounded-lg bg-gradient-to-b from-amber-300 to-amber-600 border-b border-amber-800 shadow-md flex items-center justify-center transition-transform duration-300 ${
                 isLockClosed ? 'translate-y-0' : '-translate-y-2'
               }`}
             >
-              <div className="w-8 h-1 bg-amber-900/60 rounded-full" />
+              <div className="w-6 sm:w-8 h-1 bg-amber-900/60 rounded-full" />
             </div>
 
             {/* Glowing Center Wax Seal with Lock */}
             <div className="relative my-auto flex items-center justify-center">
               <div
-                className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all duration-300 ${
+                style={{ willChange: 'transform, opacity' }}
+                className={`w-10 h-10 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all duration-300 ${
                   isLockClosed
-                    ? 'bg-gradient-to-br from-rose-600 via-amber-600 to-amber-800 ring-4 ring-amber-300 shadow-[0_0_35px_rgba(245,158,11,0.9)]'
+                    ? 'bg-gradient-to-br from-rose-600 via-amber-600 to-amber-800 ring-2 sm:ring-4 ring-amber-300 shadow-[0_0_35px_rgba(245,158,11,0.9)]'
                     : 'bg-amber-950/80 ring-2 ring-amber-500/40'
                 }`}
               >
                 {isLockClosed ? (
-                  <Lock className="w-6 h-6 sm:w-7 sm:h-7 text-amber-100 animate-bounce" />
+                  <Lock className="w-5 h-5 sm:w-7 sm:h-7 text-amber-100 animate-bounce" />
                 ) : (
-                  <Sparkles className="w-5 h-5 text-amber-300 animate-pulse" />
+                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300 animate-pulse" />
                 )}
               </div>
             </div>
 
             {/* Bottom Metallic Base */}
             <div
-              className={`w-full h-10 rounded-lg bg-gradient-to-t from-amber-300 to-amber-600 border-t border-amber-800 shadow-md flex items-center justify-center transition-transform duration-300 ${
+              style={{ willChange: 'transform' }}
+              className={`w-full h-8 sm:h-10 rounded-lg bg-gradient-to-t from-amber-300 to-amber-600 border-t border-amber-800 shadow-md flex items-center justify-center transition-transform duration-300 ${
                 isLockClosed ? 'translate-y-0' : 'translate-y-2'
               }`}
             >
-              <div className="w-8 h-1 bg-amber-900/60 rounded-full" />
+              <div className="w-6 sm:w-8 h-1 bg-amber-900/60 rounded-full" />
             </div>
           </div>
         </div>
 
         {/* Dynamic Status HUD Card */}
         <div
-          className={`mt-4 px-6 py-2.5 rounded-2xl parchment-card border border-amber-400/80 shadow-2xl max-w-sm transition-all duration-500 ${
+          style={{ willChange: 'transform, opacity' }}
+          className={`mt-4 px-4 sm:px-6 py-2 sm:py-2.5 rounded-2xl parchment-card border border-amber-400/80 shadow-2xl max-w-sm transition-all duration-500 ${
             animStage === 'sealed' ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'
           }`}
         >

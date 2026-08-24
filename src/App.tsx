@@ -24,22 +24,23 @@ import { ResetPasswordModal } from './components/Modals/ResetPasswordModal';
 import { fetchCountryDetails, getCountryCodeFromCoordinates } from './utils/countries';
 import { GeocodingResult } from './utils/mapbox';
 import { ambientSound } from './utils/audio';
-import { supabaseAuth, capsulesDb, AppUser } from './utils/supabase';
+import { supabaseAuth, capsulesDb, AppUser, createGuestUser } from './utils/supabase';
+import { AlertTriangle } from 'lucide-react';
 
 const STORAGE_KEY = 'chronospheres_capsules_v8';
 const LEGACY_STORAGE_KEY = 'chronospheres_dao_capsules_v7';
 
 export default function App() {
-  // 1. Capsule State (Starts empty when logged out, populated on Supabase authentication)
+  // 1. Capsule State (Loads all public worldwide capsules and user's pins)
   const [capsules, setCapsules] = useState<Capsule[]>([]);
 
-  // 2. Real Supabase Authentication State & Password Reset Detection (Starts signed out: null)
+  // 2. Real Supabase Authentication State & Session Persistence
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup' | 'forgot_password'>('signin');
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
 
-  // Helper to load capsules when authenticated
+  // Helper to load all public capsules worldwide and user's personal pins
   const loadUserCapsules = async () => {
     const remoteCapsules = await capsulesDb.fetchCapsules();
     if (remoteCapsules && remoteCapsules.length > 0) {
@@ -49,19 +50,22 @@ export default function App() {
     }
   };
 
-  // On App Initialization: Explicitly sign out to guarantee clean logged-out initial state
+  // On App Initialization: Restore session if present, otherwise load public world pins
   useEffect(() => {
-    const initLoggedOutState = async () => {
+    const initSession = async () => {
       try {
-        await supabaseAuth.signOut();
+        const u = await supabaseAuth.getUser();
+        if (u) {
+          setCurrentUser(u);
+        }
       } catch (e) {
-        console.warn('Init signOut:', e);
+        console.warn('Init session check:', e);
       }
-      setCurrentUser(null);
-      setCapsules([]);
+      // Always load public capsules so world map is interactive immediately
+      loadUserCapsules();
     };
 
-    initLoggedOutState();
+    initSession();
 
     // Check if the current URL points to /reset-password or has Supabase recovery tokens
     const isResetUrl =
@@ -86,7 +90,7 @@ export default function App() {
         });
       } else if (event === 'SIGNED_OUT') {
         setCurrentUser(null);
-        setCapsules([]);
+        loadUserCapsules();
       }
     });
 
@@ -95,7 +99,35 @@ export default function App() {
     };
   }, []);
 
-  const activeUsername = currentUser?.username || 'Explorer';
+  const activeUsername = currentUser?.username || (currentUser?.isGuest ? 'Guest Explorer' : 'Explorer');
+
+  // Personal Vault Isolation: For new accounts, vault starts completely empty (0 items)
+  const vaultCapsules = useMemo(() => {
+    if (!currentUser) return [];
+    if (currentUser.isGuest) {
+      return capsules.filter(
+        (c) =>
+          c.creator_username.toLowerCase() === 'guest' ||
+          c.creator_username.toLowerCase() === 'guest explorer' ||
+          c.id.startsWith('guest_')
+      );
+    }
+    const uname = (currentUser.username || '').toLowerCase();
+    const cleanUname = uname.startsWith('@') ? uname.substring(1) : uname;
+    const uid = currentUser.id;
+
+    return capsules.filter((c) => {
+      if (c.user_id && c.user_id === uid) return true;
+      const cCreator = (c.creator_username || '').toLowerCase().replace('@', '');
+      if (cCreator === cleanUname) return true;
+      const cRecip = (c.recipient_username || '').toLowerCase().replace('@', '');
+      if (cRecip && cRecip === cleanUname) return true;
+      if (c.tagged_users && c.tagged_users.some((t) => t.toLowerCase().replace('@', '') === cleanUname)) {
+        return true;
+      }
+      return false;
+    });
+  }, [capsules, currentUser]);
 
   // 3. Fast-Forward Time Travel State for Evaluation
   const [simulatedTimeOffsetMs, setSimulatedTimeOffsetMs] = useState<number>(0);
@@ -392,6 +424,12 @@ export default function App() {
     await loadUserCapsules();
   };
 
+  const handleContinueAsGuest = () => {
+    const guestUser = createGuestUser();
+    setCurrentUser(guestUser);
+    setIsAuthModalOpen(false);
+  };
+
   const handleSignOut = async () => {
     try {
       await supabaseAuth.signOut();
@@ -399,7 +437,7 @@ export default function App() {
       console.warn('handleSignOut error:', e);
     }
     setCurrentUser(null);
-    setCapsules([]);
+    loadUserCapsules();
     setIsVaultOpen(false);
   };
 
@@ -454,6 +492,23 @@ export default function App() {
         isPlantingMode={isPlantingMode}
       />
 
+      {/* Guest Mode Active Floating Notice */}
+      {currentUser?.isGuest && (
+        <div className="absolute top-18 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-950/90 border border-amber-500/70 text-amber-200 text-xs shadow-lg backdrop-blur-md animate-in fade-in slide-in-from-top-2 max-w-[92vw]">
+          <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+          <span className="truncate">
+            <strong>Guest Mode:</strong> None of your data, pins, or vaults will be saved.
+          </span>
+          <button
+            type="button"
+            onClick={() => handleOpenAuth('signup')}
+            className="ml-1 px-2.5 py-0.5 rounded-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-[10px] sm:text-[11px] transition shadow-xs cursor-pointer shrink-0"
+          >
+            Sign Up
+          </button>
+        </div>
+      )}
+
       {/* 2. 3D EARTH GLOBE CANVAS VIEW */}
       <GlobeView
         capsules={filteredCapsules}
@@ -504,7 +559,7 @@ export default function App() {
       <MyVaultDrawer
         isOpen={isVaultOpen}
         onClose={() => setIsVaultOpen(false)}
-        capsules={currentUser ? capsules : []}
+        capsules={vaultCapsules}
         simulatedTimeOffsetMs={simulatedTimeOffsetMs}
         initialTab={vaultInitialTab}
         onSelectCapsuleOnGlobe={handleViewVaultCapsuleOnGlobe}
@@ -601,6 +656,7 @@ export default function App() {
         currentUser={currentUser}
         onAuthSuccess={handleAuthSuccess}
         onSignOut={handleSignOut}
+        onContinueAsGuest={handleContinueAsGuest}
         initialMode={authModalMode}
       />
 

@@ -16,9 +16,24 @@ export interface AppUser {
   avatar_url?: string;
   role?: string;
   is_verified?: boolean;
-  provider?: 'email' | 'google';
+  isGuest?: boolean;
+  provider?: 'email' | 'google' | 'guest';
   created_at?: string;
   last_sign_in_at?: string;
+}
+
+export function createGuestUser(): AppUser {
+  return {
+    id: 'guest',
+    email: 'guest@chronospheres.earth',
+    username: 'Guest Explorer',
+    role: 'guest',
+    is_verified: false,
+    isGuest: true,
+    provider: 'guest',
+    created_at: new Date().toISOString(),
+    last_sign_in_at: new Date().toISOString(),
+  };
 }
 
 export function getSupabaseConfig() {
@@ -38,8 +53,8 @@ export function getSupabaseClient(): SupabaseClient {
     const effectiveKey = anonKey || 'placeholder_key';
     supabaseInstance = createClient(effectiveUrl, effectiveKey, {
       auth: {
-        autoRefreshToken: false,
-        persistSession: false,
+        autoRefreshToken: true,
+        persistSession: true,
         detectSessionInUrl: true,
       },
     });
@@ -105,10 +120,21 @@ export const supabaseAuth = {
           created_at: u.created_at,
           last_sign_in_at: u.last_sign_in_at,
         };
+        localStorage.setItem(LOCAL_STORAGE_AUTH_SESSION_KEY, JSON.stringify(userObj));
         return userObj;
       }
     } catch (e) {
       console.warn('Supabase client getUser check:', e);
+    }
+
+    // Check stored active verified session for instant recovery
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_AUTH_SESSION_KEY);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn('Could not read session:', e);
     }
 
     return null;
@@ -229,6 +255,7 @@ export const supabaseAuth = {
           created_at: u.created_at,
           last_sign_in_at: new Date().toISOString(),
         };
+        localStorage.setItem(LOCAL_STORAGE_AUTH_SESSION_KEY, JSON.stringify(loggedUser));
         await this.sendLoginConfirmationEmail(cleanEmail, username);
         return { user: loggedUser, error: null };
       }
@@ -236,7 +263,7 @@ export const supabaseAuth = {
       console.warn('Supabase signInWithPassword:', e);
     }
 
-    // Demo / offline fallback session (in-memory only)
+    // Demo / offline fallback session
     const username = `@${cleanEmail.split('@')[0]}`;
     const loggedUser: AppUser = {
       id: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
@@ -249,6 +276,7 @@ export const supabaseAuth = {
       created_at: new Date().toISOString(),
       last_sign_in_at: new Date().toISOString(),
     };
+    localStorage.setItem(LOCAL_STORAGE_AUTH_SESSION_KEY, JSON.stringify(loggedUser));
 
     await this.sendLoginConfirmationEmail(cleanEmail, username);
     return { user: loggedUser, error: null };
@@ -429,9 +457,11 @@ export const capsulesDb = {
           access_type: row.access_type || 'public',
           recipient_username: row.recipient_username,
           recipient_email: row.recipient_email,
+          tagged_users: Array.isArray(row.tagged_users) ? row.tagged_users : typeof row.tagged_users === 'string' ? JSON.parse(row.tagged_users) : [],
           photo_url: row.photo_url,
           audio_url: row.audio_url,
           audio_duration: row.audio_duration,
+          attachments: Array.isArray(row.attachments) ? row.attachments : typeof row.attachments === 'string' ? JSON.parse(row.attachments) : [],
           spotify_uri: row.spotify_uri,
           spotify_track_id: row.spotify_track_id,
           spotify_title: row.spotify_title,
@@ -485,6 +515,15 @@ export const capsulesDb = {
    * Save or Update a Capsule in Supabase: inserts into public.capsules tied to auth.uid()
    */
   async saveCapsule(capsule: Capsule, userId?: string): Promise<{ success: boolean; error?: string }> {
+    // If guest mode, do not persist to database or localStorage cache
+    if (
+      userId === 'guest' ||
+      capsule.creator_username.toLowerCase() === 'guest' ||
+      capsule.creator_username.toLowerCase() === 'guest explorer'
+    ) {
+      return { success: true };
+    }
+
     try {
       const client = getSupabaseClient();
       const currentUser = (await client.auth.getUser())?.data?.user;
@@ -507,9 +546,11 @@ export const capsulesDb = {
         access_type: capsule.access_type,
         recipient_username: capsule.recipient_username || null,
         recipient_email: capsule.recipient_email || null,
+        tagged_users: capsule.tagged_users || [],
         photo_url: capsule.photo_url || null,
         audio_url: capsule.audio_url || null,
         audio_duration: capsule.audio_duration || null,
+        attachments: capsule.attachments || [],
         spotify_uri: capsule.spotify_uri || null,
         spotify_track_id: capsule.spotify_track_id || null,
         spotify_title: capsule.spotify_title || null,
