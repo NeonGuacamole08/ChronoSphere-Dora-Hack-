@@ -273,6 +273,30 @@ export const MyVaultDrawer: React.FC<MyVaultDrawerProps> = ({
 
           {/* 3. Cards Scrollable Container */}
           <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3.5 custom-scrollbar">
+            {/* Guest Mode Notice in Vault */}
+            {currentUser?.isGuest && (
+              <div className="p-3 rounded-xl bg-amber-100/90 border border-amber-400 text-amber-950 text-xs flex items-center justify-between gap-2 shadow-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
+                  <span className="leading-tight text-[11px] font-medium">
+                    <strong>Guest Mode:</strong> None of your data, pins, vaults, or shares will be saved.
+                  </span>
+                </div>
+                {onOpenAuthModal && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onOpenAuthModal();
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-amber-800 hover:bg-amber-900 text-amber-100 font-bold text-[10px] whitespace-nowrap transition cursor-pointer shrink-0"
+                  >
+                    Sign Up
+                  </button>
+                )}
+              </div>
+            )}
+
             {displayedCapsules.length === 0 ? (
               <div className="text-center py-12 px-4 space-y-3">
                 <div className="w-12 h-12 rounded-full bg-amber-900/10 border border-amber-800/30 flex items-center justify-center mx-auto text-amber-800/60">

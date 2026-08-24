@@ -642,6 +642,21 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
             onSubmit={handleProceedToLock}
             className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-3.5 sm:space-y-5"
           >
+            {/* Guest Mode Warning Banner if current user is guest */}
+            {currentUser?.isGuest && (
+              <div className="p-3 rounded-xl bg-amber-100/90 border border-amber-400 text-amber-950 text-xs flex items-start gap-2.5 shadow-xs">
+                <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                <div className="leading-snug">
+                  <span className="font-bold text-amber-900 block">
+                    Guest Mode Active
+                  </span>
+                  <span className="text-amber-800 text-[11px]">
+                    None of your data, pins, vaults, or shares will be saved permanently. Create an account to preserve and lock this capsule forever.
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Title & Primary Story */}
             <div className="space-y-3 sm:space-y-4">
               <div>

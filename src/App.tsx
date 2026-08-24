@@ -494,10 +494,10 @@ export default function App() {
 
       {/* Guest Mode Active Floating Notice */}
       {currentUser?.isGuest && (
-        <div className="absolute top-18 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-950/90 border border-amber-500/70 text-amber-200 text-xs shadow-lg backdrop-blur-md animate-in fade-in slide-in-from-top-2 max-w-[92vw]">
-          <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-          <span className="truncate">
-            <strong>Guest Mode:</strong> None of your data, pins, or vaults will be saved.
+        <div className="absolute top-18 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-950/95 border border-amber-500/80 text-amber-200 text-xs shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 max-w-[95vw] whitespace-normal">
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+          <span className="leading-tight text-[11px] sm:text-xs">
+            <strong>Guest Mode:</strong> None of your data, pins, vaults, or shares will be saved.
           </span>
           <button
             type="button"

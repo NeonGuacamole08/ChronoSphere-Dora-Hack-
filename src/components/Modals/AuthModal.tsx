@@ -392,7 +392,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
                   <div className="leading-snug">
                     <span className="font-bold block text-amber-900">
-                      Guest Mode: None of your data, pins, or vaults will be saved.
+                      Guest Mode: None of your data, pins, vaults, or shares will be saved.
                     </span>
                     <span className="text-amber-800 text-[10px]">
                       You can explore the global map, test creating temporary pins, and view public time capsules.
