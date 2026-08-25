@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Capsule } from '../types';
+import { Capsule, Pin } from '../types';
 import { SEED_CAPSULES } from '../data/seedCapsules';
 
 // Environment credentials automatically read from Vite environment variables
@@ -175,7 +175,7 @@ export const supabaseAuth = {
 
   /**
    * Sign up with Email, Password & Username
-   * Dispatches a real 6-digit email confirmation code and requires confirmation before the account starts working.
+   * Automatically activates the account immediately without requiring email confirmation codes for streamlined onboarding.
    */
   async signUp(
     email: string,
@@ -202,10 +202,6 @@ export const supabaseAuth = {
       return { user: null, error: 'Please provide a username (at least 2 characters).' };
     }
 
-    // Generate secure 6-digit verification code
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const verificationExpires = Date.now() + 15 * 60 * 1000; // 15 minutes validity
-
     const registeredUsers = getRegisteredAccounts();
     const existingIndex = registeredUsers.findIndex((u) => u.email === cleanEmail);
 
@@ -214,9 +210,7 @@ export const supabaseAuth = {
       email: cleanEmail,
       username: cleanUsername,
       password: password,
-      is_verified: false, // Unverified until confirmed by email!
-      verification_code: verificationCode,
-      verification_expires: verificationExpires,
+      is_verified: true, // Automatically active & verified for streamlined MVP onboarding!
       avatar_url: getAvatarUrl(cleanUsername),
       created_at: existingIndex >= 0 ? registeredUsers[existingIndex].created_at : new Date().toISOString(),
       last_sign_in_at: new Date().toISOString(),
@@ -229,20 +223,25 @@ export const supabaseAuth = {
     }
     saveRegisteredAccounts(registeredUsers);
 
-    // Dispatch real activation email with confirmation code to user
+    const activeUser: AppUser = {
+      id: accountRecord.id,
+      email: accountRecord.email,
+      username: accountRecord.username,
+      avatar_url: accountRecord.avatar_url || getAvatarUrl(accountRecord.username),
+      role: 'user',
+      is_verified: true,
+      provider: 'email',
+      created_at: accountRecord.created_at,
+      last_sign_in_at: accountRecord.last_sign_in_at,
+    };
+
+    localStorage.setItem(LOCAL_STORAGE_AUTH_SESSION_KEY, JSON.stringify(activeUser));
+
+    // Optional background notification email
     try {
-      await fetch('/api/auth/send-confirmation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: cleanEmail,
-          username: cleanUsername,
-          code: verificationCode,
-        }),
-      });
-      console.log(`[Supabase Auth] Confirmation email dispatched to ${cleanEmail} (Code: ${verificationCode})`);
-    } catch (apiErr) {
-      console.warn('[Supabase Auth] Confirmation API dispatch catch:', apiErr);
+      this.sendLoginConfirmationEmail(cleanEmail, cleanUsername).catch(() => {});
+    } catch {
+      // Non-blocking
     }
 
     // Also attempt Supabase native signup if connected
@@ -263,11 +262,10 @@ export const supabaseAuth = {
     }
 
     return {
-      user: null,
-      pendingVerification: true,
+      user: activeUser,
+      pendingVerification: false,
       email: cleanEmail,
       username: cleanUsername,
-      code: verificationCode,
       error: null,
     };
   },
@@ -382,7 +380,7 @@ export const supabaseAuth = {
 
   /**
    * Sign in with Email & Password
-   * Checks if user has confirmed their email; blocks unverified accounts until confirmed.
+   * Automatically grants active authenticated session for registered accounts.
    */
   async signInWithPassword(
     email: string,
@@ -413,21 +411,8 @@ export const supabaseAuth = {
         return { user: null, error: 'Incorrect password. Please verify your password or use "Forgot Password".' };
       }
 
-      // Check if user has confirmed their email
-      if (!foundUser.is_verified) {
-        // Generate new confirmation code and dispatch email
-        const resendRes = await this.resendVerificationCode(cleanEmail);
-        return {
-          user: null,
-          requiresVerification: true,
-          email: cleanEmail,
-          username: foundUser.username,
-          code: resendRes.code,
-          error: 'Your email address is not verified yet. We sent a new 6-digit confirmation code to your inbox.',
-        };
-      }
-
-      // Verified user - grant login session
+      // Auto-verify if previously unverified
+      foundUser.is_verified = true;
       foundUser.last_sign_in_at = new Date().toISOString();
       saveRegisteredAccounts(registeredUsers);
 
@@ -444,7 +429,11 @@ export const supabaseAuth = {
       };
 
       localStorage.setItem(LOCAL_STORAGE_AUTH_SESSION_KEY, JSON.stringify(loggedUser));
-      await this.sendLoginConfirmationEmail(cleanEmail, foundUser.username);
+      try {
+        this.sendLoginConfirmationEmail(cleanEmail, foundUser.username).catch(() => {});
+      } catch {
+        // Non-blocking
+      }
       return { user: loggedUser, error: null };
     }
 
@@ -705,8 +694,8 @@ export const supabaseAuth = {
     }
 
     // Instant Google OAuth provider session
-    const googleEmail = 'weareuniscattered@gmail.com';
-    const googleUsername = '@weareuniscattered';
+    const googleEmail = 'contact@unis.org';
+    const googleUsername = '@UNIS';
     const googleUser: AppUser = {
       id: `usr_google_${Date.now()}`,
       email: googleEmail,
@@ -855,64 +844,63 @@ export const capsulesDb = {
    * Save or Update a Capsule in Supabase: inserts into public.capsules tied to auth.uid()
    */
   async saveCapsule(capsule: Capsule, userId?: string): Promise<{ success: boolean; error?: string }> {
-    // If guest mode, do not persist to database or localStorage cache
-    if (
+    const isGuest = Boolean(
       userId === 'guest' ||
       capsule.creator_username.toLowerCase() === 'guest' ||
       capsule.creator_username.toLowerCase() === 'guest explorer'
-    ) {
-      return { success: true };
-    }
+    );
 
-    try {
-      const client = getSupabaseClient();
-      const currentUser = (await client.auth.getUser())?.data?.user;
-      const effectiveUserId = currentUser?.id || userId || null;
+    if (!isGuest) {
+      try {
+        const client = getSupabaseClient();
+        const currentUser = (await client.auth.getUser())?.data?.user;
+        const effectiveUserId = currentUser?.id || userId || null;
 
-      const record = {
-        id: capsule.id,
-        user_id: effectiveUserId,
-        title: capsule.title,
-        message: capsule.message,
-        created_at: capsule.created_at,
-        unlock_timestamp: capsule.unlock_timestamp,
-        lat: capsule.lat,
-        lng: capsule.lng,
-        location_name: capsule.location_name,
-        country_code: capsule.country_code,
-        country_name: capsule.country_name,
-        creator_username: capsule.creator_username,
-        creator_email: capsule.creator_email,
-        access_type: capsule.access_type,
-        recipient_username: capsule.recipient_username || null,
-        recipient_email: capsule.recipient_email || null,
-        tagged_users: capsule.tagged_users || [],
-        photo_url: capsule.photo_url || null,
-        audio_url: capsule.audio_url || null,
-        audio_duration: capsule.audio_duration || null,
-        attachments: capsule.attachments || [],
-        spotify_uri: capsule.spotify_uri || null,
-        spotify_track_id: capsule.spotify_track_id || null,
-        spotify_title: capsule.spotify_title || null,
-        spotify_artist: capsule.spotify_artist || null,
-        arweave_tx_id: capsule.arweave_tx_id,
-        encryption_signature: capsule.encryption_signature,
-        is_encrypted: capsule.is_encrypted,
-        is_draft: Boolean(capsule.is_draft),
-        notified: Boolean(capsule.notified),
-        tags: capsule.tags || [],
-      };
+        const record = {
+          id: capsule.id,
+          user_id: effectiveUserId,
+          title: capsule.title,
+          message: capsule.message,
+          created_at: capsule.created_at,
+          unlock_timestamp: capsule.unlock_timestamp,
+          lat: capsule.lat,
+          lng: capsule.lng,
+          location_name: capsule.location_name,
+          country_code: capsule.country_code,
+          country_name: capsule.country_name,
+          creator_username: capsule.creator_username,
+          creator_email: capsule.creator_email,
+          access_type: capsule.access_type,
+          recipient_username: capsule.recipient_username || null,
+          recipient_email: capsule.recipient_email || null,
+          tagged_users: capsule.tagged_users || [],
+          photo_url: capsule.photo_url || null,
+          audio_url: capsule.audio_url || null,
+          audio_duration: capsule.audio_duration || null,
+          attachments: capsule.attachments || [],
+          spotify_uri: capsule.spotify_uri || null,
+          spotify_track_id: capsule.spotify_track_id || null,
+          spotify_title: capsule.spotify_title || null,
+          spotify_artist: capsule.spotify_artist || null,
+          arweave_tx_id: capsule.arweave_tx_id,
+          encryption_signature: capsule.encryption_signature,
+          is_encrypted: capsule.is_encrypted,
+          is_draft: Boolean(capsule.is_draft),
+          notified: Boolean(capsule.notified),
+          tags: capsule.tags || [],
+        };
 
-      const { error } = await client.from('capsules').upsert(record, { onConflict: 'id' });
+        const { error } = await client.from('capsules').upsert(record, { onConflict: 'id' });
 
-      if (error) {
-        console.warn('Supabase capsules.upsert warning:', error.message);
+        if (error) {
+          console.warn('Supabase capsules.upsert warning:', error.message);
+        }
+      } catch (e: any) {
+        console.warn('Supabase capsules save error:', e);
       }
-    } catch (e: any) {
-      console.warn('Supabase capsules save error:', e);
     }
 
-    // Always update local cache for instant zero-latency UI
+    // Always update local cache for instant zero-latency UI (both for guests and users)
     try {
       const current = await this.fetchCapsules();
       const filtered = current.filter((c) => c.id !== capsule.id);
@@ -962,4 +950,51 @@ export const capsulesDb = {
     }
   },
 };
+
+/**
+ * Direct Supabase Client instance for database queries
+ */
+export const supabase = getSupabaseClient();
+
+/**
+ * Standard Frontend Save Pin Function
+ * Saves raw, exact floating-point geographical coordinates (lat, lng) to Supabase/state
+ */
+export async function savePin(pinData: {
+  title: string;
+  description?: string;
+  lat: number;
+  lng: number;
+  media_urls?: string[];
+  is_public?: boolean;
+}): Promise<{ data: any; error: any }> {
+  try {
+    const client = getSupabaseClient();
+    const rawLat = Number(pinData.lat);
+    const rawLng = Number(pinData.lng);
+
+    const { data, error } = await client
+      .from('pins')
+      .insert([
+        {
+          title: pinData.title,
+          description: pinData.description || '',
+          latitude: rawLat,
+          longitude: rawLng,
+          media_urls: pinData.media_urls || [],
+          is_public: pinData.is_public !== false,
+        },
+      ])
+      .select();
+
+    if (error) {
+      console.warn('Notice saving to Supabase pins table:', error.message || error);
+    }
+    return { data, error };
+  } catch (err: any) {
+    console.warn('Error in savePin:', err);
+    return { data: null, error: err };
+  }
+}
+
 

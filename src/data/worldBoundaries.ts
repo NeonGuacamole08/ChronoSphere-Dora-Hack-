@@ -267,6 +267,16 @@ export const WORLD_COUNTRY_BORDERS: CountryBoundary[] = [
     ],
   },
   {
+    id: 'b_gh',
+    name: 'Ghana',
+    cca2: 'GH',
+    cca3: 'GHA',
+    coordinates: [
+      [11.17, -0.2], [10.5, 0.5], [6.1, 1.2], [5.5, 0.0], [4.7, -2.1], [5.1, -2.9],
+      [7.2, -3.2], [9.5, -2.7], [11.0, -2.9], [11.17, -0.2]
+    ],
+  },
+  {
     id: 'b_ma',
     name: 'Morocco',
     cca2: 'MA',

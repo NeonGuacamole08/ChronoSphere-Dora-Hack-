@@ -26,6 +26,7 @@ export function latLngToVector3(lat: number, lng: number, radius = 2.0): THREE.V
 
 /**
  * Converts 3D Cartesian vector on a sphere back to Latitude and Longitude
+ * Returns raw, exact floating-point geographical coordinates (lat, lng).
  */
 export function vector3ToLatLng(vec: THREE.Vector3): { lat: number; lng: number } {
   const normalized = vec.clone().normalize();
@@ -37,8 +38,8 @@ export function vector3ToLatLng(vec: THREE.Vector3): { lat: number; lng: number 
   const lng = Math.atan2(-normalized.z, normalized.x) * (180 / Math.PI);
 
   return {
-    lat: Number(lat.toFixed(4)),
-    lng: Number(lng.toFixed(4)),
+    lat: Number(lat.toFixed(6)),
+    lng: Number(lng.toFixed(6)),
   };
 }
 

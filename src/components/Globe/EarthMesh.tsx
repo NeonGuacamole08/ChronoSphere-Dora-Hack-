@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { generateEarthTextures } from './textureGenerator';
@@ -13,6 +13,13 @@ export const EarthMesh: React.FC<EarthMeshProps> = ({
   onCoordinatesPicked,
   radius = 2.0,
 }) => {
+  const onCoordinatesPickedRef = useRef(onCoordinatesPicked);
+  useEffect(() => {
+    onCoordinatesPickedRef.current = onCoordinatesPicked;
+  }, [onCoordinatesPicked]);
+
+  const pointerDownPosRef = useRef<{ x: number; y: number } | null>(null);
+
   // Generate high-resolution base procedural maps
   const baseTextures = useMemo(() => {
     return generateEarthTextures();
@@ -67,12 +74,25 @@ export const EarthMesh: React.FC<EarthMeshProps> = ({
     );
   }, []);
 
+  const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
+    pointerDownPosRef.current = { x: e.clientX, y: e.clientY };
+  };
+
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
-    // Handle direct clicks on earth surface
-    if (e.point && onCoordinatesPicked) {
+    // Check if pointer moved significantly (drag/orbit rotation vs click/tap)
+    if (pointerDownPosRef.current) {
+      const dx = Math.abs(e.clientX - pointerDownPosRef.current.x);
+      const dy = Math.abs(e.clientY - pointerDownPosRef.current.y);
+      if (dx > 12 || dy > 12) {
+        return; // User was dragging the globe to rotate
+      }
+    }
+
+    // Handle direct clicks/taps on earth surface persistently
+    if (e.point && onCoordinatesPickedRef.current) {
       e.stopPropagation();
       const coords = vector3ToLatLng(e.point);
-      onCoordinatesPicked({
+      onCoordinatesPickedRef.current({
         lat: coords.lat,
         lng: coords.lng,
         point: e.point.clone(),
@@ -84,6 +104,7 @@ export const EarthMesh: React.FC<EarthMeshProps> = ({
     <mesh
       receiveShadow
       castShadow
+      onPointerDown={handlePointerDown}
       onClick={handleClick}
       onPointerOver={() => {
         document.body.style.cursor = 'grab';

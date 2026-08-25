@@ -38,7 +38,7 @@ export const AtmosphereGlow: React.FC<AtmosphereGlowProps> = ({ radius = 2.0 }) 
   }), []);
 
   return (
-    <mesh scale={[1.06, 1.06, 1.06]}>
+    <mesh scale={[1.06, 1.06, 1.06]} raycast={() => null}>
       <sphereGeometry args={[radius, 64, 64]} />
       <shaderMaterial
         vertexShader={AtmosphereShader.vertexShader}

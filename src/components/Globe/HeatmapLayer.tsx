@@ -95,7 +95,7 @@ export const HeatmapLayer: React.FC<HeatmapLayerProps> = ({
   if (!visible) return null;
 
   return (
-    <mesh ref={meshRef}>
+    <mesh ref={meshRef} raycast={() => null}>
       <sphereGeometry args={[radius, 48, 48]} />
       <meshBasicMaterial
         map={heatmapTexture}

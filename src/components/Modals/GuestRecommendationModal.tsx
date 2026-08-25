@@ -90,7 +90,7 @@ export const GuestRecommendationModal: React.FC<GuestRecommendationModalProps> =
       pinTitle: capsuleJustPlanted?.title || 'First Memory Pin',
       pinLocation: capsuleJustPlanted?.location_name || 'Global Coordinates',
       submittedAt: new Date().toISOString(),
-      targetEmail: 'masiala.felicia@gmail.com',
+      targetRecipient: 'UNIS Org',
     };
 
     try {
@@ -185,7 +185,7 @@ export const GuestRecommendationModal: React.FC<GuestRecommendationModalProps> =
             Guest Recommendation & Experience Review
           </h2>
           <p className="text-xs text-amber-100/70 mt-1 leading-relaxed">
-            You just planted your first time capsule! As a guest explorer, please take 30 seconds to rate your experience. Your answers are sent directly to the creator (<strong className="text-amber-300">masiala.felicia@gmail.com</strong>).
+            You just planted your first time capsule! As a guest explorer, please take 30 seconds to rate your experience. Your answers are sent directly to <strong className="text-amber-300">UNIS Org</strong>.
           </p>
         </div>
 
@@ -405,7 +405,7 @@ export const GuestRecommendationModal: React.FC<GuestRecommendationModalProps> =
                 )}
               </button>
               <p className="text-[10px] text-center text-stone-500 mt-2 font-mono">
-                Responses are automatically delivered to masiala.felicia@gmail.com
+                Responses are automatically delivered to UNIS Org
               </p>
             </div>
           </form>
@@ -421,7 +421,7 @@ export const GuestRecommendationModal: React.FC<GuestRecommendationModalProps> =
                 Thank You for Your Feedback! 🎉
               </h3>
               <p className="text-xs text-stone-300 max-w-md mx-auto leading-relaxed">
-                Your rating (<strong className="text-amber-400">{rating}/5 Stars</strong>) and recommendation score (<strong className="text-emerald-400">{npsScore}/10</strong>) have been routed to <strong className="text-amber-300">masiala.felicia@gmail.com</strong>.
+                Your rating (<strong className="text-amber-400">{rating}/5 Stars</strong>) and recommendation score (<strong className="text-emerald-400">{npsScore}/10</strong>) have been routed to <strong className="text-amber-300">UNIS Org</strong>.
               </p>
             </div>
 

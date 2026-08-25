@@ -31,8 +31,8 @@ import { Capsule, CapsuleAttachment, Coordinates } from '../../types';
 import { VoiceRecorder } from '../Audio/VoiceRecorder';
 import { SpotifyEmbed } from '../Spotify/SpotifyEmbed';
 import { generateArweaveTxId } from '../../utils/crypto';
-import { AppUser } from '../../utils/supabase';
-import { getCountryCodeFromCoordinates } from '../../utils/countries';
+import { AppUser, savePin } from '../../utils/supabase';
+import { getCountryCodeFromCoordinates, isCoordinateOnLand } from '../../utils/countries';
 
 interface CreateCapsuleModalProps {
   isOpen: boolean;
@@ -146,13 +146,14 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
 
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
-  const [lat, setLat] = useState<number>(initialCoords?.lat ?? 35.6762);
-  const [lng, setLng] = useState<number>(initialCoords?.lng ?? 139.6503);
+  const [lat, setLat] = useState<number | null>(initialCoords?.lat ?? null);
+  const [lng, setLng] = useState<number | null>(initialCoords?.lng ?? null);
   const [locationName, setLocationName] = useState(
-    initialCoords?.name || initialCoords?.country || 'Earth Coordinates'
+    initialCoords?.name || initialCoords?.country || ''
   );
-  const [countryName, setCountryName] = useState(initialCoords?.country || 'Global');
+  const [countryName, setCountryName] = useState(initialCoords?.country || '');
   const [countryCode, setCountryCode] = useState('US');
+  const [coordinateError, setCoordinateError] = useState<string | null>(null);
 
   // Access Control: Default to 'private' (Personal to User)
   const [accessType, setAccessType] = useState<'public' | 'private'>('private');
@@ -190,11 +191,44 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
 
+  // Helper to completely clear all form inputs and states
+  const resetFormState = () => {
+    setTitle('');
+    setMessage('');
+    setLat(null);
+    setLng(null);
+    setLocationName('');
+    setCountryName('');
+    setCountryCode('US');
+    setCoordinateError(null);
+    setAttachments([]);
+    setSpotifyTrack(null);
+    setAccessType('private');
+    setRecipientUsername('');
+    setRecipientEmail('');
+    setTaggedUsersInput('');
+    setImageUrlInput('');
+    setLetterTitle('');
+    setLetterContent('');
+    setShowAddLetterModal(false);
+    setUploadError(null);
+    setStep('form');
+    const d = new Date();
+    d.setFullYear(d.getFullYear() + 1);
+    setUnlockDate(d.toISOString().slice(0, 16));
+  };
+
+  const handleModalClose = () => {
+    resetFormState();
+    onClose();
+  };
+
   // Synchronize coordinates and reset or populate form fields whenever modal opens
   useEffect(() => {
     if (isOpen) {
       setStep('form');
       setUploadError(null);
+      setCoordinateError(null);
       setShowAddLetterModal(false);
 
       if (draftToEdit) {
@@ -252,21 +286,9 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
         setAttachments(initialAttachments);
       } else {
         // Reset fresh
-        setTitle('');
-        setMessage('');
-        setAttachments([]);
-        setSpotifyTrack(null);
-        setAccessType('private');
-        setRecipientUsername('');
-        setRecipientEmail('');
-        setTaggedUsersInput('');
+        resetFormState();
 
-        // Reset default unlock date to +1 year
-        const d = new Date();
-        d.setFullYear(d.getFullYear() + 1);
-        setUnlockDate(d.toISOString().slice(0, 16));
-
-        if (initialCoords) {
+        if (initialCoords && initialCoords.lat !== undefined && initialCoords.lng !== undefined) {
           setLat(initialCoords.lat);
           setLng(initialCoords.lng);
           setLocationName(
@@ -282,13 +304,15 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
           );
           setCountryCode(detectedCode || 'GL');
         } else {
-          setLat(35.6762);
-          setLng(139.6503);
-          setLocationName('Tokyo, Japan');
-          setCountryName('Japan');
-          setCountryCode('JP');
+          setLat(null);
+          setLng(null);
+          setLocationName('');
+          setCountryName('');
+          setCountryCode('US');
         }
       }
+    } else {
+      resetFormState();
     }
   }, [isOpen, initialCoords, draftToEdit]);
 
@@ -472,10 +496,22 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
 
   // Step 1 Save as In-Progress Draft in My Vault
   const handleSaveAsDraft = () => {
-    const finalLat = Number(Number(lat).toFixed(4));
-    const finalLng = Number(Number(lng).toFixed(4));
+    if (lat === null || lng === null || isNaN(Number(lat)) || isNaN(Number(lng))) {
+      setCoordinateError('Please select or search for a valid land location before saving.');
+      return;
+    }
+
+    const finalLat = Number(lat);
+    const finalLng = Number(lng);
+
+    // Validate land placement
+    if (!isCoordinateOnLand(finalLat, finalLng)) {
+      setCoordinateError('No pins should land in open ocean waters. Please select a terrestrial land or city location.');
+      return;
+    }
+
     const userHandle = currentUser?.username || activeUsername || '@earth_explorer';
-    const userEmail = currentUser?.email || 'explorer@earth.org';
+    const userEmail = currentUser?.email || 'contact@unis.org';
     const draftId =
       draftToEdit?.id || `draft_cap_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
 
@@ -487,7 +523,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
       unlock_timestamp: new Date(unlockDate).toISOString(),
       lat: finalLat,
       lng: finalLng,
-      location_name: locationName.trim() || `Earth Point (${finalLat}°, ${finalLng}°)`,
+      location_name: locationName.trim() || `Earth Point (${finalLat.toFixed(4)}°, ${finalLng.toFixed(4)}°)`,
       country_code: countryCode.toUpperCase() || 'GL',
       country_name: countryName.trim() || 'Global',
       creator_username: userHandle,
@@ -523,23 +559,49 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
     } else {
       onSaveCapsule(draftCapsule);
     }
-    onClose();
+    handleModalClose();
   };
 
   // Step 1 -> Step 2 transition on "Lock Capsule"
   const handleProceedToLock = (e: React.FormEvent) => {
     e.preventDefault();
+    setCoordinateError(null);
+
     if (!title.trim() || !message.trim()) return;
+
+    if (lat === null || lng === null || isNaN(Number(lat)) || isNaN(Number(lng)) || (Number(lat) === 0 && Number(lng) === 0)) {
+      setCoordinateError('Please select a valid land coordinate or search for a location before burying your capsule.');
+      return;
+    }
+
+    if (!isCoordinateOnLand(Number(lat), Number(lng))) {
+      setCoordinateError('No pins should land in open ocean waters. Please choose a terrestrial landmass or city.');
+      return;
+    }
+
     setStep('confirm');
   };
 
   // Step 2 final "Bury Capsule" confirmation
   const handleFinalBury = () => {
+    if (lat === null || lng === null || isNaN(Number(lat)) || isNaN(Number(lng))) {
+      setCoordinateError('Invalid coordinates. Please select a valid land position on the globe.');
+      setStep('form');
+      return;
+    }
+
+    const finalLat = Number(lat);
+    const finalLng = Number(lng);
+
+    if (!isCoordinateOnLand(finalLat, finalLng)) {
+      setCoordinateError('No pins should land in open ocean waters. Please choose a terrestrial location.');
+      setStep('form');
+      return;
+    }
+
     const txId = generateArweaveTxId();
-    const finalLat = Number(Number(lat).toFixed(4));
-    const finalLng = Number(Number(lng).toFixed(4));
     const userHandle = currentUser?.username || activeUsername || '@earth_explorer';
-    const userEmail = currentUser?.email || 'explorer@earth.org';
+    const userEmail = currentUser?.email || 'contact@unis.org';
     const capId =
       draftToEdit && !draftToEdit.id.startsWith('draft_')
         ? draftToEdit.id
@@ -553,7 +615,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
       unlock_timestamp: new Date(unlockDate).toISOString(),
       lat: finalLat,
       lng: finalLng,
-      location_name: locationName.trim() || `Earth Point (${finalLat}°, ${finalLng}°)`,
+      location_name: locationName.trim() || `Earth Point (${finalLat.toFixed(4)}°, ${finalLng.toFixed(4)}°)`,
       country_code: countryCode.toUpperCase() || 'GL',
       country_name: countryName.trim() || 'Global',
       creator_username: userHandle,
@@ -584,8 +646,19 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
       tags: ['personal', 'memory', 'time-capsule'],
     };
 
+    // Save pin to database with raw numeric latitude & longitude
+    savePin({
+      title: newCapsule.title,
+      description: newCapsule.message,
+      lat: finalLat,
+      lng: finalLng,
+      is_public: accessType === 'public',
+    }).catch((err) => {
+      console.warn('Background savePin notice:', err);
+    });
+
     onSaveCapsule(newCapsule);
-    onClose();
+    handleModalClose();
   };
 
   // Counts of each media type
@@ -629,7 +702,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleModalClose}
             className="p-1 sm:p-1.5 rounded-full hover:bg-amber-950/60 text-amber-200 hover:text-white transition cursor-pointer"
           >
             <X className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -693,12 +766,21 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
               <div className="flex items-center justify-between">
                 <span className="text-[11px] sm:text-xs font-bold text-amber-950 flex items-center gap-1.5">
                   <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-700" />
-                  Earth Coordinates & Location
+                  Earth Coordinates & Location (Land Locked)
                 </span>
                 <span className="text-[10px] sm:text-[11px] font-mono text-amber-800">
-                  Lat: {Number(lat).toFixed(4)}°, Lng: {Number(lng).toFixed(4)}°
+                  {lat !== null && lng !== null
+                    ? `Lat: ${Number(lat).toFixed(4)}°, Lng: ${Number(lng).toFixed(4)}°`
+                    : 'No location selected'}
                 </span>
               </div>
+
+              {coordinateError && (
+                <div className="p-2 sm:p-2.5 rounded-lg bg-red-950/90 border border-red-500/60 text-red-200 text-[11px] flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                  <span>{coordinateError}</span>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
                 <input
@@ -1118,7 +1200,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
             <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-amber-800/15">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleModalClose}
                 className="px-3.5 py-2.5 rounded-xl bg-stone-200 hover:bg-stone-300 text-stone-700 font-semibold text-xs transition cursor-pointer"
               >
                 Cancel

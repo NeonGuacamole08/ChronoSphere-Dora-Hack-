@@ -1,5 +1,6 @@
 import { CountryData } from '../types';
 import { matchCoordinatesToCountry } from '../data/worldBoundaries';
+import { isCoordinateOnLand } from '../data/worldLandPolygons';
 
 const countryCache = new Map<string, CountryData>();
 
@@ -749,13 +750,12 @@ export function getCountryCodeFromCoordinates(lat: number, lng: number): { count
     return { countryCode: 'RU', countryName: 'Russia' };
   }
 
-  // Generic Continental fallbacks based on coordinates quadrant
-  if (lat > 35 && lng > -10 && lng < 40) return { countryCode: 'FR', countryName: 'France' };
-  if (lat > 10 && lng > 60 && lng < 140) return { countryCode: 'JP', countryName: 'Japan' };
-  if (lat < 10 && lat > -40 && lng > 10 && lng < 50) return { countryCode: 'ZA', countryName: 'South Africa' };
-  if (lat > 15 && lng > -130 && lng < -60) return { countryCode: 'US', countryName: 'United States' };
-  if (lat < 15 && lng > -90 && lng < -30) return { countryCode: 'BR', countryName: 'Brazil' };
-  if (lat < -10 && lng > 110 && lng < 179) return { countryCode: 'AU', countryName: 'Australia' };
+  // Check general landmass polygons
+  if (isCoordinateOnLand(lat, lng)) {
+    return { countryCode: 'UN', countryName: 'Land Territory' };
+  }
 
-  return { countryCode: 'US', countryName: 'Global Location' };
+  return { countryCode: 'OCEAN', countryName: 'Ocean Waters' };
 }
+
+export { isCoordinateOnLand };

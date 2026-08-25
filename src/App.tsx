@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Capsule, CountryData, Coordinates } from './types';
 import { SEED_CAPSULES } from './data/seedCapsules';
 import { Header } from './components/Navigation/Header';
@@ -258,7 +258,7 @@ export default function App() {
   };
 
   // Handle "Drop Pin" button click
-  const handleDropPinClick = () => {
+  const handleDropPinClick = useCallback(() => {
     if (targetCoordinates) {
       setCreateCoords({
         lat: targetCoordinates.lat,
@@ -267,84 +267,96 @@ export default function App() {
       });
       setIsCreateModalOpen(true);
       setIsPlantingMode(false);
+      setTargetCoordinates(null);
     } else {
       setIsPlantingMode((prev) => !prev);
     }
-  };
+  }, [targetCoordinates, searchQuery]);
 
   // Handle capsule click: if unlocked, trigger 2-second excavation animation; otherwise open modal directly
-  const handleSelectCapsule = async (capsule: Capsule, forceExcavate = false) => {
-    setIsPlantingMode(false);
+  const handleSelectCapsule = useCallback(
+    async (capsule: Capsule, forceExcavate = false) => {
+      setIsPlantingMode(false);
 
-    // 1. Smoothly fly camera direct to capsule coordinates
-    setTargetCoordinates({ lat: capsule.lat, lng: capsule.lng });
+      // 1. Smoothly fly camera direct to capsule coordinates
+      setTargetCoordinates({ lat: capsule.lat, lng: capsule.lng });
 
-    // 2. Fetch REST Countries details
-    if (capsule.country_code) {
-      fetchCountryDetails(capsule.country_code).then((info) => {
-        if (info) setSelectedCountry(info);
-      });
-    }
+      // 2. Fetch REST Countries details
+      if (capsule.country_code) {
+        fetchCountryDetails(capsule.country_code).then((info) => {
+          if (info) setSelectedCountry(info);
+        });
+      }
 
-    const effectiveTime = Date.now() + simulatedTimeOffsetMs;
-    const isUnlocked =
-      new Date(capsule.unlock_timestamp).getTime() <= effectiveTime || capsule.is_encrypted === false;
+      const effectiveTime = Date.now() + simulatedTimeOffsetMs;
+      const isUnlocked =
+        new Date(capsule.unlock_timestamp).getTime() <= effectiveTime || capsule.is_encrypted === false;
 
-    if (isUnlocked || forceExcavate) {
-      // Close any open drawers/modals first
-      setIsCapsuleModalOpen(false);
-      setIsVaultOpen(false);
-      // Play 2-second excavation unearthing sequence
-      setExcavatingCapsule(capsule);
-    } else {
-      setSelectedCapsule(capsule);
-      setIsCapsuleModalOpen(true);
-    }
-  };
+      if (isUnlocked || forceExcavate) {
+        // Close any open drawers/modals first
+        setIsCapsuleModalOpen(false);
+        setIsVaultOpen(false);
+        // Play 2-second excavation unearthing sequence
+        setExcavatingCapsule(capsule);
+      } else {
+        setSelectedCapsule(capsule);
+        setIsCapsuleModalOpen(true);
+      }
+    },
+    [simulatedTimeOffsetMs]
+  );
 
   // Complete excavation sequence & reveal unlocked capsule modal
-  const handleExcavationComplete = () => {
+  const handleExcavationComplete = useCallback(() => {
     if (excavatingCapsule) {
       setSelectedCapsule(excavatingCapsule);
       setIsCapsuleModalOpen(true);
       setExcavatingCapsule(null);
     }
-  };
+  }, [excavatingCapsule]);
 
   // Delete Capsule Pin from local state and Supabase
-  const handleDeleteCapsule = async (capsuleId: string) => {
+  const handleDeleteCapsule = useCallback(async (capsuleId: string) => {
     setCapsules((prev) => prev.filter((c) => c.id !== capsuleId));
-    if (selectedCapsule && selectedCapsule.id === capsuleId) {
-      setSelectedCapsule(null);
-      setIsCapsuleModalOpen(false);
-    }
+    setSelectedCapsule((prev) => (prev?.id === capsuleId ? null : prev));
+    setIsCapsuleModalOpen(false);
     await capsulesDb.deleteCapsule(capsuleId);
-  };
+  }, []);
 
   // Handle Planting modal with coordinates picked from globe
-  const handleOpenCreateWithCoords = (coords: Coordinates) => {
+  const handleOpenCreateWithCoords = useCallback((coords: Coordinates) => {
     setDraftToEdit(null);
+    setSelectedCapsule(null);
+    setTargetCoordinates(null);
     setCreateCoords(coords);
     setIsCreateModalOpen(true);
     setIsPlantingMode(false);
-  };
+  }, []);
 
   // Save capsule as an in-progress draft (bypasses burial, stores in My Vault -> Drafts)
-  const handleSaveDraft = async (draftCap: Capsule) => {
-    setCapsules((prev) => [draftCap, ...prev.filter((c) => c.id !== draftCap.id)]);
-    setIsCreateModalOpen(false);
-    setDraftToEdit(null);
-    setCreateCoords(null);
-    setVaultInitialTab('drafts');
-    setIsVaultOpen(true);
+  const handleSaveDraft = useCallback(
+    async (draftCap: Capsule) => {
+      // Dynamic marker array update
+      setCapsules((prev) => [draftCap, ...prev.filter((c) => c.id !== draftCap.id)]);
+      setIsCreateModalOpen(false);
+      setDraftToEdit(null);
+      setCreateCoords(null);
+      setIsPlantingMode(false);
+      setTargetCoordinates(null);
+      setVaultInitialTab('drafts');
+      setIsVaultOpen(true);
 
-    // Persist draft in Supabase database
-    await capsulesDb.saveCapsule(draftCap, currentUser?.id);
-  };
+      // Persist draft in Supabase database
+      await capsulesDb.saveCapsule(draftCap, currentUser?.id);
+    },
+    [currentUser?.id]
+  );
 
   // Resume editing a saved draft from My Vault
-  const handleResumeDraft = (draft: Capsule) => {
+  const handleResumeDraft = useCallback((draft: Capsule) => {
     setIsVaultOpen(false);
+    setSelectedCapsule(null);
+    setTargetCoordinates(null);
     setDraftToEdit(draft);
     setCreateCoords({
       lat: draft.lat,
@@ -353,32 +365,34 @@ export default function App() {
       country: draft.country_name,
     });
     setIsCreateModalOpen(true);
-  };
+  }, []);
 
   // Add newly created capsule & initiate Burial Animation Sequence + Supabase Sync
-  const handleSaveCapsule = async (newCap: Capsule) => {
-    setIsVaultOpen(false);
-    setIsCountryDrawerOpen(false);
-    setIsCapsuleModalOpen(false);
-    setDraftToEdit(null);
+  const handleSaveCapsule = useCallback(
+    async (newCap: Capsule) => {
+      setIsVaultOpen(false);
+      setIsCountryDrawerOpen(false);
+      setIsCapsuleModalOpen(false);
+      setDraftToEdit(null);
+      setCreateCoords(null);
+      setIsPlantingMode(false);
+      setSearchQuery('');
+      setTargetCoordinates({ lat: newCap.lat, lng: newCap.lng });
 
-    // Remove any previous draft version
-    setCapsules((prev) => prev.filter((c) => c.id !== newCap.id));
+      // Dynamic Marker Array Update: append new pin immediately into state so it renders on globe right away
+      setCapsules((prev) => [newCap, ...prev.filter((c) => c.id !== newCap.id)]);
 
-    // Smoothly fly 3D camera direct to capsule coordinates
-    setSearchQuery('');
-    setTargetCoordinates({ lat: newCap.lat, lng: newCap.lng });
-    setIsPlantingMode(false);
+      // Persist to Supabase database
+      await capsulesDb.saveCapsule(newCap, currentUser?.id);
 
-    // Persist to Supabase database
-    await capsulesDb.saveCapsule(newCap, currentUser?.id);
-
-    // Trigger 2-second Burial animation overlay
-    setBuryingCapsule(newCap);
-  };
+      // Trigger 2-second Burial animation overlay
+      setBuryingCapsule(newCap);
+    },
+    [currentUser?.id]
+  );
 
   // Complete burial sequence & settle camera on placed pin
-  const handleBurialAnimationComplete = () => {
+  const handleBurialAnimationComplete = useCallback(() => {
     if (buryingCapsule) {
       const isGuest = Boolean(
         currentUser?.isGuest ||
@@ -387,7 +401,9 @@ export default function App() {
         buryingCapsule.id.startsWith('guest_')
       );
 
-      setCapsules((prev) => [buryingCapsule, ...prev]);
+      // Ensure pin exists in state
+      setCapsules((prev) => [buryingCapsule, ...prev.filter((c) => c.id !== buryingCapsule.id)]);
+      setTargetCoordinates(null);
 
       // If guest and hasn't yet submitted mandatory recommendation review
       if (isGuest && !hasCompletedGuestFeedback) {
@@ -399,24 +415,24 @@ export default function App() {
       }
       setBuryingCapsule(null);
     }
-  };
+  }, [buryingCapsule, currentUser, hasCompletedGuestFeedback]);
 
-  const handleCloseGuestRecommendation = () => {
+  const handleCloseGuestRecommendation = useCallback(() => {
     setIsGuestRecommendationOpen(false);
     setHasCompletedGuestFeedback(true);
     if (guestFirstPlantedCapsule) {
       setSelectedCapsule(guestFirstPlantedCapsule);
       setIsCapsuleModalOpen(true);
     }
-  };
+  }, [guestFirstPlantedCapsule]);
 
   // Handle "View on Globe" from My Vault Drawer
-  const handleViewVaultCapsuleOnGlobe = (capsule: Capsule) => {
+  const handleViewVaultCapsuleOnGlobe = useCallback((capsule: Capsule) => {
     setIsVaultOpen(false);
     setSearchQuery('');
     setTargetCoordinates({ lat: capsule.lat, lng: capsule.lng });
     setSelectedCapsule(capsule);
-  };
+  }, []);
 
   // Fast-Forward / Test Unlock override
   const handleUnlockTest = (capsuleId: string) => {
@@ -661,6 +677,7 @@ export default function App() {
         onClose={() => {
           setIsCapsuleModalOpen(false);
           setSelectedCapsule(null);
+          setTargetCoordinates(null);
         }}
         activeUsername={activeUsername}
         onUnlockTest={handleUnlockTest}
@@ -678,6 +695,8 @@ export default function App() {
           setIsCreateModalOpen(false);
           setCreateCoords(null);
           setDraftToEdit(null);
+          setIsPlantingMode(false);
+          setTargetCoordinates(null);
         }}
         onSaveCapsule={handleSaveCapsule}
         onSaveDraft={handleSaveDraft}

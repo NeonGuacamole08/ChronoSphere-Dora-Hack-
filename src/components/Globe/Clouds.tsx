@@ -46,7 +46,7 @@ export const Clouds: React.FC<CloudsProps> = ({ texture, radius = 2.028 }) => {
   return (
     <group>
       {/* 1. Primary Smooth Low-Altitude Moving Cloud Layer */}
-      <mesh ref={cloudsRef} scale={[1.015, 1.015, 1.015]}>
+      <mesh ref={cloudsRef} scale={[1.015, 1.015, 1.015]} raycast={() => null}>
         <sphereGeometry args={[radius, 64, 64]} />
         <meshStandardMaterial
           map={cloudTexture}
@@ -60,7 +60,7 @@ export const Clouds: React.FC<CloudsProps> = ({ texture, radius = 2.028 }) => {
       </mesh>
 
       {/* 2. Secondary Smooth High-Altitude Wispy Moving Cloud Layer */}
-      <mesh ref={outerCloudsRef} scale={[1.025, 1.025, 1.025]}>
+      <mesh ref={outerCloudsRef} scale={[1.025, 1.025, 1.025]} raycast={() => null}>
         <sphereGeometry args={[radius * 1.012, 64, 64]} />
         <meshStandardMaterial
           map={cloudTexture}

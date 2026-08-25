@@ -110,12 +110,21 @@ export const CapsulePin: React.FC<CapsulePinProps> = ({
         document.body.style.cursor = 'auto';
       }}
     >
-      {/* 1. PHYSICAL MANIFESTATION: Solid Metallic Anchor Pedestal embedded in Earth's Crust */}
+      {/* 1. PHYSICAL MANIFESTATION: Solid Metallic Anchor Needle & Pedestal embedded in Earth's Crust */}
+      <mesh position={[0, 0.015, 0]}>
+        <coneGeometry args={[0.018, 0.03, 16]} />
+        <meshStandardMaterial
+          color={!hasAccess ? '#881337' : '#f59e0b'}
+          metalness={0.9}
+          roughness={0.2}
+        />
+      </mesh>
+
       <mesh
         ref={pedestalRef}
-        position={[0, 0.02, 0]}
+        position={[0, 0.035, 0]}
       >
-        <cylinderGeometry args={[0.022, 0.034, 0.04, 16]} />
+        <cylinderGeometry args={[0.022, 0.028, 0.02, 16]} />
         <meshStandardMaterial
           color={!hasAccess ? '#4c0519' : '#1e293b'}
           metalness={0.85}
@@ -124,7 +133,7 @@ export const CapsulePin: React.FC<CapsulePinProps> = ({
       </mesh>
 
       {/* 2. Physical Capsule Core (Floating Inset Vault Body) */}
-      <mesh position={[0, 0.06, 0]}>
+      <mesh position={[0, 0.065, 0]}>
         <sphereGeometry args={[0.02, 16, 16]} />
         <meshStandardMaterial
           color={!hasAccess ? '#e11d48' : '#38bdf8'}
@@ -138,7 +147,7 @@ export const CapsulePin: React.FC<CapsulePinProps> = ({
       {/* 3. Glowing Radial Projection Light Beam */}
       <mesh
         ref={beamRef}
-        position={[0, beamHeight / 2 + 0.03, 0]}
+        position={[0, beamHeight / 2 + 0.035, 0]}
       >
         <cylinderGeometry args={[0.005, 0.015, beamHeight, 16]} />
         <meshBasicMaterial
@@ -149,7 +158,7 @@ export const CapsulePin: React.FC<CapsulePinProps> = ({
       </mesh>
 
       {/* 4. Surface Base Impact Glow Ring on Earth */}
-      <mesh position={[0, 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0, 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[0.038, 24]} />
         <meshBasicMaterial
           color={!hasAccess ? '#e11d48' : '#38bdf8'}
@@ -162,7 +171,7 @@ export const CapsulePin: React.FC<CapsulePinProps> = ({
       {/* 5. Golden Circular Ring Target at the tip of the beam */}
       <mesh
         ref={ringRef}
-        position={[0, beamHeight + 0.03, 0]}
+        position={[0, beamHeight + 0.035, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
       >
         <torusGeometry args={[0.036, 0.005, 16, 32]} />
@@ -181,7 +190,10 @@ export const CapsulePin: React.FC<CapsulePinProps> = ({
           distanceFactor={6.5}
           zIndexRange={[20, 0]}
         >
-          <div className="relative pointer-events-auto cursor-pointer select-none">
+          <div
+            className="relative pointer-events-auto cursor-pointer select-none"
+            style={{ transform: 'translate3d(-50%, -100%, 0)' }}
+          >
             {/* Conditional Badge Styling depending on Access */}
             {hasAccess ? (
               <div

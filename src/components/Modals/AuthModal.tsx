@@ -75,7 +75,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   if (!isOpen) return null;
 
-  // 1. Handle Sign Up -> Triggers real confirmation email with 6-digit code
+  // 1. Handle Sign Up -> Instant activation & session creation without requiring email verification codes
   const handleSignUpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
@@ -87,19 +87,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     if (res.error) {
       setErrorMsg(res.error);
-    } else if (res.pendingVerification) {
-      setLastDispatchedCode(res.code || null);
-      setSuccessMsg(
-        `Confirmation email dispatched to ${res.email}! Please enter the 6-digit code below to activate your account.`
-      );
-      setResendCooldown(30);
-      setMode('verify_email');
     } else if (res.user) {
-      setSuccessMsg(`Welcome ${res.user.username}! Account created and verified.`);
+      setSuccessMsg(`🎉 Welcome to ChronoSpheres, ${res.user.username}! Account created and activated.`);
       onAuthSuccess(res.user);
       setTimeout(() => {
         onClose();
-      }, 1500);
+      }, 900);
     }
   };
 
@@ -666,7 +659,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>
-                      <span>{mode === 'signup' ? 'Create Account & Send Verification Email' : 'Sign In'}</span>
+                      <span>{mode === 'signup' ? 'Create Account & Start Exploring' : 'Sign In'}</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}

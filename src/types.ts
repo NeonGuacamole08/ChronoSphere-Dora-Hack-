@@ -1,3 +1,15 @@
+export interface Pin {
+  id?: string;
+  user_id?: string | null;
+  title: string;
+  description?: string;
+  latitude: number;
+  longitude: number;
+  media_urls?: string[];
+  is_public: boolean;
+  created_at?: string;
+}
+
 export type AttachmentType = 'photo' | 'image' | 'audio' | 'letter' | 'text' | 'document';
 
 export interface CapsuleAttachment {

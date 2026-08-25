@@ -87,7 +87,7 @@ export const SEED_CAPSULES: Capsule[] = [
   {
     id: 'cap_grand_canyon_03',
     title: 'Golden Hour at Desert View Watchtower',
-    message: 'Sealed for @weareuniscattered: The shadows stretching miles across the Colorado River basin. When you unlock this, remember the silence that enveloped us when the sun dipped below the rim.',
+    message: 'Sealed for @UNIS: The shadows stretching miles across the Colorado River basin. When you unlock this, remember the silence that enveloped us when the sun dipped below the rim.',
     created_at: '2026-02-10T17:45:00Z',
     unlock_timestamp: '2027-01-01T00:00:00Z', // LOCKED INTO FUTURE!
     lat: 36.0427,
@@ -98,8 +98,8 @@ export const SEED_CAPSULES: Capsule[] = [
     creator_username: '@elena_hiker',
     creator_email: 'elena@treasurefest.io',
     access_type: 'private',
-    recipient_username: '@weareuniscattered',
-    recipient_email: 'weareuniscattered@gmail.com',
+    recipient_username: '@UNIS',
+    recipient_email: 'contact@unis.org',
     photo_url: 'https://images.unsplash.com/photo-1474044159687-1ee9f3a51722?w=800&auto=format&fit=crop&q=80',
     audio_url: 'https://actions.google.com/sounds/v1/weather/wind_desert_howl.ogg',
     audio_duration: 30,
@@ -197,7 +197,7 @@ export const SEED_CAPSULES: Capsule[] = [
   {
     id: 'cap_sydney_07',
     title: 'Under the Southern Cross in Sydney Harbour',
-    message: 'Sailing past Bradley’s Head as the harbour breeze cools the summer heat. Tagging @weareuniscattered with our graduation oath.',
+    message: 'Sailing past Bradley’s Head as the harbour breeze cools the summer heat. Tagging @UNIS with our graduation oath.',
     created_at: '2025-12-31T23:59:00Z',
     unlock_timestamp: '2026-07-01T00:00:00Z', // UNLOCKED
     lat: -33.8568,
@@ -208,8 +208,8 @@ export const SEED_CAPSULES: Capsule[] = [
     creator_username: '@liam_sails',
     creator_email: 'liam@treasurefest.io',
     access_type: 'private',
-    recipient_username: '@weareuniscattered',
-    recipient_email: 'weareuniscattered@gmail.com',
+    recipient_username: '@UNIS',
+    recipient_email: 'contact@unis.org',
     photo_url: 'https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=800&auto=format&fit=crop&q=80',
     audio_url: 'https://actions.google.com/sounds/v1/water/waves_crashing_harbor.ogg',
     audio_duration: 22,
