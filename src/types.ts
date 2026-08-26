@@ -45,6 +45,8 @@ export interface Capsule {
   creator_username: string;
   creator_email: string;
   access_type: 'public' | 'private';
+  public_unlock_mode?: 'instant_find' | 'time_locked';
+  unlock_radius_meters?: number;
   recipient_username?: string;
   recipient_email?: string;
   tagged_users?: string[];

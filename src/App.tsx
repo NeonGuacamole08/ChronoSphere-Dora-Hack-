@@ -22,6 +22,10 @@ import { WelcomeGuideModal } from './components/Modals/WelcomeGuideModal';
 import { AuthModal } from './components/Modals/AuthModal';
 import { ResetPasswordModal } from './components/Modals/ResetPasswordModal';
 import { GuestRecommendationModal } from './components/Modals/GuestRecommendationModal';
+import { StreetMapView } from './components/Map/StreetMapView';
+import { ProximityToast } from './components/Map/ProximityToast';
+import { CloudTransitionOverlay } from './components/Globe/CloudTransitionOverlay';
+import { useUserLocation, ProximityAlertEvent } from './utils/useUserLocation';
 import { fetchCountryDetails, getCountryCodeFromCoordinates } from './utils/countries';
 import { GeocodingResult } from './utils/mapbox';
 import { ambientSound } from './utils/audio';
@@ -70,6 +74,9 @@ export default function App() {
     };
 
     initSession();
+
+    // App Launch Audio: Play high-altitude gliding whoosh as globe materializes
+    ambientSound.playLaunchAirGlidingSound(3.8);
 
     // Check if the current URL points to /reset-password or has Supabase recovery tokens
     const isResetUrl =
@@ -140,11 +147,52 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [targetCoordinates, setTargetCoordinates] = useState<{ lat: number; lng: number } | null>(null);
 
-  // 5. 3D Scene Controls & Audio
+  // 5. Map View Mode (3D Globe vs 2D Snap Map Street View) & Controls
+  const [viewMode, setViewMode] = useState<'3d' | '2d'>('3d');
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [flyInTrigger, setFlyInTrigger] = useState(1);
   const [isPlantingMode, setIsPlantingMode] = useState(false);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
+
+  // Atmospheric Cloud Pass-Through Zoom Transition State
+  const [isCloudDiving, setIsCloudDiving] = useState(false);
+  const [cloudDiveLabel, setCloudDiveLabel] = useState<string>('');
+
+  const handleTriggerCloudDive = useCallback(
+    (coords?: { lat: number; lng: number }, label?: string) => {
+      if (coords) {
+        setTargetCoordinates(coords);
+      }
+      if (label) {
+        setCloudDiveLabel(label);
+      } else if (coords) {
+        setCloudDiveLabel(`${coords.lat.toFixed(2)}°, ${coords.lng.toFixed(2)}°`);
+      } else {
+        setCloudDiveLabel('Street-Level Vector Grid');
+      }
+
+      setIsCloudDiving(true);
+
+      // Switch underlying view layer to 2D after cloud dive accelerates
+      setTimeout(() => {
+        setViewMode('2d');
+      }, 700);
+    },
+    []
+  );
+
+  // Proximity Alert Toast State
+  const [activeProximityAlert, setActiveProximityAlert] = useState<ProximityAlertEvent | null>(null);
+
+  const handleProximityAlert = useCallback((event: ProximityAlertEvent) => {
+    setActiveProximityAlert(event);
+  }, []);
+
+  // Real-time User GPS location & Proximity Engine
+  const { userLocation, simulateLocation, getDistanceToCapsule } = useUserLocation(
+    capsules,
+    handleProximityAlert
+  );
 
   // Sync isAudioMuted with ambientSound engine
   useEffect(() => {
@@ -272,6 +320,14 @@ export default function App() {
       setIsPlantingMode((prev) => !prev);
     }
   }, [targetCoordinates, searchQuery]);
+
+  // Handle focus on user's live GPS location
+  const handleFocusUserLocation = useCallback(() => {
+    if (!userLocation) return;
+    ambientSound.playCloudDiveWhooshSound(1.2);
+    setTargetCoordinates({ lat: userLocation.lat, lng: userLocation.lng });
+    setFlyInTrigger((prev) => prev + 1);
+  }, [userLocation]);
 
   // Handle capsule click: if unlocked, trigger 2-second excavation animation; otherwise open modal directly
   const handleSelectCapsule = useCallback(
@@ -561,20 +617,20 @@ export default function App() {
         isPlantingMode={isPlantingMode}
       />
 
-      {/* Guest Mode Active Floating Notice - Slender, elegant pill design matching desktop */}
+      {/* Guest Mode Active Floating Notice - Positioned safely below all header action buttons for all screen types */}
       {currentUser?.isGuest && showGuestBanner && (
-        <div className="absolute top-14 sm:top-16 md:top-18 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 sm:gap-2.5 py-1 px-2.5 sm:px-3.5 rounded-full bg-[#140e06]/95 border border-amber-500/70 text-amber-100 text-[10.5px] sm:text-xs shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 max-w-[96vw] w-auto whitespace-nowrap">
-          <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
-            <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+        <div className="absolute top-28 sm:top-32 md:top-36 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 sm:gap-2.5 py-1.5 px-3 sm:px-4 rounded-full bg-[#140e06]/98 border-2 border-amber-500/80 text-amber-100 text-[10.5px] sm:text-xs shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-2 max-w-[94vw] w-auto whitespace-nowrap">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 animate-pulse" />
             <span className="font-bold text-amber-300">Guest Mode:</span>
             <span className="text-amber-100/90 sm:hidden">Pins won't be saved</span>
             <span className="text-amber-100/90 hidden sm:inline">None of your data, pins, or vaults will be saved.</span>
           </div>
-          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 pl-1 border-l border-amber-500/30">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 pl-1.5 border-l border-amber-500/40">
             <button
               type="button"
               onClick={() => handleOpenAuth('signup')}
-              className="px-2 sm:px-2.5 py-0.5 rounded-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-[10px] sm:text-[11px] transition shadow-xs cursor-pointer active:scale-95"
+              className="px-2.5 sm:px-3 py-0.5 rounded-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-[10px] sm:text-[11px] transition shadow-xs cursor-pointer active:scale-95"
             >
               Sign Up
             </button>
@@ -584,36 +640,83 @@ export default function App() {
               className="p-0.5 rounded-full text-amber-400/70 hover:text-amber-100 transition cursor-pointer"
               title="Dismiss notice"
             >
-              <X className="w-3 h-3" />
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       )}
 
-      {/* 2. 3D EARTH GLOBE CANVAS VIEW */}
-      <GlobeView
-        capsules={filteredCapsules}
-        selectedCapsule={selectedCapsule}
-        targetCoordinates={targetCoordinates}
-        onSelectCapsule={handleSelectCapsule}
-        showHeatmap={showHeatmap}
-        flyInTrigger={flyInTrigger}
-        onFlyInComplete={() => {
-          try {
-            if (localStorage.getItem('chronospheres_welcome_dismissed') !== 'true') {
+      {/* 2. MAP ENGINE: 3D EARTH GLOBE vs EXPLORE MODE (2D OPENSTREETMAP) */}
+      {viewMode === '3d' ? (
+        <GlobeView
+          capsules={filteredCapsules}
+          selectedCapsule={selectedCapsule}
+          targetCoordinates={targetCoordinates}
+          userLocation={userLocation}
+          onFocusUserLocation={handleFocusUserLocation}
+          onSelectCapsule={handleSelectCapsule}
+          showHeatmap={showHeatmap}
+          flyInTrigger={flyInTrigger}
+          onFlyInComplete={() => {
+            try {
+              if (localStorage.getItem('chronospheres_welcome_dismissed') !== 'true') {
+                setIsWelcomeGuideOpen(true);
+              }
+            } catch (e) {
               setIsWelcomeGuideOpen(true);
             }
-          } catch (e) {
-            setIsWelcomeGuideOpen(true);
+          }}
+          onOpenCreateWithCoords={handleOpenCreateWithCoords}
+          onCountrySelected={handleCountrySelected}
+          isPlantingMode={isPlantingMode}
+          onTogglePlantingMode={() => setIsPlantingMode((prev) => !prev)}
+          isJudgeOverride={false}
+          activeUsername={activeUsername}
+          onTriggerCloudDive={handleTriggerCloudDive}
+        />
+      ) : (
+        <StreetMapView
+          capsules={filteredCapsules}
+          selectedCapsule={selectedCapsule}
+          targetCoordinates={targetCoordinates}
+          onSelectCapsule={handleSelectCapsule}
+          onSwitchTo3D={() => setViewMode('3d')}
+          onOpenCreateWithCoords={handleOpenCreateWithCoords}
+          isPlantingMode={isPlantingMode}
+          onTogglePlantingMode={() => setIsPlantingMode((prev) => !prev)}
+          userLocation={userLocation}
+          onSimulateLocation={simulateLocation}
+          initialCenter={
+            targetCoordinates
+              ? { lat: targetCoordinates.lat, lng: targetCoordinates.lng, zoom: 14 }
+              : selectedCapsule
+              ? { lat: selectedCapsule.lat, lng: selectedCapsule.lng, zoom: 15 }
+              : userLocation
+              ? { lat: userLocation.lat, lng: userLocation.lng, zoom: 14 }
+              : undefined
           }
-        }}
-        onOpenCreateWithCoords={handleOpenCreateWithCoords}
-        onCountrySelected={handleCountrySelected}
-        isPlantingMode={isPlantingMode}
-        onTogglePlantingMode={() => setIsPlantingMode((prev) => !prev)}
-        isJudgeOverride={false}
-        activeUsername={activeUsername}
+        />
+      )}
+
+      {/* Atmospheric Cloud Pass-Through Zoom Transition Overlay */}
+      <CloudTransitionOverlay
+        isActive={isCloudDiving}
+        onTransitionComplete={() => setIsCloudDiving(false)}
+        destinationLabel={cloudDiveLabel}
       />
+
+      {/* Real-time Proximity Alert Toast */}
+      {activeProximityAlert && (
+        <ProximityToast
+          capsule={activeProximityAlert.capsule}
+          distanceMeters={activeProximityAlert.distanceMeters}
+          onOpenCapsule={(cap) => {
+            handleSelectCapsule(cap);
+            setActiveProximityAlert(null);
+          }}
+          onClose={() => setActiveProximityAlert(null)}
+        />
+      )}
 
       {/* 3. BOTTOM CONTROLS: Realtime Clock + Fast-Forward [+1h, +1d, +1w, +1y] */}
       <GlobeControlsOverlay
@@ -624,6 +727,7 @@ export default function App() {
         onTogglePlantingMode={() => setIsPlantingMode((prev) => !prev)}
         capsules={capsules}
         onSelectCapsule={handleSelectCapsule}
+        onFocusUserLocation={handleFocusUserLocation}
       />
 
       {/* 4. REST Countries Live Data Side Drawer */}
@@ -686,6 +790,8 @@ export default function App() {
         onOpenTutorial={() => setIsWelcomeGuideOpen(true)}
         isJudgeOverride={false}
         simulatedTimeOffsetMs={simulatedTimeOffsetMs}
+        userLocation={userLocation}
+        onSimulateLocation={simulateLocation}
       />
 
       {/* 9. Create Capsule Modal */}

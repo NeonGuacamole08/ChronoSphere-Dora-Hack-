@@ -5,6 +5,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { Capsule } from '../../types';
+import { CuteExplorerMascot } from './CuteExplorerMascot';
 
 interface GlobeControlsOverlayProps {
   onFastForward: (hours: number) => void;
@@ -14,6 +15,7 @@ interface GlobeControlsOverlayProps {
   onTogglePlantingMode: () => void;
   capsules: Capsule[];
   onSelectCapsule: (capsule: Capsule) => void;
+  onFocusUserLocation?: () => void;
 }
 
 export const GlobeControlsOverlay: React.FC<GlobeControlsOverlayProps> = ({
@@ -22,6 +24,7 @@ export const GlobeControlsOverlay: React.FC<GlobeControlsOverlayProps> = ({
   simulatedTimeOffsetMs,
   isPlantingMode,
   onTogglePlantingMode,
+  onFocusUserLocation,
 }) => {
   // Live ticking real-time clock
   const [currentTimestamp, setCurrentTimestamp] = useState<Date>(
@@ -116,8 +119,23 @@ export const GlobeControlsOverlay: React.FC<GlobeControlsOverlayProps> = ({
         </div>
       </div>
 
-      {/* 2. BOTTOM RIGHT: 'Drop Pin on Globe' Action Button */}
-      <div className="absolute bottom-20 sm:bottom-4 md:bottom-6 right-2.5 sm:right-4 md:right-6 z-40 pointer-events-auto select-none pb-[env(safe-area-inset-bottom,0px)]">
+      {/* 2. BOTTOM RIGHT: 'My Location' & 'Drop Pin on Globe' Action Buttons */}
+      <div className="absolute bottom-20 sm:bottom-4 md:bottom-6 right-2.5 sm:right-4 md:right-6 z-40 pointer-events-auto select-none flex items-center gap-2 pb-[env(safe-area-inset-bottom,0px)]">
+        {onFocusUserLocation && (
+          <button
+            type="button"
+            onClick={onFocusUserLocation}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3.5 sm:py-2 md:px-4 md:py-2.5 rounded-2xl bg-[#0c1626]/95 hover:bg-[#13233a] text-cyan-200 hover:text-white border border-cyan-500/40 backdrop-blur-md text-[11px] sm:text-xs font-bold transition-all duration-200 shadow-2xl cursor-pointer active:scale-95 group"
+            title="Focus 3D Globe on My Live Location"
+          >
+            <div className="w-5 h-5 rounded-lg bg-cyan-950/90 border border-cyan-400/60 flex items-center justify-center text-cyan-300 group-hover:scale-110 transition-transform">
+              <CuteExplorerMascot size={18} animate={false} />
+            </div>
+            <span className="font-mono hidden sm:inline">My Location</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          </button>
+        )}
+
         <button
           type="button"
           onClick={onTogglePlantingMode}

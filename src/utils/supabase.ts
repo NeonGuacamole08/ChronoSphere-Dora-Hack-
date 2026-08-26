@@ -871,6 +871,8 @@ export const capsulesDb = {
           creator_username: capsule.creator_username,
           creator_email: capsule.creator_email,
           access_type: capsule.access_type,
+          public_unlock_mode: capsule.public_unlock_mode || 'time_locked',
+          unlock_radius_meters: capsule.unlock_radius_meters || 100,
           recipient_username: capsule.recipient_username || null,
           recipient_email: capsule.recipient_email || null,
           tagged_users: capsule.tagged_users || [],

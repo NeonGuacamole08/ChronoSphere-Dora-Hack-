@@ -2,7 +2,8 @@
   "name": "TreasureFest",
   "description": "3D Earth time capsule platform to plant, discover, and unlock multimedia memories across the globe with skydiving fly-in, memory heatmap, audio recording, and Spotify tracks.",
   "requestFramePermissions": [
-    "microphone"
+    "microphone",
+    "geolocation"
   ],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

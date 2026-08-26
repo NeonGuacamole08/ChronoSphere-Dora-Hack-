@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import * as THREE from 'three';
 import { Capsule } from '../../types';
-import { latLngToVector3 } from '../../utils/coordinates';
+import { latLngToVector3, vector3ToLatLng } from '../../utils/coordinates';
 
 interface CameraControllerProps {
   selectedCapsule: Capsule | null;
@@ -11,6 +11,8 @@ interface CameraControllerProps {
   flyInTrigger: number;
   onFlyInComplete?: () => void;
   controlsRef: React.RefObject<OrbitControlsImpl | null>;
+  onTriggerCloudDive?: (coords: { lat: number; lng: number }) => void;
+  onZoomPastThreshold?: () => void;
 }
 
 export const CameraController: React.FC<CameraControllerProps> = ({
@@ -19,6 +21,8 @@ export const CameraController: React.FC<CameraControllerProps> = ({
   flyInTrigger,
   onFlyInComplete,
   controlsRef,
+  onTriggerCloudDive,
+  onZoomPastThreshold,
 }) => {
   const { camera, size } = useThree();
   
@@ -30,7 +34,8 @@ export const CameraController: React.FC<CameraControllerProps> = ({
   const targetEndPosRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0.35, 4.85));
   const isFocusingRef = useRef<boolean>(false);
   const focusTargetPosRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 5.0));
-  const prevDistanceRef = useRef<number>(camera.position.length());
+  const hasTriggeredCloudDiveRef = useRef<boolean>(false);
+  const hasDismissedTutorialRef = useRef<boolean>(false);
 
   // Dynamic aspect ratio & FOV adaptation on viewport resize (tablets, portrait, split-screen)
   useEffect(() => {
@@ -55,6 +60,7 @@ export const CameraController: React.FC<CameraControllerProps> = ({
   useEffect(() => {
     isAnimatingRef.current = true;
     animProgressRef.current = 0;
+    hasTriggeredCloudDiveRef.current = false;
     startPosRef.current = new THREE.Vector3(0, 26, 16);
     camera.position.copy(startPosRef.current);
     camera.lookAt(0, 0, 0);
@@ -135,6 +141,29 @@ export const CameraController: React.FC<CameraControllerProps> = ({
       }
       if (controlsRef.current) {
         controlsRef.current.update();
+      }
+    }
+
+    // 3. Detect when user zooms in past threshold (z > 4, distance < 4.7) to dismiss gesture tutorial
+    if (!isAnimatingRef.current && onZoomPastThreshold && !hasDismissedTutorialRef.current) {
+      const dist = camera.position.length();
+      if (dist < 4.7) {
+        hasDismissedTutorialRef.current = true;
+        onZoomPastThreshold();
+      }
+    }
+
+    // 4. Detect when user zooms in deeply through the atmosphere (distance <= 2.6) to enter Explore Mode
+    if (!isAnimatingRef.current && onTriggerCloudDive && !hasTriggeredCloudDiveRef.current) {
+      const dist = camera.position.length();
+      if (dist <= 2.58) {
+        hasTriggeredCloudDiveRef.current = true;
+        const targetLatLng = vector3ToLatLng(camera.position);
+        onTriggerCloudDive(targetLatLng);
+        // Reset flag after small delay
+        setTimeout(() => {
+          hasTriggeredCloudDiveRef.current = false;
+        }, 2000);
       }
     }
   });

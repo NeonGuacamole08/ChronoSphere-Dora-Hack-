@@ -11,11 +11,15 @@ import { CapsulePin } from './CapsulePin';
 import { HeatmapLayer } from './HeatmapLayer';
 import { CameraController } from './CameraController';
 import { generateEarthTextures } from './textureGenerator';
+import { UserLocation3DPin } from './UserLocation3DPin';
+import { UserLocation } from '../../utils/useUserLocation';
 
 interface GlobeSceneProps {
   capsules: Capsule[];
   selectedCapsule: Capsule | null;
   targetCoordinates?: { lat: number; lng: number } | null;
+  userLocation?: UserLocation | null;
+  onFocusUserLocation?: () => void;
   onSelectCapsule: (capsule: Capsule) => void;
   onCoordinatesPicked?: (coords: { lat: number; lng: number; point: THREE.Vector3 }) => void;
   showHeatmap: boolean;
@@ -24,12 +28,16 @@ interface GlobeSceneProps {
   isPlantingMode: boolean;
   isJudgeOverride?: boolean;
   activeUsername?: string;
+  onTriggerCloudDive?: (coords: { lat: number; lng: number }) => void;
+  onZoomPastThreshold?: () => void;
 }
 
 export const GlobeScene: React.FC<GlobeSceneProps> = ({
   capsules,
   selectedCapsule,
   targetCoordinates,
+  userLocation,
+  onFocusUserLocation,
   onSelectCapsule,
   onCoordinatesPicked,
   showHeatmap,
@@ -38,6 +46,8 @@ export const GlobeScene: React.FC<GlobeSceneProps> = ({
   isPlantingMode,
   isJudgeOverride = false,
   activeUsername = 'DoraHacksJudge',
+  onTriggerCloudDive,
+  onZoomPastThreshold,
 }) => {
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
 
@@ -84,6 +94,8 @@ export const GlobeScene: React.FC<GlobeSceneProps> = ({
           flyInTrigger={flyInTrigger}
           onFlyInComplete={onFlyInComplete}
           controlsRef={controlsRef}
+          onTriggerCloudDive={onTriggerCloudDive}
+          onZoomPastThreshold={onZoomPastThreshold}
         />
 
         {/* Smooth Air-Gliding Orbit Controls with momentum damping */}
@@ -121,6 +133,17 @@ export const GlobeScene: React.FC<GlobeSceneProps> = ({
             visible={showHeatmap}
             radius={2.018}
           />
+
+          {/* User's Live Location 3D Pin with Cute Astro-Explorer Mascot */}
+          {userLocation && (
+            <UserLocation3DPin
+              lat={userLocation.lat}
+              lng={userLocation.lng}
+              accuracy={userLocation.accuracy}
+              radius={2.0}
+              onFocusUser={onFocusUserLocation || (() => {})}
+            />
+          )}
 
           {/* Time Capsule 3D Pins with projection beams, physical pedestals, and golden rings */}
           {capsules.map((capsule) => (

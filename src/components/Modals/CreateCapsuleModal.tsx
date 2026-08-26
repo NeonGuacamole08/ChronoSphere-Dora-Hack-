@@ -26,6 +26,9 @@ import {
   Link as LinkIcon,
   AlertCircle,
   FileCheck,
+  Loader2,
+  Zap,
+  Radio,
 } from 'lucide-react';
 import { Capsule, CapsuleAttachment, Coordinates } from '../../types';
 import { VoiceRecorder } from '../Audio/VoiceRecorder';
@@ -157,6 +160,8 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
 
   // Access Control: Default to 'private' (Personal to User)
   const [accessType, setAccessType] = useState<'public' | 'private'>('private');
+  const [publicUnlockMode, setPublicUnlockMode] = useState<'instant_find' | 'time_locked'>('instant_find');
+  const [unlockRadiusMeters, setUnlockRadiusMeters] = useState<number>(100);
   const [recipientUsername, setRecipientUsername] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
   const [taggedUsersInput, setTaggedUsersInput] = useState('');
@@ -190,6 +195,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
   // Audio Playback in preview list
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Helper to completely clear all form inputs and states
   const resetFormState = () => {
@@ -204,6 +210,8 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
     setAttachments([]);
     setSpotifyTrack(null);
     setAccessType('private');
+    setPublicUnlockMode('instant_find');
+    setUnlockRadiusMeters(100);
     setRecipientUsername('');
     setRecipientEmail('');
     setTaggedUsersInput('');
@@ -212,6 +220,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
     setLetterContent('');
     setShowAddLetterModal(false);
     setUploadError(null);
+    setIsSubmitting(false);
     setStep('form');
     const d = new Date();
     d.setFullYear(d.getFullYear() + 1);
@@ -583,7 +592,9 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
   };
 
   // Step 2 final "Bury Capsule" confirmation
-  const handleFinalBury = () => {
+  const handleFinalBury = async () => {
+    if (isSubmitting) return;
+
     if (lat === null || lng === null || isNaN(Number(lat)) || isNaN(Number(lng))) {
       setCoordinateError('Invalid coordinates. Please select a valid land position on the globe.');
       setStep('form');
@@ -599,66 +610,78 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
       return;
     }
 
-    const txId = generateArweaveTxId();
-    const userHandle = currentUser?.username || activeUsername || '@earth_explorer';
-    const userEmail = currentUser?.email || 'contact@unis.org';
-    const capId =
-      draftToEdit && !draftToEdit.id.startsWith('draft_')
-        ? draftToEdit.id
-        : `user_cap_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    setIsSubmitting(true);
 
-    const newCapsule: Capsule = {
-      id: capId,
-      title: title.trim(),
-      message: message.trim(),
-      created_at: draftToEdit?.created_at || new Date().toISOString(),
-      unlock_timestamp: new Date(unlockDate).toISOString(),
-      lat: finalLat,
-      lng: finalLng,
-      location_name: locationName.trim() || `Earth Point (${finalLat.toFixed(4)}°, ${finalLng.toFixed(4)}°)`,
-      country_code: countryCode.toUpperCase() || 'GL',
-      country_name: countryName.trim() || 'Global',
-      creator_username: userHandle,
-      creator_email: userEmail,
-      access_type: accessType,
-      recipient_username:
-        accessType === 'private' && recipientUsername.trim()
-          ? recipientUsername.trim()
-          : undefined,
-      recipient_email:
-        accessType === 'private' && recipientEmail.trim()
-          ? recipientEmail.trim()
-          : undefined,
-      tagged_users: parsedTaggedUsers.length > 0 ? parsedTaggedUsers : undefined,
-      attachments: attachments.length > 0 ? attachments : undefined,
-      photo_url: primaryPhoto || undefined,
-      audio_url: primaryAudio?.data_url || undefined,
-      audio_duration: primaryAudio?.duration,
-      spotify_uri: spotifyTrack?.uri,
-      spotify_track_id: spotifyTrack?.id,
-      spotify_title: spotifyTrack?.title,
-      spotify_artist: spotifyTrack?.artist,
-      arweave_tx_id: txId,
-      encryption_signature: `sig_ed25519_${Math.random().toString(16).slice(2, 10)}`,
-      is_encrypted: new Date(unlockDate).getTime() > Date.now(),
-      is_draft: false,
-      notified: false,
-      tags: ['personal', 'memory', 'time-capsule'],
-    };
+    try {
+      const txId = generateArweaveTxId();
+      const userHandle = currentUser?.username || activeUsername || '@earth_explorer';
+      const userEmail = currentUser?.email || 'contact@unis.org';
+      const capId =
+        draftToEdit && !draftToEdit.id.startsWith('draft_')
+          ? draftToEdit.id
+          : `user_cap_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
 
-    // Save pin to database with raw numeric latitude & longitude
-    savePin({
-      title: newCapsule.title,
-      description: newCapsule.message,
-      lat: finalLat,
-      lng: finalLng,
-      is_public: accessType === 'public',
-    }).catch((err) => {
-      console.warn('Background savePin notice:', err);
-    });
+      const newCapsule: Capsule = {
+        id: capId,
+        title: title.trim(),
+        message: message.trim(),
+        created_at: draftToEdit?.created_at || new Date().toISOString(),
+        unlock_timestamp: new Date(unlockDate).toISOString(),
+        lat: finalLat,
+        lng: finalLng,
+        location_name: locationName.trim() || `Earth Point (${finalLat.toFixed(4)}°, ${finalLng.toFixed(4)}°)`,
+        country_code: countryCode.toUpperCase() || 'GL',
+        country_name: countryName.trim() || 'Global',
+        creator_username: userHandle,
+        creator_email: userEmail,
+        access_type: accessType,
+        public_unlock_mode: accessType === 'public' ? publicUnlockMode : undefined,
+        unlock_radius_meters: accessType === 'public' ? unlockRadiusMeters : undefined,
+        recipient_username:
+          accessType === 'private' && recipientUsername.trim()
+            ? recipientUsername.trim()
+            : undefined,
+        recipient_email:
+          accessType === 'private' && recipientEmail.trim()
+            ? recipientEmail.trim()
+            : undefined,
+        tagged_users: parsedTaggedUsers.length > 0 ? parsedTaggedUsers : undefined,
+        attachments: attachments.length > 0 ? attachments : undefined,
+        photo_url: primaryPhoto || undefined,
+        audio_url: primaryAudio?.data_url || undefined,
+        audio_duration: primaryAudio?.duration,
+        spotify_uri: spotifyTrack?.uri,
+        spotify_track_id: spotifyTrack?.id,
+        spotify_title: spotifyTrack?.title,
+        spotify_artist: spotifyTrack?.artist,
+        arweave_tx_id: txId,
+        encryption_signature: `sig_ed25519_${Math.random().toString(16).slice(2, 10)}`,
+        is_encrypted: new Date(unlockDate).getTime() > Date.now(),
+        is_draft: false,
+        notified: false,
+        tags: ['personal', 'memory', 'time-capsule'],
+      };
 
-    onSaveCapsule(newCapsule);
-    handleModalClose();
+      // Save pin to database with raw numeric latitude & longitude
+      try {
+        await savePin({
+          title: newCapsule.title,
+          description: newCapsule.message,
+          lat: finalLat,
+          lng: finalLng,
+          is_public: accessType === 'public',
+        });
+      } catch (err) {
+        console.warn('Background savePin notice:', err);
+      }
+
+      await onSaveCapsule(newCapsule);
+      handleModalClose();
+    } catch (err) {
+      console.error('Error burying capsule:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Counts of each media type
@@ -909,6 +932,83 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                   </div>
                 </button>
               </div>
+
+              {/* Dual Public Unlock System Configuration */}
+              {accessType === 'public' && (
+                <div className="p-3 rounded-xl bg-amber-100/70 border border-amber-400/80 space-y-2.5 animate-in fade-in">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-amber-950 flex items-center gap-1.5">
+                      <Zap className="w-3.5 h-3.5 text-amber-700" />
+                      Public Unlock Mode
+                    </span>
+                    <span className="text-[10px] text-amber-800 font-medium">
+                      GPS Proximity & Time Rule
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPublicUnlockMode('instant_find')}
+                      className={`p-2.5 rounded-xl border text-left transition flex items-start gap-2 cursor-pointer ${
+                        publicUnlockMode === 'instant_find'
+                          ? 'bg-amber-950 text-amber-100 border-amber-400 ring-2 ring-amber-500 shadow-sm'
+                          : 'bg-white/90 text-stone-700 border-amber-300 hover:bg-white'
+                      }`}
+                    >
+                      <Zap className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="text-xs font-bold text-amber-100">⚡ Instant Find</div>
+                        <div className="text-[10px] opacity-80 leading-tight mt-0.5">
+                          Unlocks as soon as another explorer reaches target coordinates (within proximity).
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPublicUnlockMode('time_locked')}
+                      className={`p-2.5 rounded-xl border text-left transition flex items-start gap-2 cursor-pointer ${
+                        publicUnlockMode === 'time_locked'
+                          ? 'bg-amber-950 text-amber-100 border-amber-400 ring-2 ring-amber-500 shadow-sm'
+                          : 'bg-white/90 text-stone-700 border-amber-300 hover:bg-white'
+                      }`}
+                    >
+                      <Lock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="text-xs font-bold text-amber-100">⏳ Time-Locked</div>
+                        <div className="text-[10px] opacity-80 leading-tight mt-0.5">
+                          Unlocks only when the explorer is at the location AND the unlock date has passed.
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* Unlock Radius Selector */}
+                  <div className="flex items-center justify-between pt-1 border-t border-amber-300/60">
+                    <span className="text-[10px] font-bold text-amber-900 flex items-center gap-1">
+                      <Radio className="w-3 h-3 text-amber-700" />
+                      Interaction / Proximity Radius:
+                    </span>
+                    <div className="flex gap-1.5">
+                      {[50, 100, 250, 500].map((meters) => (
+                        <button
+                          key={meters}
+                          type="button"
+                          onClick={() => setUnlockRadiusMeters(meters)}
+                          className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition cursor-pointer ${
+                            unlockRadiusMeters === meters
+                              ? 'bg-amber-800 text-amber-100 shadow-xs'
+                              : 'bg-white/80 text-stone-700 hover:bg-white border border-amber-300'
+                          }`}
+                        >
+                          {meters}m
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Designated Recipient & Tagged Users */}
               <div className="space-y-2 pt-1 border-t border-amber-200/80">
@@ -1429,10 +1529,20 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
               <button
                 type="button"
                 onClick={handleFinalBury}
-                className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-700 via-amber-800 to-amber-950 hover:from-amber-600 hover:to-amber-900 text-amber-100 font-bold text-sm transition shadow-xl border-2 border-amber-400/80 flex items-center gap-2 cursor-pointer animate-pulse hover:animate-none"
+                disabled={isSubmitting}
+                className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-700 via-amber-800 to-amber-950 hover:from-amber-600 hover:to-amber-900 disabled:opacity-50 disabled:cursor-not-allowed text-amber-100 font-bold text-sm transition shadow-xl border-2 border-amber-400/80 flex items-center gap-2 cursor-pointer"
               >
-                <Lock className="w-4.5 h-4.5 text-amber-300" />
-                <span>Bury Capsule</span>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4.5 h-4.5 text-amber-300 animate-spin" />
+                    <span>Burying Capsule...</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-4.5 h-4.5 text-amber-300" />
+                    <span>Bury Capsule</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

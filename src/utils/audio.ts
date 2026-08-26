@@ -906,6 +906,236 @@ class AmbientSoundManager {
       console.warn('Could not play excavation sound:', e);
     }
   }
+
+  // =========================================================================
+  // APP LAUNCH AIR GLIDING & SKYDIVING AUDIO FX
+  // =========================================================================
+  public playLaunchAirGlidingSound(durationSec = 3.2) {
+    try {
+      const ctx = this.getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
+      // 1. High-Altitude Filtered Air Rush (Pink/White noise wind generator)
+      const bufferSize = Math.floor(ctx.sampleRate * Math.min(durationSec + 0.5, 5.0));
+      const buffer = ctx.createBuffer(2, bufferSize, ctx.sampleRate);
+      for (let ch = 0; ch < 2; ch++) {
+        const data = buffer.getChannelData(ch);
+        let lastOut = 0.0;
+        for (let i = 0; i < bufferSize; i++) {
+          const white = Math.random() * 2 - 1;
+          // Pink noise filter approximation for deep aerodynamic rushing air
+          lastOut = (lastOut * 0.95) + (white * 0.05);
+          data[i] = lastOut * 3.5;
+        }
+      }
+
+      const noiseSource = ctx.createBufferSource();
+      noiseSource.buffer = buffer;
+
+      // Sweeping Bandpass Wind Filter descending from skydiving altitude
+      const bandpass = ctx.createBiquadFilter();
+      bandpass.type = 'bandpass';
+      bandpass.frequency.setValueAtTime(1200, now);
+      bandpass.frequency.exponentialRampToValueAtTime(320, now + durationSec);
+      bandpass.Q.setValueAtTime(1.4, now);
+
+      const windGain = ctx.createGain();
+      windGain.gain.setValueAtTime(0.001, now);
+      windGain.gain.linearRampToValueAtTime(0.28, now + 0.4);
+      windGain.gain.exponentialRampToValueAtTime(0.0001, now + durationSec);
+
+      noiseSource.connect(bandpass);
+      bandpass.connect(windGain);
+      windGain.connect(ctx.destination);
+
+      // 2. Aerodynamic Sub-Bass Resonance
+      const subOsc = ctx.createOscillator();
+      subOsc.type = 'sine';
+      subOsc.frequency.setValueAtTime(80, now);
+      subOsc.frequency.exponentialRampToValueAtTime(42, now + durationSec);
+
+      const subGain = ctx.createGain();
+      subGain.gain.setValueAtTime(0.001, now);
+      subGain.gain.linearRampToValueAtTime(0.18, now + 0.5);
+      subGain.gain.exponentialRampToValueAtTime(0.0001, now + durationSec);
+
+      subOsc.connect(subGain);
+      subGain.connect(ctx.destination);
+
+      noiseSource.start(now);
+      noiseSource.stop(now + durationSec + 0.1);
+      subOsc.start(now);
+      subOsc.stop(now + durationSec + 0.1);
+    } catch (e) {
+      console.warn('Could not play launch air gliding sound:', e);
+    }
+  }
+
+  // =========================================================================
+  // CLOUD PASS-THROUGH DIVE & WHOOSH AUDIO FX
+  // =========================================================================
+  public playCloudDiveWhooshSound(durationSec = 1.6) {
+    try {
+      const ctx = this.getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
+      // Dynamic rushing wind whoosh
+      const bufferSize = Math.floor(ctx.sampleRate * durationSec);
+      const buffer = ctx.createBuffer(2, bufferSize, ctx.sampleRate);
+      for (let ch = 0; ch < 2; ch++) {
+        const data = buffer.getChannelData(ch);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = (Math.random() * 2 - 1) * 0.8;
+        }
+      }
+
+      const noiseSource = ctx.createBufferSource();
+      noiseSource.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(300, now);
+      filter.frequency.exponentialRampToValueAtTime(2800, now + durationSec * 0.45);
+      filter.frequency.exponentialRampToValueAtTime(400, now + durationSec);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.35, now + durationSec * 0.35);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + durationSec);
+
+      noiseSource.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+
+      noiseSource.start(now);
+      noiseSource.stop(now + durationSec);
+    } catch (e) {
+      console.warn('Could not play cloud dive sound:', e);
+    }
+  }
+
+  // =========================================================================
+  // 2D STREET MAP SOFT LANDING IMPACT & ARRIVAL CHIME
+  // =========================================================================
+  public playLandingImpactChimeSound() {
+    try {
+      const ctx = this.getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
+      // 1. Soft Landing Sub-Bass Cushion Impact
+      const cushionOsc = ctx.createOscillator();
+      cushionOsc.type = 'sine';
+      cushionOsc.frequency.setValueAtTime(120, now);
+      cushionOsc.frequency.exponentialRampToValueAtTime(48, now + 0.35);
+
+      const cushionGain = ctx.createGain();
+      cushionGain.gain.setValueAtTime(0.24, now);
+      cushionGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+      cushionOsc.connect(cushionGain);
+      cushionGain.connect(ctx.destination);
+      cushionOsc.start(now);
+      cushionOsc.stop(now + 0.45);
+
+      // 2. Shimmering Arrival Chime Chord (E4, G#4, B4, E5)
+      const chord = [329.63, 415.3, 493.88, 659.25];
+      chord.forEach((freq, idx) => {
+        const cOsc = ctx.createOscillator();
+        cOsc.type = 'triangle';
+        cOsc.frequency.setValueAtTime(freq, now + 0.08 + idx * 0.03);
+
+        const cGain = ctx.createGain();
+        cGain.gain.setValueAtTime(0.001, now + 0.08 + idx * 0.03);
+        cGain.gain.linearRampToValueAtTime(0.12, now + 0.12 + idx * 0.03);
+        cGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2 + idx * 0.03);
+
+        cOsc.connect(cGain);
+        cGain.connect(ctx.destination);
+        cOsc.start(now + 0.08 + idx * 0.03);
+        cOsc.stop(now + 1.3 + idx * 0.03);
+      });
+    } catch (e) {
+      console.warn('Could not play landing chime:', e);
+    }
+  }
+
+  // =========================================================================
+  // INTERACTIVE PIN DROP & CAPSULE BURIAL CHIME
+  // =========================================================================
+  public playPinDropSound() {
+    try {
+      const ctx = this.getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
+      // 1. Crisp high resonant drop click
+      const dropOsc = ctx.createOscillator();
+      dropOsc.type = 'triangle';
+      dropOsc.frequency.setValueAtTime(1480, now);
+      dropOsc.frequency.exponentialRampToValueAtTime(580, now + 0.09);
+
+      const dropGain = ctx.createGain();
+      dropGain.gain.setValueAtTime(0.2, now);
+      dropGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+
+      dropOsc.connect(dropGain);
+      dropGain.connect(ctx.destination);
+      dropOsc.start(now);
+      dropOsc.stop(now + 0.12);
+
+      // 2. Resonant golden sparkle chime (D5 -> G5)
+      const sparkleOsc = ctx.createOscillator();
+      sparkleOsc.type = 'sine';
+      sparkleOsc.frequency.setValueAtTime(587.33, now + 0.04);
+      sparkleOsc.frequency.exponentialRampToValueAtTime(783.99, now + 0.18);
+
+      const sparkleGain = ctx.createGain();
+      sparkleGain.gain.setValueAtTime(0.001, now + 0.04);
+      sparkleGain.gain.linearRampToValueAtTime(0.16, now + 0.08);
+      sparkleGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+
+      sparkleOsc.connect(sparkleGain);
+      sparkleGain.connect(ctx.destination);
+      sparkleOsc.start(now + 0.04);
+      sparkleOsc.stop(now + 0.65);
+    } catch (e) {
+      console.warn('Could not play pin drop sound:', e);
+    }
+  }
+
+  // =========================================================================
+  // SCAVENGER RADAR PROXIMITY PING (Hot/Cold feedback)
+  // =========================================================================
+  public playRadarPulseBeep(proximityFactor: number = 0.5) {
+    // proximityFactor: 0.0 (far) -> 1.0 (right on top of capsule)
+    try {
+      const ctx = this.getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
+      // Dynamic frequency: 600Hz (distant cold) to 1500Hz (hot/close)
+      const baseFreq = 600 + proximityFactor * 900;
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(baseFreq, now);
+      osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.25, now + 0.12);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.15 + proximityFactor * 0.15, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.25);
+    } catch (e) {
+      console.warn('Could not play radar pulse:', e);
+    }
+  }
 }
 
 export const ambientSound = new AmbientSoundManager();

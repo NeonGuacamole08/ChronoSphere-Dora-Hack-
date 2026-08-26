@@ -29,6 +29,8 @@ import {
 import { Capsule, CapsuleAttachment } from '../../types';
 import { SpotifyEmbed } from '../Spotify/SpotifyEmbed';
 import { generateOfflineHtmlViewer } from '../../utils/crypto';
+import { UserLocation } from '../../utils/useUserLocation';
+import { getDistanceInMeters, formatDistanceText } from '../../utils/proximity';
 
 interface CapsuleModalProps {
   capsule: Capsule | null;
@@ -41,6 +43,8 @@ interface CapsuleModalProps {
   onOpenTutorial?: () => void;
   isJudgeOverride?: boolean;
   simulatedTimeOffsetMs?: number;
+  userLocation?: UserLocation | null;
+  onSimulateLocation?: (lat: number, lng: number) => void;
 }
 
 export const CapsuleModal: React.FC<CapsuleModalProps> = ({
@@ -54,6 +58,8 @@ export const CapsuleModal: React.FC<CapsuleModalProps> = ({
   onOpenTutorial,
   isJudgeOverride = false,
   simulatedTimeOffsetMs = 0,
+  userLocation = null,
+  onSimulateLocation,
 }) => {
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
@@ -89,13 +95,41 @@ export const CapsuleModal: React.FC<CapsuleModalProps> = ({
   const effectiveNow = Date.now() + simulatedTimeOffsetMs;
   const isTimeUnlocked = isJudgeOverride || (unlockDate.getTime() <= effectiveNow);
 
+  const isCreator = useMemo(() => {
+    if (!capsule) return false;
+    return capsule.creator_username.toLowerCase() === activeUsername.toLowerCase();
+  }, [capsule, activeUsername]);
+
+  // Real-time GPS distance in meters
+  const distanceMeters = useMemo(() => {
+    if (!capsule || !userLocation) return null;
+    return getDistanceInMeters(userLocation.lat, userLocation.lng, capsule.lat, capsule.lng);
+  }, [capsule, userLocation]);
+
+  const unlockRadius = capsule?.unlock_radius_meters || 100;
+  const isWithinRadius = isJudgeOverride || isCreator || (distanceMeters !== null && distanceMeters <= unlockRadius);
+  const isInstantFind = capsule?.access_type === 'public' && capsule.public_unlock_mode === 'instant_find';
+
+  // Master unlock boolean combining access, time, proximity, and instant find mode
+  const isCapsuleUnlocked = useMemo(() => {
+    if (!capsule) return false;
+    if (isJudgeOverride || isCreator) return true;
+    if (capsule.access_type === 'public') {
+      if (isInstantFind) {
+        return isWithinRadius;
+      }
+      return isTimeUnlocked && isWithinRadius;
+    }
+    return isTimeUnlocked;
+  }, [capsule, isJudgeOverride, isCreator, isInstantFind, isWithinRadius, isTimeUnlocked]);
+
   // Access validation (creator, tagged user, public, or judge mode override)
   const hasAccess = useMemo(() => {
     if (!capsule) return false;
     if (isJudgeOverride) return true;
     if (activeUsername.toLowerCase() === 'dorahacksjudge') return true;
     if (capsule.access_type === 'public') return true;
-    if (capsule.creator_username.toLowerCase() === activeUsername.toLowerCase()) return true;
+    if (isCreator) return true;
     if (
       capsule.recipient_username &&
       capsule.recipient_username.toLowerCase() === activeUsername.toLowerCase()
@@ -103,7 +137,7 @@ export const CapsuleModal: React.FC<CapsuleModalProps> = ({
       return true;
     }
     return false;
-  }, [capsule, activeUsername, isJudgeOverride]);
+  }, [capsule, activeUsername, isJudgeOverride, isCreator]);
 
   // Can the current active user delete this capsule? (creator, judge, or any user created pin)
   const canDelete = useMemo(() => {
@@ -143,7 +177,7 @@ export const CapsuleModal: React.FC<CapsuleModalProps> = ({
 
   // Trigger celebration confetti on opened unlocked capsule
   useEffect(() => {
-    if (isOpen && capsule && isTimeUnlocked && hasAccess) {
+    if (isOpen && capsule && isCapsuleUnlocked && hasAccess) {
       confetti({
         particleCount: 45,
         spread: 55,
@@ -151,7 +185,7 @@ export const CapsuleModal: React.FC<CapsuleModalProps> = ({
         colors: ['#f59e0b', '#d97706', '#ea580c', '#854d0e', '#22c55e'],
       });
     }
-  }, [isOpen, capsule, isTimeUnlocked, hasAccess]);
+  }, [isOpen, capsule, isCapsuleUnlocked, hasAccess]);
 
   // Cleanup audio
   useEffect(() => {
@@ -337,26 +371,68 @@ export const CapsuleModal: React.FC<CapsuleModalProps> = ({
             </div>
           )}
 
-          {/* Locked / Unlocked Countdown Display Box */}
+          {/* Locked / Unlocked Countdown & Proximity Display Box */}
           <div
             className={`p-5 rounded-2xl border text-center shadow-inner ${
-              isTimeUnlocked
+              isCapsuleUnlocked
                 ? 'bg-emerald-50/90 border-emerald-300 text-emerald-950'
                 : 'bg-amber-100/70 border-amber-300 text-amber-950'
             }`}
           >
-            {isTimeUnlocked ? (
+            {isCapsuleUnlocked ? (
               <div className="space-y-1">
                 <div className="inline-flex items-center gap-2 text-emerald-800 font-bold text-sm uppercase tracking-wide">
                   <Sparkles className="w-4 h-4 text-emerald-600" />
-                  Time-Lock Expired • Capsule Unlocked
+                  {isInstantFind
+                    ? '⚡ Instant Find • In Proximity Zone • Capsule Unsealed'
+                    : 'Time-Lock Expired • Capsule Unlocked'}
                 </div>
                 <p className="text-xs text-stone-600">
-                  Unsealed on {new Date(capsule.unlock_timestamp).toLocaleDateString()} at{' '}
-                  {new Date(capsule.unlock_timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {isInstantFind
+                    ? `Coordinates verified on Earth at ${capsule.location_name}`
+                    : `Unsealed on ${new Date(capsule.unlock_timestamp).toLocaleDateString()} at ${new Date(
+                        capsule.unlock_timestamp
+                      ).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
                 </p>
               </div>
+            ) : isInstantFind ? (
+              /* Instant Find: Proximity Locked */
+              <div className="space-y-2.5">
+                <div className="inline-flex items-center gap-1.5 text-amber-900 font-bold text-xs uppercase tracking-wider">
+                  <Zap className="w-4 h-4 text-amber-700" />
+                  ⚡ Instant Find Mode: Location Unlock Required
+                </div>
+                <p className="text-xs text-amber-900/90 max-w-md mx-auto leading-relaxed">
+                  This public capsule unlocks as soon as an explorer reaches its physical coordinates on Earth (within{' '}
+                  <strong className="font-mono">{unlockRadius}m</strong>).
+                </p>
+
+                {distanceMeters !== null && (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-900/10 border border-amber-400 text-xs font-mono text-amber-950">
+                    <MapPin className="w-3.5 h-3.5 text-amber-700" />
+                    <span>
+                      Current Distance:{' '}
+                      <strong>{formatDistanceText(distanceMeters)}</strong> away
+                    </span>
+                  </div>
+                )}
+
+                {/* Teleport / Evaluator Proximity Simulation Trigger */}
+                {onSimulateLocation && (
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={() => onSimulateLocation(capsule.lat, capsule.lng)}
+                      className="inline-flex items-center gap-1.5 text-xs px-3.5 py-1.5 rounded-lg bg-amber-800 hover:bg-amber-900 text-amber-100 font-semibold transition cursor-pointer shadow-sm active:scale-95"
+                    >
+                      <Zap className="w-3.5 h-3.5 text-amber-300" />
+                      Simulate GPS Arrival / Test Teleport (Evaluator Mode)
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
+              /* Standard Time-Locked */
               <div className="space-y-2">
                 <div className="inline-flex items-center gap-1.5 text-amber-900 font-bold text-xs uppercase tracking-wider">
                   <Clock className="w-4 h-4 text-amber-700" />
@@ -389,9 +465,16 @@ export const CapsuleModal: React.FC<CapsuleModalProps> = ({
                   </div>
                 </div>
 
+                {/* Proximity notice if public */}
+                {capsule.access_type === 'public' && distanceMeters !== null && (
+                  <div className="text-[11px] text-amber-900/80 font-medium">
+                    Distance: <strong>{formatDistanceText(distanceMeters)}</strong> • Requires arrival within {unlockRadius}m
+                  </div>
+                )}
+
                 {/* Judge / Evaluator Instant Unlock Trigger */}
                 {onUnlockTest && (
-                  <div className="pt-2">
+                  <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
                     <button
                       type="button"
                       onClick={() => onUnlockTest(capsule.id)}
@@ -400,6 +483,16 @@ export const CapsuleModal: React.FC<CapsuleModalProps> = ({
                       <Zap className="w-3.5 h-3.5 text-amber-300" />
                       Instant Fast-Unlock (Evaluator Mode)
                     </button>
+                    {onSimulateLocation && (
+                      <button
+                        type="button"
+                        onClick={() => onSimulateLocation(capsule.lat, capsule.lng)}
+                        className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-amber-900 hover:bg-amber-950 text-amber-200 font-semibold transition cursor-pointer shadow-sm"
+                      >
+                        <MapPin className="w-3.5 h-3.5 text-amber-400" />
+                        Simulate GPS Teleport
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -425,15 +518,17 @@ export const CapsuleModal: React.FC<CapsuleModalProps> = ({
                 )}
               </p>
             </div>
-          ) : !isTimeUnlocked ? (
-            /* Locked Pre-Date Content Teaser */
+          ) : !isCapsuleUnlocked ? (
+            /* Locked Pre-Date or Proximity Content Teaser */
             <div className="p-6 rounded-2xl parchment-subtle border border-amber-300/80 text-center space-y-3">
               <Lock className="w-8 h-8 text-amber-800 mx-auto" />
               <h3 className="font-serif font-bold text-base text-amber-950">
-                Memories Are Cryptographically Locked
+                {isInstantFind ? '📍 Arrive at Coordinates to Unlock' : 'Memories Are Cryptographically Locked'}
               </h3>
               <p className="text-xs text-stone-600 max-w-md mx-auto leading-relaxed">
-                The sealed message, media, voice notes, and Spotify soundtrack will automatically decrypt when the time-lock expires.
+                {isInstantFind
+                  ? `This capsule requires physical proximity on Earth. Visit ${capsule.location_name} (within ${unlockRadius}m) to unseal the hidden media, letters, and voice memories.`
+                  : 'The sealed message, media, voice notes, and Spotify soundtrack will automatically decrypt when the unlock conditions are fulfilled.'}
               </p>
             </div>
           ) : (

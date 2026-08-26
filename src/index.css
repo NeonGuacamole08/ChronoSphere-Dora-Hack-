@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
 
 @layer base {
   body {
@@ -165,3 +166,37 @@
 .pulse-marker {
   animation: capsulePulse 2.5s infinite cubic-bezier(0.4, 0, 0.6, 1);
 }
+
+/* Custom Drop Marker Fixes for Leaflet */
+.custom-drop-marker-container,
+.custom-drop-marker,
+.custom-leaflet-user-marker {
+  background: transparent !important;
+  border: none !important;
+  overflow: visible !important;
+}
+
+.custom-drop-marker-wrapper {
+  width: max-content !important;
+  max-width: 90vw !important;
+  white-space: nowrap !important;
+}
+
+/* Custom Leaflet popup styling fixes */
+.leaflet-popup-content-wrapper {
+  border-radius: 1rem !important;
+  background: #fdfbf7 !important;
+  box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(217, 119, 6, 0.3) !important;
+  padding: 0.25rem !important;
+}
+
+.leaflet-popup-tip {
+  background: #fdfbf7 !important;
+}
+
+.custom-leaflet-user-popup .leaflet-popup-content-wrapper {
+  background: #f0fdf4 !important;
+  border: 1px solid #06b6d4 !important;
+  box-shadow: 0 20px 35px -10px rgba(6, 182, 212, 0.35) !important;
+}
+

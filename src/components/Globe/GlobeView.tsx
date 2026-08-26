@@ -6,11 +6,15 @@ import { SkyBackground } from './SkyBackground';
 import { fetchCountryDetails, getCountryCodeFromCoordinates, isCoordinateOnLand } from '../../utils/countries';
 import { reverseGeocodeMapbox } from '../../utils/mapbox';
 import { LandWarningToast } from './LandWarningToast';
+import { GestureTutorialOverlay } from './GestureTutorialOverlay';
+import { UserLocation } from '../../utils/useUserLocation';
 
 interface GlobeViewProps {
   capsules: Capsule[];
   selectedCapsule: Capsule | null;
   targetCoordinates?: { lat: number; lng: number } | null;
+  userLocation?: UserLocation | null;
+  onFocusUserLocation?: () => void;
   onSelectCapsule: (capsule: Capsule) => void;
   showHeatmap: boolean;
   flyInTrigger: number;
@@ -21,12 +25,15 @@ interface GlobeViewProps {
   onTogglePlantingMode: () => void;
   isJudgeOverride?: boolean;
   activeUsername?: string;
+  onTriggerCloudDive?: (coords: { lat: number; lng: number }) => void;
 }
 
 export const GlobeView: React.FC<GlobeViewProps> = ({
   capsules,
   selectedCapsule,
   targetCoordinates,
+  userLocation,
+  onFocusUserLocation,
   onSelectCapsule,
   showHeatmap,
   flyInTrigger,
@@ -36,9 +43,17 @@ export const GlobeView: React.FC<GlobeViewProps> = ({
   isPlantingMode,
   isJudgeOverride = false,
   activeUsername = 'DoraHacksJudge',
+  onTriggerCloudDive,
 }) => {
   const [, setClickedCoord] = useState<Coordinates | null>(null);
   const [showOceanWarning, setShowOceanWarning] = useState(false);
+  const [showGestureTutorial, setShowGestureTutorial] = useState(() => {
+    try {
+      return sessionStorage.getItem('chronospheres_gesture_dismissed') !== 'true';
+    } catch {
+      return true;
+    }
+  });
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Keep references to latest callbacks and flags to completely avoid stale closures
@@ -136,6 +151,15 @@ export const GlobeView: React.FC<GlobeViewProps> = ({
     []
   );
 
+  const handleDismissGestureTutorial = useCallback(() => {
+    setShowGestureTutorial(false);
+    try {
+      sessionStorage.setItem('chronospheres_gesture_dismissed', 'true');
+    } catch {
+      // ignore
+    }
+  }, []);
+
   return (
     <div
       ref={containerRef}
@@ -151,6 +175,8 @@ export const GlobeView: React.FC<GlobeViewProps> = ({
           capsules={capsules}
           selectedCapsule={selectedCapsule}
           targetCoordinates={targetCoordinates}
+          userLocation={userLocation}
+          onFocusUserLocation={onFocusUserLocation}
           onSelectCapsule={onSelectCapsule}
           onCoordinatesPicked={handleCoordinatesPicked}
           showHeatmap={showHeatmap}
@@ -159,8 +185,16 @@ export const GlobeView: React.FC<GlobeViewProps> = ({
           isPlantingMode={isPlantingMode}
           isJudgeOverride={isJudgeOverride}
           activeUsername={activeUsername}
+          onTriggerCloudDive={onTriggerCloudDive}
+          onZoomPastThreshold={handleDismissGestureTutorial}
         />
       </div>
+
+      {/* Interactive Pinch/Double-Tap Gesture Tutorial Overlay */}
+      <GestureTutorialOverlay
+        isVisible={showGestureTutorial}
+        onDismiss={handleDismissGestureTutorial}
+      />
 
       {/* Non-intrusive Ocean Click Notification */}
       <LandWarningToast
