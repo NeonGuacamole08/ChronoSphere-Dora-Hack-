@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   X,
+  Globe,
   Globe2,
   MapPin,
   Lock,
@@ -8,7 +9,6 @@ import {
   Compass,
   Layers,
   Sparkles,
-  ShieldCheck,
   Music,
   Mic,
   ArrowRight,
@@ -21,18 +21,23 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { ambientSound, SoundTheme, SOUND_THEMES } from '../../utils/audio';
+import { LANGUAGES, SupportedLanguage, translate } from '../../utils/i18n';
 
 interface WelcomeGuideModalProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenPlantModal?: () => void;
   onOpenBackendHub?: () => void;
+  language?: SupportedLanguage;
+  onSelectLanguage?: (lang: SupportedLanguage) => void;
 }
 
 export const WelcomeGuideModal: React.FC<WelcomeGuideModalProps> = ({
   isOpen,
   onClose,
   onOpenPlantModal,
+  language = 'en',
+  onSelectLanguage,
 }) => {
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const [activeTheme, setActiveTheme] = useState<SoundTheme>(() => ambientSound.getTheme());
@@ -70,13 +75,6 @@ export const WelcomeGuideModal: React.FC<WelcomeGuideModalProps> = ({
     }
   };
 
-  const handleSelectTheme = (themeId: SoundTheme) => {
-    ambientSound.setTheme(themeId);
-    if (!isPlaying) {
-      ambientSound.start();
-    }
-  };
-
   const handleToggleSound = () => {
     ambientSound.toggle();
   };
@@ -106,21 +104,41 @@ export const WelcomeGuideModal: React.FC<WelcomeGuideModalProps> = ({
             </div>
             <div>
               <h2 className="font-serif font-bold text-base sm:text-lg text-amber-50 leading-tight">
-                Welcome to ChronoSpheres
+                {translate('appName', language)}
               </h2>
               <p className="text-[10px] sm:text-xs text-amber-200/80 font-sans">
-                Global 3D Earth Time Capsule Archive & Interactive Guide
+                {translate('appTagline', language)}
               </p>
             </div>
           </div>
 
-          <button
-            onClick={handleDismiss}
-            className="p-1.5 rounded-full hover:bg-amber-950/80 text-amber-200 hover:text-white transition cursor-pointer"
-            title="Close Guide"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {onSelectLanguage && (
+              <div className="flex items-center gap-1.5 bg-[#170e07] border border-amber-500/40 rounded-xl px-2.5 py-1 text-xs text-amber-200 shadow-inner">
+                <Globe className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <select
+                  value={language}
+                  onChange={(e) => onSelectLanguage(e.target.value as SupportedLanguage)}
+                  className="bg-transparent text-amber-200 font-bold text-xs focus:outline-none cursor-pointer pr-1"
+                  title={translate('switchLanguage', language)}
+                >
+                  {LANGUAGES.map((lang) => (
+                    <option key={lang.code} value={lang.code} className="bg-[#2c1d11] text-amber-100">
+                      {lang.flag} {lang.nativeName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <button
+              onClick={handleDismiss}
+              className="p-1.5 rounded-full hover:bg-amber-950/80 text-amber-200 hover:text-white transition cursor-pointer"
+              title={translate('close', language)}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable Parchment Body */}
@@ -129,10 +147,10 @@ export const WelcomeGuideModal: React.FC<WelcomeGuideModalProps> = ({
           <div className="p-3.5 rounded-xl bg-[#ede2cf] border border-[#d6c2a2] text-stone-800 text-xs leading-relaxed space-y-1.5 shadow-xs">
             <p className="font-serif font-bold text-sm text-[#4a3018] flex items-center gap-1.5">
               <Sparkles className="w-4 h-4 text-amber-700" />
-              Preserving Human Memory Across Time and Space
+              {translate('tutorialIntroTitle', language)}
             </p>
             <p className="text-[#5c4632] text-[11px] sm:text-xs">
-              ChronoSpheres is a decentralized 3D Earth archive where travelers, historians, and explorers plant cryptographic time capsules bound to exact global coordinates and locked until future dates.
+              {translate('tutorialIntroDesc', language)}
             </p>
           </div>
 
@@ -145,13 +163,13 @@ export const WelcomeGuideModal: React.FC<WelcomeGuideModalProps> = ({
                 </div>
                 <div>
                   <h3 className="font-bold text-xs text-amber-100 flex items-center gap-1.5">
-                    Atmosphere & Background Music
+                    {translate('atmosphereMusic', language)}
                     <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                      Royalty-Free Synth
+                      {translate('proceduralSynth', language)}
                     </span>
                   </h3>
                   <p className="text-[10px] text-amber-300/80">
-                    Audio is on by default. Choose from 4 procedural soundscapes:
+                    {translate('soundSelectSubtitle', language)}
                   </p>
                 </div>
               </div>
@@ -165,104 +183,117 @@ export const WelcomeGuideModal: React.FC<WelcomeGuideModalProps> = ({
                     ? 'bg-emerald-950 text-emerald-300 border-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
                     : 'bg-stone-900 text-stone-300 border-stone-700'
                 }`}
-                title={isPlaying ? 'Mute audio' : 'Play audio'}
+                title={isPlaying ? translate('soundOn', language) : translate('soundMuted', language)}
               >
                 {isPlaying ? (
                   <>
                     <Volume2 className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-                    <span>Sound ON</span>
+                    <span>{translate('soundOn', language)}</span>
                   </>
                 ) : (
                   <>
                     <VolumeX className="w-3.5 h-3.5 text-stone-400" />
-                    <span>Muted</span>
+                    <span>{translate('soundMuted', language)}</span>
                   </>
                 )}
               </button>
             </div>
 
-            {/* 4 Sound Theme Buttons */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-0.5">
+            {/* 4 Procedural Sound Themes Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {SOUND_THEMES.map((theme) => {
                 const isSelected = activeTheme === theme.id;
+                const themeKey = theme.id === 'nostalgic' ? 'themeNostalgic'
+                  : theme.id === 'haunting' ? 'themeHaunting'
+                  : theme.id === 'upbeat' ? 'themeUpbeat'
+                  : 'themeSad';
+                const tagKey = theme.id === 'nostalgic' ? 'themeNostalgicTag'
+                  : theme.id === 'haunting' ? 'themeHauntingTag'
+                  : theme.id === 'upbeat' ? 'themeUpbeatTag'
+                  : 'themeSadTag';
+
                 return (
                   <button
                     key={theme.id}
                     type="button"
-                    onClick={() => handleSelectTheme(theme.id)}
+                    onClick={() => ambientSound.setTheme(theme.id)}
                     className={`p-2 rounded-xl text-left transition flex flex-col justify-between border cursor-pointer ${
                       isSelected
-                        ? 'bg-amber-900/80 border-amber-400 ring-2 ring-amber-400/40 text-amber-50 shadow-md'
-                        : 'bg-[#150d07]/80 hover:bg-[#25170d] border-amber-900/60 text-amber-200/90'
+                        ? 'bg-amber-900/80 border-amber-400 text-amber-50 ring-1 ring-amber-400 shadow-sm'
+                        : 'bg-[#180e06]/80 hover:bg-[#251509] border-amber-800/40 text-amber-200/90'
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-1 mb-1">
-                      <div className="flex items-center gap-1.5">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="w-6 h-6 rounded-md bg-black/40 border border-amber-700/60 flex items-center justify-center">
                         {getThemeIcon(theme.id)}
-                        <span className="font-bold text-xs">{theme.name}</span>
                       </div>
                       {isSelected && isPlaying && (
-                        <Radio className="w-3 h-3 text-emerald-400 animate-spin shrink-0" />
+                        <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
                       )}
                     </div>
-                    <span className="text-[9px] text-amber-300/75 line-clamp-1">
-                      {theme.tag}
-                    </span>
+                    <div>
+                      <span className="font-bold text-xs block truncate text-amber-100">
+                        {translate(themeKey, language)}
+                      </span>
+                      <span className="text-[9px] text-amber-300/70 block truncate">
+                        {translate(tagKey, language)}
+                      </span>
+                    </div>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Core Feature Sections */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* 1. Orbit & Explore */}
-            <div className="p-3 rounded-xl bg-white/80 border border-[#dfd2bc] hover:border-amber-600/50 transition shadow-xs flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-6 h-6 rounded-lg bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-800 shrink-0">
-                    <Compass className="w-3.5 h-3.5" />
-                  </div>
-                  <h3 className="font-bold text-xs text-[#3d2714]">
-                    1. Orbit & Explore Earth
-                  </h3>
-                </div>
-                <p className="text-[11px] text-stone-600 leading-relaxed">
-                  Click and drag to rotate the globe. Scroll to zoom in with real-time aerodynamic air-gliding sound effects. Country borders are outlined across continents.
-                </p>
-              </div>
-            </div>
-
-            {/* 2. Country Borders & Live Intel */}
-            <div className="p-3 rounded-xl bg-white/80 border border-[#dfd2bc] hover:border-amber-600/50 transition shadow-xs flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-6 h-6 rounded-lg bg-emerald-100 border border-emerald-300 flex items-center justify-center text-emerald-800 shrink-0">
-                    <Layers className="w-3.5 h-3.5" />
-                  </div>
-                  <h3 className="font-bold text-xs text-[#3d2714]">
-                    2. Country Borders & Live Data
-                  </h3>
-                </div>
-                <p className="text-[11px] text-stone-600 leading-relaxed">
-                  Click inside any country outline to open the live REST Countries drawer showing its capital, flag, population, currency, and local capsules.
-                </p>
-              </div>
-            </div>
-
-            {/* 3. Plant Sealed Time Capsules */}
+          {/* Quick Guide Points */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {/* 1. Explore 3D Earth */}
             <div className="p-3 rounded-xl bg-white/80 border border-[#dfd2bc] hover:border-amber-600/50 transition shadow-xs flex flex-col justify-between">
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <div className="w-6 h-6 rounded-lg bg-cyan-100 border border-cyan-300 flex items-center justify-center text-cyan-800 shrink-0">
-                    <MapPin className="w-3.5 h-3.5" />
+                    <Compass className="w-3.5 h-3.5" />
                   </div>
                   <h3 className="font-bold text-xs text-[#3d2714]">
-                    3. Plant Sealed Capsules
+                    {translate('tutorialStep1Title', language)}
                   </h3>
                 </div>
                 <p className="text-[11px] text-stone-600 leading-relaxed">
-                  Click <span className="font-bold text-cyan-900">+ Plant Capsule</span> or <span className="font-bold text-cyan-900">Drop Pin</span> to bury messages, voice recordings (<Mic className="w-3 h-3 inline text-emerald-700" />), photo memories, and Spotify tracks (<Music className="w-3 h-3 inline text-emerald-700" />).
+                  {translate('tutorialStep1Desc', language)}
+                </p>
+              </div>
+            </div>
+
+            {/* 2. Unearth Unlocked Capsules */}
+            <div className="p-3 rounded-xl bg-white/80 border border-[#dfd2bc] hover:border-amber-600/50 transition shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-6 h-6 rounded-lg bg-emerald-100 border border-emerald-300 flex items-center justify-center text-emerald-800 shrink-0">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  </div>
+                  <h3 className="font-bold text-xs text-[#3d2714]">
+                    {translate('tutorialStep2Title', language)}
+                  </h3>
+                </div>
+                <p className="text-[11px] text-stone-600 leading-relaxed">
+                  {translate('tutorialStep2Desc', language)}
+                </p>
+              </div>
+            </div>
+
+            {/* 3. Plant Sealed Capsules */}
+            <div className="p-3 rounded-xl bg-white/80 border border-[#dfd2bc] hover:border-amber-600/50 transition shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-6 h-6 rounded-lg bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-800 shrink-0">
+                    <MapPin className="w-3.5 h-3.5" />
+                  </div>
+                  <h3 className="font-bold text-xs text-[#3d2714]">
+                    {translate('tutorialStep3Title', language)}
+                  </h3>
+                </div>
+                <p className="text-[11px] text-stone-600 leading-relaxed">
+                  {translate('tutorialStep3Desc', language)}
                 </p>
               </div>
             </div>
@@ -275,11 +306,11 @@ export const WelcomeGuideModal: React.FC<WelcomeGuideModalProps> = ({
                     <Lock className="w-3.5 h-3.5" />
                   </div>
                   <h3 className="font-bold text-xs text-[#3d2714]">
-                    4. Public vs. Private Vaults
+                    {translate('tutorialStep4Title', language)}
                   </h3>
                 </div>
                 <p className="text-[11px] text-stone-600 leading-relaxed">
-                  Public capsules unlock for anyone worldwide upon unlock date. Private capsules encrypt data strictly to your account or recipient.
+                  {translate('tutorialStep4Desc', language)}
                 </p>
               </div>
             </div>
@@ -292,10 +323,10 @@ export const WelcomeGuideModal: React.FC<WelcomeGuideModalProps> = ({
             </div>
             <div className="flex-1 text-xs">
               <h4 className="font-bold text-amber-950 mb-0.5">
-                5. Fast-Forward Time Travel Simulator
+                {translate('tutorialStep5Title', language)}
               </h4>
               <p className="text-amber-900 leading-relaxed text-[11px]">
-                Want to test capsule unlocks immediately? Use the bottom control panel buttons (<span className="font-mono font-bold bg-amber-200/80 px-1 py-0.5 rounded text-[10px]">+1h</span>, <span className="font-mono font-bold bg-amber-200/80 px-1 py-0.5 rounded text-[10px]">+1d</span>, <span className="font-mono font-bold bg-amber-200/80 px-1 py-0.5 rounded text-[10px]">+1w</span>, <span className="font-mono font-bold bg-amber-200/80 px-1 py-0.5 rounded text-[10px]">+1y</span>) to simulate future dates and decrypt mature memory tokens!
+                {translate('tutorialStep5Desc', language)}
               </p>
             </div>
           </div>
@@ -310,7 +341,7 @@ export const WelcomeGuideModal: React.FC<WelcomeGuideModalProps> = ({
               onChange={(e) => setDontShowAgain(e.target.checked)}
               className="w-4 h-4 text-amber-700 rounded border-stone-400 focus:ring-amber-500 accent-amber-800"
             />
-            <span>Don't show automatically on startup</span>
+            <span>{translate('dontShowAgain', language)}</span>
           </label>
 
           <div className="flex items-center gap-2.5 w-full sm:w-auto">
@@ -319,7 +350,7 @@ export const WelcomeGuideModal: React.FC<WelcomeGuideModalProps> = ({
               onClick={handlePlantClick}
               className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-white hover:bg-stone-50 border border-stone-300 text-stone-800 text-xs font-bold transition cursor-pointer shadow-xs"
             >
-              Plant a Capsule
+              {translate('plantCapsule', language)}
             </button>
 
             <button
@@ -327,7 +358,7 @@ export const WelcomeGuideModal: React.FC<WelcomeGuideModalProps> = ({
               onClick={handleDismiss}
               className="flex-1 sm:flex-none px-5 py-2 rounded-xl bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
             >
-              <span>Start Exploring Earth</span>
+              <span>{translate('startExploring', language)}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>

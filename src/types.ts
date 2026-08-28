@@ -64,6 +64,55 @@ export interface Capsule {
   is_draft?: boolean;
   notified: boolean;
   tags?: string[];
+  is_found?: boolean;
+  event_id?: string;
+  event_hint?: string;
+  order_in_hunt?: number;
+}
+
+export interface EventBroadcastHint {
+  id: string;
+  event_id: string;
+  capsule_id: string;
+  capsule_title: string;
+  hint_text: string;
+  sent_at: string;
+}
+
+export interface EventDiscoveryRecord {
+  event_id: string;
+  capsule_id: string;
+  username: string;
+  discovered_at: string;
+}
+
+export interface LeaderboardParticipant {
+  username: string;
+  avatar_url?: string;
+  capsules_found: number;
+  total_event_capsules: number;
+  completion_time_seconds?: number;
+  last_discovery_at?: string;
+  is_current_user?: boolean;
+}
+
+export interface ScavengerEvent {
+  id: string;
+  title: string;
+  description: string;
+  creator_id: string;
+  creator_username: string;
+  is_public: boolean;
+  secret_access_code?: string;
+  invited_handles?: string[];
+  start_timestamp: string; // ISO 8601 string
+  end_timestamp: string; // ISO 8601 string
+  capsule_ids: string[];
+  banner_url?: string;
+  theme_color?: string;
+  hints_broadcasted: EventBroadcastHint[];
+  discoveries?: EventDiscoveryRecord[];
+  created_at: string;
 }
 
 export interface CountryData {

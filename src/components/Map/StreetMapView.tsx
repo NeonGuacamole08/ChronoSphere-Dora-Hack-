@@ -126,17 +126,22 @@ function createCapsuleDivIcon(
   isSelected: boolean,
   isHunting: boolean
 ): L.DivIcon {
+  const isEvent = Boolean(capsule.event_id);
   const isInstant = capsule.public_unlock_mode === 'instant_find';
   const isUnlocked = new Date(capsule.unlock_timestamp).getTime() <= Date.now();
   const districtLabel = capsule.location_name ? capsule.location_name.split(',')[0].trim() : 'Local Pin';
 
-  const pinGradient = isInstant
+  const pinGradient = isEvent
+    ? 'from-amber-400 via-yellow-400 to-amber-600'
+    : isInstant
     ? 'from-amber-400 via-amber-500 to-amber-600'
     : isUnlocked
     ? 'from-emerald-400 via-emerald-500 to-emerald-600'
     : 'from-amber-600 via-amber-700 to-stone-900';
 
-  const pinBorder = isInstant
+  const pinBorder = isEvent
+    ? 'border-yellow-200 ring-2 ring-yellow-400/80 shadow-[0_0_15px_rgba(245,158,11,0.8)]'
+    : isInstant
     ? 'border-yellow-200'
     : isUnlocked
     ? 'border-emerald-200'
@@ -145,7 +150,7 @@ function createCapsuleDivIcon(
   const iconHtml = `
     <div class="relative flex flex-col items-center select-none group" style="transform: translate(-50%, -100%);">
       ${
-        isHunting || isSelected
+        isEvent || isHunting || isSelected
           ? `
             <div class="absolute -top-6 w-24 h-24 rounded-full bg-amber-400/20 border border-amber-400/60 animate-ping pointer-events-none"></div>
             <div class="absolute -top-3 w-16 h-16 rounded-full bg-amber-500/25 border border-amber-300/80 animate-pulse pointer-events-none"></div>
@@ -154,12 +159,12 @@ function createCapsuleDivIcon(
       }
 
       <!-- Mini Callout Badge -->
-      <div class="mb-1 px-2.5 py-0.5 rounded-full bg-[#120a05]/95 border border-amber-400/80 text-amber-100 text-[11px] font-bold shadow-2xl whitespace-nowrap backdrop-blur-md flex items-center gap-1.5 ${
+      <div class="mb-1 px-2.5 py-0.5 rounded-full bg-[#120a05]/95 border ${isEvent ? 'border-amber-400 ring-1 ring-amber-400/50 bg-[#291303]' : 'border-amber-400/80'} text-amber-100 text-[11px] font-bold shadow-2xl whitespace-nowrap backdrop-blur-md flex items-center gap-1.5 ${
         isSelected
           ? 'scale-110 ring-2 ring-amber-400 bg-amber-950 text-amber-200'
           : 'opacity-90 hover:opacity-100 hover:scale-105'
       }">
-        <span class="text-xs">${isInstant ? '⚡' : isUnlocked ? '🔓' : '🔒'}</span>
+        <span class="text-xs">${isEvent ? '🏆' : isInstant ? '⚡' : isUnlocked ? '🔓' : '🔒'}</span>
         <span class="max-w-[130px] truncate">${capsule.title || districtLabel}</span>
       </div>
 
@@ -168,7 +173,9 @@ function createCapsuleDivIcon(
         isSelected ? 'scale-120 ring-4 ring-amber-400 animate-bounce' : 'hover:scale-110'
       }">
         ${
-          isInstant
+          isEvent
+            ? '<svg class="w-4 h-4 text-stone-950 font-black fill-current" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>'
+            : isInstant
             ? '<svg class="w-4 h-4 text-stone-950 font-black fill-current" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'
             : isUnlocked
             ? '<svg class="w-4 h-4 text-emerald-950 font-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke-width="2.5"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke-width="2.5"/></svg>'
@@ -961,51 +968,9 @@ export const StreetMapView: React.FC<StreetMapViewProps> = ({
         </div>
       )}
 
-      {/* SLENDER "PLANT CAPSULE" BUTTON DESIGN & GPS RE-CENTER (Explore Mode) */}
-      <div className="absolute bottom-6 right-4 sm:right-6 z-20 flex items-center gap-2 pointer-events-auto">
-        <button
-          type="button"
-          onClick={handleToggleDropPinMode}
-          className={`flex items-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl backdrop-blur-md font-bold text-xs sm:text-sm shadow-xl transition-all duration-200 cursor-pointer active:scale-95 border ${
-            isDropModeActive
-              ? 'bg-emerald-950/90 border-emerald-400 text-emerald-200 ring-2 ring-emerald-400/30 animate-pulse'
-              : 'bg-[#120a05]/90 hover:bg-[#1c1008] border-amber-500/50 text-amber-100 hover:border-amber-400 hover:text-white shadow-[0_4px_20px_rgba(0,0,0,0.5)]'
-          }`}
-          title="Click on OpenStreetMap to bury a memory capsule"
-        >
-          {isDropModeActive ? (
-            <>
-              <Check className="w-4 h-4 text-emerald-400 font-bold" />
-              <span className="tracking-wide">Click Map to Place Pin</span>
-            </>
-          ) : (
-            <>
-              <Plus className="w-4 h-4 text-amber-400 stroke-[2.5]" />
-              <span className="tracking-wide">Plant Capsule</span>
-            </>
-          )}
-        </button>
-
-        {/* Cute "My Location" Action Button */}
-        {userLocation && (
-          <button
-            type="button"
-            onClick={handleCenterOnUser}
-            className="flex items-center gap-1.5 px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl bg-[#120a05]/95 hover:bg-[#1c1008] border border-cyan-500/50 text-cyan-200 hover:text-white hover:border-cyan-400 backdrop-blur-md shadow-xl transition-all duration-200 cursor-pointer active:scale-95 group"
-            title="Fly to My Live Location"
-          >
-            <div className="w-5 h-5 rounded-lg bg-cyan-950/90 border border-cyan-400/60 flex items-center justify-center text-cyan-300 group-hover:scale-110 transition-transform">
-              <CuteExplorerMascot size={18} animate={false} />
-            </div>
-            <span className="text-xs font-bold font-mono hidden sm:inline">My Location</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          </button>
-        )}
-      </div>
-
-      {/* Selected Capsule Bottom-Left Street Card */}
+      {/* Selected Capsule Card (Positioned safely above bottom-left Time Control Box) */}
       {activeStreetCapsule && !huntingCapsule && !isDropModeActive && (
-        <div className="absolute bottom-6 left-4 right-20 sm:right-auto sm:max-w-md z-20 p-3.5 rounded-xl bg-[#120a05]/95 border border-amber-500/80 text-amber-100 shadow-2xl backdrop-blur-md animate-in slide-in-from-bottom-3 space-y-2">
+        <div className="absolute bottom-28 sm:bottom-24 left-4 sm:left-5 right-4 sm:right-auto sm:max-w-md z-30 p-3.5 rounded-2xl bg-[#120a05]/95 border border-amber-500/80 text-amber-100 shadow-2xl backdrop-blur-md animate-in slide-in-from-bottom-3 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-base">

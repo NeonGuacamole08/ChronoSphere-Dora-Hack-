@@ -4,7 +4,7 @@ import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { Capsule } from '../../types';
 import { latLngToVector3 } from '../../utils/coordinates';
-import { Sparkles, Lock, KeyRound } from 'lucide-react';
+import { Sparkles, Lock, KeyRound, Trophy } from 'lucide-react';
 
 interface CapsulePinProps {
   capsule: Capsule;
@@ -82,14 +82,17 @@ export const CapsulePin: React.FC<CapsulePinProps> = ({
   // Prominently show title pill for selected capsule or hovered
   const showTitlePill = isSelected || hovered;
 
-  // Visual theme colors based on access & status
-  const beamColor = !hasAccess
+  // Visual theme colors based on access, event status & type
+  const isEventCapsule = Boolean(capsule.event_id);
+  const beamColor = isEventCapsule
+    ? '#f59e0b'
+    : !hasAccess
     ? '#f43f5e'
     : capsule.access_type === 'private'
     ? '#eab308'
     : '#67e8f9';
 
-  const ringColor = !hasAccess ? '#fb7185' : '#facc15';
+  const ringColor = isEventCapsule ? '#fbbf24' : !hasAccess ? '#fb7185' : '#facc15';
 
   return (
     <group
@@ -194,8 +197,23 @@ export const CapsulePin: React.FC<CapsulePinProps> = ({
             className="relative pointer-events-auto cursor-pointer select-none"
             style={{ transform: 'translate3d(-50%, -100%, 0)' }}
           >
-            {/* Conditional Badge Styling depending on Access */}
-            {hasAccess ? (
+            {/* Conditional Badge Styling depending on Access & Event status */}
+            {isEventCapsule ? (
+              <div
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-full backdrop-blur-md transition-all duration-200 transform whitespace-nowrap border shadow-xl ${
+                  isSelected
+                    ? 'bg-[#3d1e05]/95 text-amber-100 border-amber-300 ring-2 ring-amber-400 scale-105 shadow-[0_0_20px_rgba(245,158,11,0.6)]'
+                    : 'bg-[#291303]/90 text-amber-200 border-amber-500/80 shadow-[0_0_15px_rgba(245,158,11,0.4)]'
+                }`}
+              >
+                <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-bounce" />
+                <span className="font-sans font-bold text-xs tracking-tight text-amber-100">
+                  {capsule.title.length > 24
+                    ? `${capsule.title.slice(0, 22)}...`
+                    : capsule.title}
+                </span>
+              </div>
+            ) : hasAccess ? (
               <div
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-full backdrop-blur-md transition-all duration-200 transform whitespace-nowrap border shadow-xl ${
                   isSelected

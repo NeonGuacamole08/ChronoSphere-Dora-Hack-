@@ -1,6 +1,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Capsule, Pin } from '../types';
 import { SEED_CAPSULES } from '../data/seedCapsules';
+import { SupportedLanguage } from './i18n';
 
 // Environment credentials automatically read from Vite environment variables
 const ENV_SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
@@ -53,6 +54,7 @@ export interface AppUser {
   provider?: 'email' | 'google' | 'guest';
   created_at?: string;
   last_sign_in_at?: string;
+  preferred_language?: SupportedLanguage;
 }
 
 export function createGuestUser(): AppUser {
@@ -142,6 +144,21 @@ export const supabaseAuth = {
         const u = data.user;
         const rawUsername = u.user_metadata?.username || u.user_metadata?.name || u.email?.split('@')[0] || 'Explorer';
         const cleanUsername = rawUsername.startsWith('@') ? rawUsername : `@${rawUsername}`;
+
+        let prefLang = u.user_metadata?.preferred_language as SupportedLanguage | undefined;
+        try {
+          const { data: profile } = await client
+            .from('profiles')
+            .select('preferred_language')
+            .eq('id', u.id)
+            .maybeSingle();
+          if (profile?.preferred_language) {
+            prefLang = profile.preferred_language as SupportedLanguage;
+          }
+        } catch {
+          // fallback to metadata or localStorage
+        }
+
         const userObj: AppUser = {
           id: u.id,
           email: u.email || '',
@@ -152,6 +169,7 @@ export const supabaseAuth = {
           provider: (u.app_metadata?.provider as any) || 'email',
           created_at: u.created_at,
           last_sign_in_at: u.last_sign_in_at,
+          preferred_language: prefLang,
         };
         localStorage.setItem(LOCAL_STORAGE_AUTH_SESSION_KEY, JSON.stringify(userObj));
         return userObj;
@@ -747,6 +765,44 @@ export const supabaseAuth = {
     }
     localStorage.removeItem(LOCAL_STORAGE_AUTH_SESSION_KEY);
   },
+
+  /**
+   * Update preferred language for the user in Supabase profiles & auth metadata
+   */
+  async updatePreferredLanguage(lang: SupportedLanguage, userId?: string): Promise<boolean> {
+    try {
+      const client = getSupabaseClient();
+      const user = await this.getUser();
+      const targetUid = userId || user?.id;
+
+      if (targetUid && targetUid !== 'guest') {
+        // 1. Update Supabase Auth user_metadata
+        await client.auth.updateUser({
+          data: { preferred_language: lang },
+        });
+
+        // 2. Update profiles table
+        await client
+          .from('profiles')
+          .update({ preferred_language: lang, updated_at: new Date().toISOString() })
+          .eq('id', targetUid);
+      }
+    } catch (err) {
+      console.warn('Supabase updatePreferredLanguage warning:', err);
+    }
+
+    // Update active stored session
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_AUTH_SESSION_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        parsed.preferred_language = lang;
+        localStorage.setItem(LOCAL_STORAGE_AUTH_SESSION_KEY, JSON.stringify(parsed));
+      }
+    } catch {}
+
+    return true;
+  },
 };
 
 /**
@@ -801,6 +857,10 @@ export const capsulesDb = {
           is_draft: Boolean(row.is_draft),
           notified: Boolean(row.notified),
           tags: Array.isArray(row.tags) ? row.tags : typeof row.tags === 'string' ? JSON.parse(row.tags) : [],
+          is_found: Boolean(row.is_found),
+          event_id: row.event_id || undefined,
+          event_hint: row.event_hint || undefined,
+          order_in_hunt: row.order_in_hunt || undefined,
         }));
         fetchSucceeded = true;
       }
@@ -890,6 +950,10 @@ export const capsulesDb = {
           is_draft: Boolean(capsule.is_draft),
           notified: Boolean(capsule.notified),
           tags: capsule.tags || [],
+          is_found: Boolean(capsule.is_found),
+          event_id: capsule.event_id || null,
+          event_hint: capsule.event_hint || null,
+          order_in_hunt: capsule.order_in_hunt || null,
         };
 
         const { error } = await client.from('capsules').upsert(record, { onConflict: 'id' });
@@ -911,6 +975,132 @@ export const capsulesDb = {
     } catch (e) {}
 
     return { success: true };
+  },
+
+  /**
+   * Fetch all capsules belonging to an event from public.capsules
+   */
+  async fetchEventCapsules(eventId: string): Promise<Capsule[]> {
+    let result: Capsule[] = [];
+    try {
+      const client = getSupabaseClient();
+      const { data, error } = await client
+        .from('capsules')
+        .select('*')
+        .eq('event_id', eventId)
+        .order('order_in_hunt', { ascending: true, nullsFirst: false });
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        result = data.map((row: any) => ({
+          id: row.id,
+          title: row.title || 'Event Capsule',
+          message: row.message || '',
+          created_at: row.created_at || new Date().toISOString(),
+          unlock_timestamp: row.unlock_timestamp || new Date().toISOString(),
+          lat: Number(row.lat) || 0,
+          lng: Number(row.lng) || 0,
+          location_name: row.location_name || 'Event Waypoint',
+          country_code: row.country_code || 'UN',
+          country_name: row.country_name || 'Global Terra',
+          creator_username: row.creator_username || '@event_host',
+          creator_email: row.creator_email || '',
+          access_type: row.access_type || 'public',
+          is_found: Boolean(row.is_found),
+          event_id: row.event_id || eventId,
+          event_hint: row.event_hint,
+          order_in_hunt: row.order_in_hunt,
+          is_encrypted: row.is_encrypted !== false,
+          notified: Boolean(row.notified),
+          arweave_tx_id: row.arweave_tx_id || `ar_${row.id}`,
+          encryption_signature: row.encryption_signature || 'sig_verified',
+        }));
+      }
+    } catch (err) {
+      console.warn('Supabase fetchEventCapsules error:', err);
+    }
+
+    // Check cached capsules for event capsules if remote is empty or offline
+    if (result.length === 0) {
+      try {
+        const cached = await this.fetchCapsules();
+        result = cached.filter((c) => c.event_id === eventId);
+      } catch {}
+    }
+
+    return result;
+  },
+
+  /**
+   * Mark Capsule Found in Supabase & Local Cache
+   * Used when an explorer excavates an event capsule in the field.
+   */
+  async markCapsuleFound(capsuleId: string, eventId?: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const client = getSupabaseClient();
+      const { error } = await client
+        .from('capsules')
+        .update({ is_found: true })
+        .eq('id', capsuleId);
+
+      if (error) {
+        console.warn('Supabase markCapsuleFound error:', error.message);
+      }
+    } catch (e: any) {
+      console.warn('Supabase markCapsuleFound catch:', e);
+    }
+
+    // Update local cache
+    try {
+      const current = await this.fetchCapsules();
+      const updated = current.map((c) => (c.id === capsuleId ? { ...c, is_found: true } : c));
+      localStorage.setItem(LOCAL_STORAGE_CAPSULES_CACHE_KEY, JSON.stringify(updated));
+    } catch (e) {}
+
+    return { success: true };
+  },
+
+  /**
+   * Seed Event Capsules to ensure public.capsules has the event's capsules
+   */
+  async seedEventCapsules(capsules: Capsule[]): Promise<void> {
+    if (!capsules || capsules.length === 0) return;
+    try {
+      const client = getSupabaseClient();
+      const records = capsules.map((capsule) => ({
+        id: capsule.id,
+        title: capsule.title,
+        message: capsule.message,
+        created_at: capsule.created_at,
+        unlock_timestamp: capsule.unlock_timestamp,
+        lat: capsule.lat,
+        lng: capsule.lng,
+        location_name: capsule.location_name,
+        country_code: capsule.country_code,
+        country_name: capsule.country_name,
+        creator_username: capsule.creator_username,
+        creator_email: capsule.creator_email,
+        access_type: capsule.access_type,
+        is_found: Boolean(capsule.is_found),
+        event_id: capsule.event_id || null,
+        event_hint: capsule.event_hint || null,
+        order_in_hunt: capsule.order_in_hunt || null,
+        arweave_tx_id: capsule.arweave_tx_id || `ar_${capsule.id}`,
+        encryption_signature: capsule.encryption_signature || 'sig_verified',
+      }));
+
+      await client.from('capsules').upsert(records, { onConflict: 'id' });
+    } catch (err) {
+      console.warn('Supabase seedEventCapsules notice:', err);
+    }
+
+    // Merge into local cache
+    try {
+      const current = await this.fetchCapsules();
+      const map = new Map<string, Capsule>();
+      current.forEach((c) => map.set(c.id, c));
+      capsules.forEach((c) => map.set(c.id, c));
+      localStorage.setItem(LOCAL_STORAGE_CAPSULES_CACHE_KEY, JSON.stringify(Array.from(map.values())));
+    } catch {}
   },
 
   /**

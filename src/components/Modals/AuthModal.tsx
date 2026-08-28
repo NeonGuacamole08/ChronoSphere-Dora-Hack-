@@ -14,8 +14,10 @@ import {
   Sparkles,
   KeyRound,
   Inbox,
+  Globe,
 } from 'lucide-react';
 import { supabaseAuth, AppUser } from '../../utils/supabase';
+import { SupportedLanguage, translate, LANGUAGES } from '../../utils/i18n';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -25,6 +27,8 @@ interface AuthModalProps {
   onSignOut: () => void;
   onContinueAsGuest?: () => void;
   initialMode?: 'signin' | 'signup' | 'forgot_password';
+  language?: SupportedLanguage;
+  onSelectLanguage?: (lang: SupportedLanguage) => void;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
@@ -35,6 +39,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onSignOut,
   onContinueAsGuest,
   initialMode = 'signin',
+  language = 'en',
+  onSelectLanguage,
 }) => {
   const [mode, setMode] = useState<
     'signin' | 'signup' | 'verify_email' | 'forgot_password' | 'reset_password_code' | 'profile'
@@ -339,6 +345,43 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <p className="text-[11px] text-cyan-900/90 leading-relaxed">
                   All memory vaults, photos, voice recordings, and planted pins are permanently preserved under your verified email.
                 </p>
+              </div>
+
+              {/* Preferred Language Selection Setting */}
+              <div className="p-3.5 bg-amber-50 rounded-xl border border-amber-200 text-xs text-stone-900 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-amber-950 flex items-center gap-1.5">
+                    <Globe className="w-4 h-4 text-amber-700" />
+                    {translate('preferredLanguage', language)}
+                  </span>
+                  <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 border border-amber-300 uppercase">
+                    {language}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 pt-1">
+                  {LANGUAGES.map((lang) => {
+                    const isSelected = language === lang.code;
+                    return (
+                      <button
+                        key={lang.code}
+                        type="button"
+                        onClick={() => {
+                          if (onSelectLanguage) {
+                            onSelectLanguage(lang.code);
+                          }
+                        }}
+                        className={`p-2 rounded-xl text-left text-xs transition cursor-pointer flex items-center gap-2 border ${
+                          isSelected
+                            ? 'bg-amber-800 text-white font-bold border-amber-900 shadow-xs'
+                            : 'bg-white text-stone-800 hover:bg-amber-100/80 border-amber-200/80'
+                        }`}
+                      >
+                        <span className="text-base">{lang.flag}</span>
+                        <span className="truncate">{lang.nativeName}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="flex items-center justify-end pt-2 border-t border-amber-200">

@@ -21,10 +21,12 @@ import {
   Heart,
   Radio,
   Package,
+  Trophy,
 } from 'lucide-react';
 import { searchMapboxPlaces, GeocodingResult } from '../../utils/mapbox';
 import { AppUser } from '../../utils/supabase';
 import { ambientSound, SoundTheme, SOUND_THEMES } from '../../utils/audio';
+import { SupportedLanguage, translate, LANGUAGES } from '../../utils/i18n';
 
 interface HeaderProps {
   searchQuery: string;
@@ -45,6 +47,11 @@ interface HeaderProps {
   totalCapsulesCount: number;
   onDropPinClick: () => void;
   isPlantingMode: boolean;
+  onOpenEvents?: () => void;
+  activeEventId?: string | null;
+  currentLanguage?: SupportedLanguage;
+  onOpenLanguageSelect?: () => void;
+  onSelectLanguage?: (lang: SupportedLanguage) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -66,6 +73,11 @@ export const Header: React.FC<HeaderProps> = ({
   totalCapsulesCount,
   onDropPinClick,
   isPlantingMode,
+  onOpenEvents,
+  activeEventId,
+  currentLanguage = 'en',
+  onOpenLanguageSelect,
+  onSelectLanguage,
 }) => {
   const [suggestions, setSuggestions] = useState<GeocodingResult[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -257,30 +269,66 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           type="button"
           onClick={onOpenCreate}
-          className="hidden md:flex items-center gap-1 md:gap-1.5 px-2 md:px-2.5 lg:px-3.5 py-1 md:py-1.5 lg:py-2 rounded-full bg-[#208b9e] hover:bg-[#1fa1bc] text-white text-[11px] md:text-xs font-bold transition shadow-[0_0_15px_rgba(6,182,212,0.4)] border border-cyan-300 hover:shadow-cyan-400/60 cursor-pointer shrink-0"
+          className="hidden md:flex items-center gap-1 md:gap-1.5 px-2 md:px-2.5 lg:px-3 py-1 md:py-1.5 rounded-full bg-[#208b9e] hover:bg-[#1fa1bc] text-white text-[11px] md:text-xs font-bold transition shadow-[0_0_15px_rgba(6,182,212,0.4)] border border-cyan-300 hover:shadow-cyan-400/60 cursor-pointer shrink-0"
           title="Plant a new encrypted time capsule"
         >
-          <Plus className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 text-cyan-100 stroke-[2.5]" />
-          <span className="hidden lg:inline">Plant Capsule</span>
-          <span className="inline lg:hidden">Plant</span>
+          <Plus className="w-3.5 h-3.5 text-cyan-100 stroke-[2.5]" />
+          <span className="hidden lg:inline">{translate('plantCapsule', currentLanguage)}</span>
+          <span className="inline lg:hidden">{translate('plant', currentLanguage)}</span>
         </button>
+
+        {/* EVENTS & SCAVENGER HUNT COMPETITIONS BUTTON */}
+        {onOpenEvents && (
+          <button
+            type="button"
+            onClick={onOpenEvents}
+            className={`flex items-center gap-1 md:gap-1.5 px-2 sm:px-2.5 py-1 md:py-1.5 rounded-xl border text-[11px] md:text-xs font-bold transition shadow-md cursor-pointer shrink-0 ${
+              activeEventId
+                ? 'bg-gradient-to-r from-amber-500 to-yellow-400 text-stone-950 border-amber-300 ring-2 ring-amber-400/60 shadow-[0_0_15px_rgba(245,158,11,0.6)] animate-pulse'
+                : 'bg-[#180e05]/95 hover:bg-[#251509] text-amber-200 border-amber-500/60 hover:border-amber-400'
+            }`}
+            title="Scavenger Hunt Competitions & Events Dashboard"
+          >
+            <Trophy className={`w-3.5 h-3.5 ${activeEventId ? 'text-stone-950' : 'text-amber-400'}`} />
+            <span className="hidden sm:inline">{translate('events', currentLanguage)}</span>
+            <span className="inline sm:hidden">Hunts</span>
+            {activeEventId && (
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping ml-0.5" />
+            )}
+          </button>
+        )}
 
         {/* 1. MY VAULT / CAPSULE INVENTORY DRAWER BUTTON */}
         {onOpenVault && (
           <button
             type="button"
             onClick={onOpenVault}
-            className="flex items-center gap-1 md:gap-1.5 px-1.5 sm:px-2 md:px-2.5 lg:px-3 py-1 md:py-1.5 lg:py-2 rounded-xl bg-[#121c2b]/95 hover:bg-[#1c2c43] text-amber-200 border border-amber-500/60 hover:border-amber-400 text-[11px] md:text-xs font-bold transition shadow-md hover:shadow-[0_0_14px_rgba(245,158,11,0.35)] cursor-pointer shrink-0"
+            className="flex items-center gap-1 md:gap-1.5 px-1.5 sm:px-2 md:px-2.5 lg:px-3 py-1 md:py-1.5 rounded-xl bg-[#121c2b]/95 hover:bg-[#1c2c43] text-amber-200 border border-amber-500/60 hover:border-amber-400 text-[11px] md:text-xs font-bold transition shadow-md hover:shadow-[0_0_14px_rgba(245,158,11,0.35)] cursor-pointer shrink-0"
             title="My Vault: Locked & Unlocked Capsule Inventory Drawer"
           >
-            <Package className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 text-amber-400" />
-            <span className="hidden sm:inline">My Vault</span>
+            <Package className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">{translate('myVault', currentLanguage)}</span>
             <span
               id="my-vault-capsule-badge"
               className="text-[9px] md:text-[10px] px-1.5 py-0.2 rounded-full bg-amber-950/90 text-amber-300 border border-amber-600/60 font-mono font-bold shadow-inner"
             >
               {totalCapsulesCount}
             </span>
+          </button>
+        )}
+
+        {/* LANGUAGE SELECTOR BUTTON */}
+        {onOpenLanguageSelect && (
+          <button
+            type="button"
+            onClick={onOpenLanguageSelect}
+            className="flex items-center gap-1.5 px-2 py-1 md:py-1.5 rounded-xl bg-[#0c1626]/90 hover:bg-[#13233a] text-cyan-200 hover:text-white border border-cyan-500/40 text-[11px] md:text-xs font-bold font-mono transition shadow-md cursor-pointer shrink-0"
+            title={`Language: ${LANGUAGES.find((l) => l.code === currentLanguage)?.name || 'English'} — Click to change`}
+          >
+            <span className="text-sm leading-none" role="img" aria-label="Language flag">
+              {LANGUAGES.find((l) => l.code === currentLanguage)?.flag || '🌐'}
+            </span>
+            <span>{currentLanguage ? currentLanguage.toUpperCase() : 'EN'}</span>
           </button>
         )}
 
@@ -547,9 +595,48 @@ export const Header: React.FC<HeaderProps> = ({
                   }}
                   className="w-full text-left px-2.5 py-1.5 rounded-xl text-xs hover:bg-cyan-950/70 text-cyan-100 transition cursor-pointer flex items-center justify-between"
                 >
-                  <span>Account & Decryption Key</span>
+                  <span>{translate('accountKey', currentLanguage)}</span>
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                 </button>
+
+                {/* Language Selector Dropdown inside User Settings */}
+                <div className="pt-2 border-t border-cyan-500/20 mt-1.5">
+                  <div className="flex items-center justify-between text-[10px] text-cyan-300 font-mono mb-1.5 px-1 font-bold">
+                    <span className="flex items-center gap-1.5">
+                      <Globe className="w-3 h-3 text-cyan-400" />
+                      {translate('preferredLanguage', currentLanguage)}
+                    </span>
+                    <span className="text-emerald-400 font-bold uppercase">{currentLanguage}</span>
+                  </div>
+                  <div className="grid grid-cols-1 gap-1">
+                    {LANGUAGES.map((lang) => (
+                      <button
+                        key={lang.code}
+                        type="button"
+                        onClick={() => {
+                          if (onSelectLanguage) {
+                            onSelectLanguage(lang.code);
+                          }
+                          setShowUserDropdown(false);
+                        }}
+                        className={`w-full text-left px-2.5 py-1.5 rounded-xl text-xs transition cursor-pointer flex items-center justify-between ${
+                          currentLanguage === lang.code
+                            ? 'bg-cyan-500/25 text-cyan-200 border border-cyan-400/60 font-bold'
+                            : 'text-stone-300 hover:bg-cyan-950/60 border border-transparent'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="text-sm">{lang.flag}</span>
+                          <span>{lang.nativeName}</span>
+                          <span className="text-[10px] text-cyan-400/50">({lang.name})</span>
+                        </span>
+                        {currentLanguage === lang.code && (
+                          <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.8)]" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
                 <button
                   type="button"
@@ -559,7 +646,7 @@ export const Header: React.FC<HeaderProps> = ({
                   }}
                   className="w-full text-left px-2.5 py-1.5 rounded-xl text-xs hover:bg-rose-950/70 text-rose-300 transition cursor-pointer flex items-center justify-between border-t border-cyan-500/20 mt-1 pt-1.5"
                 >
-                  <span>Sign Out</span>
+                  <span>{translate('signOut', currentLanguage)}</span>
                   <LogOut className="w-3.5 h-3.5 text-rose-400" />
                 </button>
               </div>

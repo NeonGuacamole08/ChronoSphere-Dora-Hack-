@@ -31,6 +31,22 @@ import { GeocodingResult } from './utils/mapbox';
 import { ambientSound } from './utils/audio';
 import { supabaseAuth, capsulesDb, AppUser, createGuestUser } from './utils/supabase';
 import { AlertTriangle, X } from 'lucide-react';
+import { SEED_EVENT_CAPSULES } from './data/seedEvents';
+import { ScavengerEvent, EventBroadcastHint } from './types';
+import { eventsStorage } from './utils/eventsStorage';
+import {
+  SupportedLanguage,
+  getStoredLanguage,
+  setStoredLanguage,
+  hasSelectedInitialLanguage,
+} from './utils/i18n';
+import { LanguageSelectModal } from './components/Modals/LanguageSelectModal';
+import { ActiveEventBanner } from './components/Events/ActiveEventBanner';
+import { EventHintNotification } from './components/Events/EventHintNotification';
+import { EventsDashboardModal } from './components/Events/EventsDashboardModal';
+import { EventLeaderboardModal } from './components/Events/EventLeaderboardModal';
+import { EventMissionControlModal } from './components/Events/EventMissionControlModal';
+import { EventCluesModal } from './components/Events/EventCluesModal';
 
 const STORAGE_KEY = 'chronospheres_capsules_v8';
 const LEGACY_STORAGE_KEY = 'chronospheres_dao_capsules_v7';
@@ -45,15 +61,48 @@ export default function App() {
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup' | 'forgot_password'>('signin');
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
 
-  // Helper to load all public capsules worldwide and user's personal pins
+  // 2b. Language Localization State (Language selection comes first before tutorial!)
+  const [currentLanguage, setCurrentLanguage] = useState<SupportedLanguage>(() => {
+    return getStoredLanguage() || 'en';
+  });
+  const [isInitialLanguageSetup, setIsInitialLanguageSetup] = useState<boolean>(() => {
+    return !hasSelectedInitialLanguage();
+  });
+  const [isLanguageModalOpen, setIsLanguageModalOpen] = useState<boolean>(() => {
+    return !hasSelectedInitialLanguage();
+  });
+
+  // 2c. Scavenger Hunt Events State
+  const [events, setEvents] = useState<ScavengerEvent[]>(() => eventsStorage.getEvents());
+  const [activeEventId, setActiveEventId] = useState<string | null>(() => eventsStorage.getActiveEventId());
+  const [isEventsDashboardOpen, setIsEventsDashboardOpen] = useState<boolean>(false);
+  const [activeLeaderboardEvent, setActiveLeaderboardEvent] = useState<ScavengerEvent | null>(null);
+  const [activeMissionControlEvent, setActiveMissionControlEvent] = useState<ScavengerEvent | null>(null);
+  const [activeCluesEvent, setActiveCluesEvent] = useState<ScavengerEvent | null>(null);
+  const [broadcastHintToast, setBroadcastHintToast] = useState<EventBroadcastHint | null>(null);
+
+  // Helper to load all public capsules worldwide and user's personal pins (merges SEED_EVENT_CAPSULES)
   const loadUserCapsules = async () => {
     const remoteCapsules = await capsulesDb.fetchCapsules();
     if (remoteCapsules && remoteCapsules.length > 0) {
-      setCapsules(remoteCapsules);
+      const existingIds = new Set(remoteCapsules.map((c) => c.id));
+      const missingEventCapsules = SEED_EVENT_CAPSULES.filter((c) => !existingIds.has(c.id));
+      setCapsules([...remoteCapsules, ...missingEventCapsules]);
     } else {
-      setCapsules(SEED_CAPSULES);
+      setCapsules([...SEED_CAPSULES, ...SEED_EVENT_CAPSULES]);
     }
   };
+
+  // Listen for real-time dispatched clues from Event Mission Control
+  useEffect(() => {
+    const handleHintBroadcast = (e: any) => {
+      if (e.detail) {
+        setBroadcastHintToast(e.detail);
+      }
+    };
+    window.addEventListener('chronospheres_hint_broadcast', handleHintBroadcast);
+    return () => window.removeEventListener('chronospheres_hint_broadcast', handleHintBroadcast);
+  }, []);
 
   // On App Initialization: Check for existing verified session, otherwise ensure Guest Explorer mode
   useEffect(() => {
@@ -227,7 +276,18 @@ export default function App() {
   const [isOfflineViewerOpen, setIsOfflineViewerOpen] = useState(false);
 
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
-  const [isWelcomeGuideOpen, setIsWelcomeGuideOpen] = useState(false);
+  const [isWelcomeGuideOpen, setIsWelcomeGuideOpen] = useState<boolean>(() => {
+    // If language was already chosen previously, show guide unless user dismissed it
+    if (hasSelectedInitialLanguage()) {
+      try {
+        return localStorage.getItem('chronospheres_welcome_dismissed') !== 'true';
+      } catch {
+        return false;
+      }
+    }
+    // Choosing the language MUST come first! So tutorial remains closed until language is picked.
+    return false;
+  });
   const [isBackendHubOpen, setIsBackendHubOpen] = useState(false);
 
   // Floating Guest Warning Banner State with 7-second auto-dismiss
@@ -256,12 +316,36 @@ export default function App() {
     }
   });
 
-  // Filtered capsules accounting for search query and excluding in-progress drafts from globe view
+  // Derived active hunt event
+  const activeEvent = useMemo(() => {
+    if (!activeEventId) return null;
+    return events.find((e) => e.id === activeEventId) || null;
+  }, [events, activeEventId]);
+
+  // Filtered capsules accounting for search query, active event window, and excluding in-progress drafts
   const filteredCapsules = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
+    const effectiveNow = Date.now() + simulatedTimeOffsetMs;
 
     return capsules.filter((cap) => {
       if (cap.is_draft) return false;
+
+      // Event Capsule Visibility Logic:
+      // Reveal event capsules on the map only while the event start and end timestamps are active
+      // or if the user has explicitly joined the hunt
+      if (cap.event_id) {
+        const ev = events.find((e) => e.id === cap.event_id);
+        if (ev) {
+          const startTime = new Date(ev.start_timestamp).getTime();
+          const endTime = new Date(ev.end_timestamp).getTime();
+          const isEventActive = effectiveNow >= startTime && effectiveNow <= endTime;
+          const isUserInHunt = activeEventId === ev.id;
+          if (!isEventActive && !isUserInHunt) {
+            return false;
+          }
+        }
+      }
+
       if (!query) return true;
       return (
         cap.title.toLowerCase().includes(query) ||
@@ -272,7 +356,46 @@ export default function App() {
         cap.tags?.some((t) => t.toLowerCase().includes(query))
       );
     });
-  }, [capsules, searchQuery]);
+  }, [capsules, searchQuery, events, activeEventId, simulatedTimeOffsetMs]);
+
+  // Handle Language Selection (Enforces Language Selection -> Tutorial sequence)
+  const handleSelectLanguage = (lang: SupportedLanguage, isInitial = false) => {
+    setCurrentLanguage(lang);
+    setStoredLanguage(lang);
+    setIsLanguageModalOpen(false);
+
+    // If this was initial setup on app startup, immediately open the tutorial in the selected language!
+    if (isInitial || isInitialLanguageSetup) {
+      setIsInitialLanguageSetup(false);
+      setIsWelcomeGuideOpen(true);
+    }
+  };
+
+  // Handle Starting / Joining a Scavenger Hunt Event
+  const handleStartHunt = (event: ScavengerEvent) => {
+    eventsStorage.setActiveEventId(event.id);
+    setActiveEventId(event.id);
+    setIsEventsDashboardOpen(false);
+
+    // Smoothly fly camera to first capsule of this event if available
+    const firstEventCap = capsules.find((c) => event.capsule_ids.includes(c.id));
+    if (firstEventCap) {
+      setTargetCoordinates({ lat: firstEventCap.lat, lng: firstEventCap.lng });
+    }
+  };
+
+  // Handle Leaving a Scavenger Hunt Event
+  const handleLeaveHunt = () => {
+    eventsStorage.setActiveEventId(null);
+    setActiveEventId(null);
+  };
+
+  // Handle Event Creation from Host UI
+  const handleCreateEvent = (newEventData: any) => {
+    const created = eventsStorage.createEvent(newEventData);
+    setEvents(eventsStorage.getEvents());
+    handleStartHunt(created);
+  };
 
   // Audio Toggle
   const handleToggleAudio = () => {
@@ -367,9 +490,26 @@ export default function App() {
     if (excavatingCapsule) {
       setSelectedCapsule(excavatingCapsule);
       setIsCapsuleModalOpen(true);
+
+      // If this capsule is part of the active event, record discovery on the live leaderboard
+      if (activeEventId && excavatingCapsule.event_id === activeEventId) {
+        eventsStorage.recordDiscovery(
+          activeEventId,
+          excavatingCapsule.id,
+          activeUsername
+        );
+        setEvents(eventsStorage.getEvents());
+      }
+
+      // Mark capsule as found in Supabase public.capsules (triggers Realtime updates to Event Owner Dashboard)
+      capsulesDb.markCapsuleFound(excavatingCapsule.id, excavatingCapsule.event_id);
+      setCapsules((prev) =>
+        prev.map((c) => (c.id === excavatingCapsule.id ? { ...c, is_found: true } : c))
+      );
+
       setExcavatingCapsule(null);
     }
-  }, [excavatingCapsule]);
+  }, [excavatingCapsule, activeEventId, currentUser?.id, activeUsername]);
 
   // Delete Capsule Pin from local state and Supabase
   const handleDeleteCapsule = useCallback(async (capsuleId: string) => {
@@ -615,7 +755,49 @@ export default function App() {
         totalCapsulesCount={capsules.length}
         onDropPinClick={handleDropPinClick}
         isPlantingMode={isPlantingMode}
+        onOpenEvents={() => setIsEventsDashboardOpen(true)}
+        activeEventId={activeEventId}
+        currentLanguage={currentLanguage}
+        onOpenLanguageSelect={() => {
+          setIsInitialLanguageSetup(false);
+          setIsLanguageModalOpen(true);
+        }}
+        onSelectLanguage={handleSelectLanguage}
       />
+
+      {/* Active Scavenger Hunt Event Top Banner */}
+      {activeEvent && (
+        <ActiveEventBanner
+          event={activeEvent}
+          capsules={capsules}
+          userDiscoveredCount={
+            activeEvent.discoveries?.filter(
+              (d) => d.username.toLowerCase() === activeUsername.toLowerCase()
+            ).length || 0
+          }
+          onOpenLeaderboard={() => setActiveLeaderboardEvent(activeEvent)}
+          onOpenMissionControl={() => setActiveMissionControlEvent(activeEvent)}
+          onOpenHints={() => setActiveCluesEvent(activeEvent)}
+          onExitHunt={handleLeaveHunt}
+          isOwner={
+            activeEvent.creator_username.toLowerCase().replace('@', '') ===
+            activeUsername.toLowerCase().replace('@', '')
+          }
+        />
+      )}
+
+      {/* Dispatched Clue / Broadcaster Toast Notification */}
+      {broadcastHintToast && (
+        <EventHintNotification
+          hint={broadcastHintToast}
+          onDismiss={() => setBroadcastHintToast(null)}
+          onOpenClues={() => {
+            const ev = events.find((e) => e.id === broadcastHintToast.event_id);
+            if (ev) setActiveCluesEvent(ev);
+            setBroadcastHintToast(null);
+          }}
+        />
+      )}
 
       {/* Guest Mode Active Floating Notice - Positioned safely below all header action buttons for all screen types */}
       {currentUser?.isGuest && showGuestBanner && (
@@ -728,6 +910,7 @@ export default function App() {
         capsules={capsules}
         onSelectCapsule={handleSelectCapsule}
         onFocusUserLocation={handleFocusUserLocation}
+        language={currentLanguage}
       />
 
       {/* 4. REST Countries Live Data Side Drawer */}
@@ -822,10 +1005,12 @@ export default function App() {
         }}
       />
 
-      {/* 11. Welcome & Site Guide Modal */}
+      {/* 11. Welcome & Site Guide Modal (Tutorial) */}
       <WelcomeGuideModal
-        isOpen={isWelcomeGuideOpen}
+        isOpen={isWelcomeGuideOpen && !isLanguageModalOpen}
         onClose={() => setIsWelcomeGuideOpen(false)}
+        language={currentLanguage}
+        onSelectLanguage={handleSelectLanguage}
         onOpenPlantModal={() => {
           setCreateCoords(null);
           setIsCreateModalOpen(true);
@@ -848,6 +1033,8 @@ export default function App() {
         onSignOut={handleSignOut}
         onContinueAsGuest={handleContinueAsGuest}
         initialMode={authModalMode}
+        language={currentLanguage}
+        onSelectLanguage={handleSelectLanguage}
       />
 
       {/* 14. Reset Password View/Modal (Redirect from Supabase password recovery email) */}
@@ -874,6 +1061,71 @@ export default function App() {
         capsuleJustPlanted={guestFirstPlantedCapsule}
         onOpenSignUp={() => handleOpenAuth('signup')}
       />
+
+      {/* 17. Initial Language Preference Selection Modal */}
+      <LanguageSelectModal
+        isOpen={isLanguageModalOpen}
+        onSelectLanguage={(lang) => handleSelectLanguage(lang, isInitialLanguageSetup)}
+        currentLanguage={currentLanguage}
+        onClose={() => setIsLanguageModalOpen(false)}
+        isInitialSetup={isInitialLanguageSetup}
+      />
+
+      {/* 18. Scavenger Hunt Competitions & Private Party Events Dashboard */}
+      <EventsDashboardModal
+        isOpen={isEventsDashboardOpen}
+        onClose={() => setIsEventsDashboardOpen(false)}
+        events={events}
+        allCapsules={capsules}
+        currentUsername={activeUsername}
+        activeEventId={activeEventId}
+        onStartHunt={handleStartHunt}
+        onOpenLeaderboard={(ev) => setActiveLeaderboardEvent(ev)}
+        onOpenMissionControl={(ev) => setActiveMissionControlEvent(ev)}
+        onCreateEvent={handleCreateEvent}
+        language={currentLanguage}
+      />
+
+      {/* 19. Event Real-Time Leaderboard Modal */}
+      {activeLeaderboardEvent && (
+        <EventLeaderboardModal
+          isOpen={Boolean(activeLeaderboardEvent)}
+          onClose={() => setActiveLeaderboardEvent(null)}
+          event={activeLeaderboardEvent}
+          leaderboard={eventsStorage.calculateLeaderboard(activeLeaderboardEvent, activeUsername)}
+          currentUsername={activeUsername}
+        />
+      )}
+
+      {/* 20. Event Owner Mission Control Modal */}
+      {activeMissionControlEvent && (
+        <EventMissionControlModal
+          isOpen={Boolean(activeMissionControlEvent)}
+          onClose={() => setActiveMissionControlEvent(null)}
+          event={activeMissionControlEvent}
+          capsules={capsules}
+          language={currentLanguage}
+          onBroadcastHint={(capsuleId, capsuleTitle, hintText) => {
+            eventsStorage.broadcastHint(
+              activeMissionControlEvent.id,
+              capsuleId,
+              capsuleTitle,
+              hintText
+            );
+            setEvents(eventsStorage.getEvents());
+          }}
+        />
+      )}
+
+      {/* 21. Event Clues & Riddle Intel Modal */}
+      {activeCluesEvent && (
+        <EventCluesModal
+          isOpen={Boolean(activeCluesEvent)}
+          onClose={() => setActiveCluesEvent(null)}
+          event={activeCluesEvent}
+          capsules={capsules}
+        />
+      )}
     </div>
   );
 }
