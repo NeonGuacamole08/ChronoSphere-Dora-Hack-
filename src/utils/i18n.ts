@@ -1,3 +1,6 @@
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+
 export type SupportedLanguage = 'en' | 'es' | 'fr' | 'de' | 'ja' | 'zh' | 'pt' | 'it';
 
 export interface LanguageOption {
@@ -802,6 +805,9 @@ export function getStoredLanguage(): SupportedLanguage | null {
 export function setStoredLanguage(lang: SupportedLanguage): void {
   try {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
+    if (i18n && typeof i18n.changeLanguage === 'function') {
+      i18n.changeLanguage(lang);
+    }
   } catch {
     // ignore
   }
@@ -815,3 +821,24 @@ export function translate(key: string, lang: SupportedLanguage = 'en'): string {
   const dictionary = TRANSLATIONS[lang] || TRANSLATIONS.en;
   return dictionary[key] || TRANSLATIONS.en[key] || key;
 }
+
+// Build i18next resources structure
+const i18nResources: Record<string, { translation: Record<string, string> }> = {};
+Object.entries(TRANSLATIONS).forEach(([langKey, dict]) => {
+  i18nResources[langKey] = {
+    translation: dict,
+  };
+});
+
+const initialLang = getStoredLanguage() || 'en';
+
+i18n.use(initReactI18next).init({
+  resources: i18nResources,
+  lng: initialLang,
+  fallbackLng: 'en',
+  interpolation: {
+    escapeValue: false, // React already safeguards against XSS
+  },
+});
+
+export default i18n;

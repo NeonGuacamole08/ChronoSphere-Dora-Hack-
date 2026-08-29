@@ -125,10 +125,10 @@ export const GlobeControlsOverlay: React.FC<GlobeControlsOverlayProps> = ({
         </div>
       </div>
 
-      {/* 2. BOTTOM-RIGHT CORNER: Vertically Stacked Action Buttons (bottom: 20px, right: 20px) */}
+      {/* 2. BOTTOM-RIGHT CORNER: Vertically Stacked Action Buttons (shifted away from Leaflet logo & attribution) */}
       <div
         id="map-action-buttons-stack"
-        className="fixed sm:absolute bottom-5 right-5 z-40 pointer-events-auto select-none flex flex-col items-end gap-2.5 pb-[env(safe-area-inset-bottom,0px)]"
+        className="fixed sm:absolute bottom-16 sm:bottom-20 right-4 sm:right-6 z-40 pointer-events-auto select-none flex flex-col items-end gap-2.5 pb-[env(safe-area-inset-bottom,0px)]"
       >
         {/* Top Button in Stack: 'Drop Pin' / 'Plant Capsule' */}
         <button

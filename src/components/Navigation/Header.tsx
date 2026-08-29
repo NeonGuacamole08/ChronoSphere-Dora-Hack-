@@ -22,6 +22,7 @@ import {
   Radio,
   Package,
   Trophy,
+  Map,
 } from 'lucide-react';
 import { searchMapboxPlaces, GeocodingResult } from '../../utils/mapbox';
 import { AppUser } from '../../utils/supabase';
@@ -52,6 +53,10 @@ interface HeaderProps {
   currentLanguage?: SupportedLanguage;
   onOpenLanguageSelect?: () => void;
   onSelectLanguage?: (lang: SupportedLanguage) => void;
+  viewMode?: '3d' | '2d';
+  onSwitchTo3D?: () => void;
+  onSwitchTo2D?: () => void;
+  onToggleViewMode?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -78,6 +83,10 @@ export const Header: React.FC<HeaderProps> = ({
   currentLanguage = 'en',
   onOpenLanguageSelect,
   onSelectLanguage,
+  viewMode = '3d',
+  onSwitchTo3D,
+  onSwitchTo2D,
+  onToggleViewMode,
 }) => {
   const [suggestions, setSuggestions] = useState<GeocodingResult[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -265,6 +274,47 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* 3. RIGHT: Action Buttons Cluster */}
       <div className="flex items-center justify-end gap-1 md:gap-1.5 lg:gap-2 shrink-0 flex-nowrap">
+        {/* VIEW MODE TOGGLE BUTTONS: 3D Globe & Explore Mode on same line with same size */}
+        {viewMode === '2d' ? (
+          <>
+            {/* 3D Globe Button when in 2D Mode */}
+            {onSwitchTo3D && (
+              <button
+                type="button"
+                onClick={onSwitchTo3D}
+                className="flex items-center gap-1 md:gap-1.5 px-2 sm:px-2.5 py-1 md:py-1.5 rounded-xl bg-[#180e05]/95 hover:bg-[#251509] text-amber-200 border border-amber-500/60 hover:border-amber-400 text-[11px] md:text-xs font-bold transition shadow-md cursor-pointer shrink-0"
+                title="Switch to 3D Earth Globe View"
+              >
+                <Globe className="w-3.5 h-3.5 text-amber-400" />
+                <span>3D Globe</span>
+              </button>
+            )}
+
+            {/* Explore Mode Active Pill */}
+            <div
+              className="hidden sm:flex items-center gap-1 px-2 sm:px-2.5 py-1 md:py-1.5 rounded-xl bg-[#0c1626]/90 border border-emerald-500/50 text-emerald-300 text-[11px] md:text-xs font-mono font-bold transition shadow-md shrink-0"
+              title="Currently in 2D OpenStreetMap Explore Mode"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Explore Mode</span>
+            </div>
+          </>
+        ) : (
+          /* Explore Mode Button when in 3D Mode */
+          onSwitchTo2D && (
+            <button
+              type="button"
+              onClick={onSwitchTo2D}
+              className="flex items-center gap-1 md:gap-1.5 px-2 sm:px-2.5 py-1 md:py-1.5 rounded-xl bg-[#0c1626]/90 hover:bg-[#13233a] text-cyan-200 hover:text-white border border-cyan-500/40 text-[11px] md:text-xs font-bold transition shadow-md cursor-pointer shrink-0"
+              title="Switch to 2D OpenStreetMap Explore Mode"
+            >
+              <Map className="w-3.5 h-3.5 text-cyan-300" />
+              <span className="hidden sm:inline">Explore Mode</span>
+              <span className="inline sm:hidden">Explore</span>
+            </button>
+          )
+        )}
+
         {/* + Plant Capsule Glowing Button (Tablet & Desktop) */}
         <button
           type="button"

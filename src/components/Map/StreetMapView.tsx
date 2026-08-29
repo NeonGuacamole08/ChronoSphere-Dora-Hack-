@@ -713,41 +713,23 @@ export const StreetMapView: React.FC<StreetMapViewProps> = ({
         )}
       </MapContainer>
 
-      {/* Floating Top Control Header: Explore Mode Indicator & Back Button */}
-      <div className="absolute top-20 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
-        {/* Return to 3D Globe Button with Explore Mode label */}
-        <div className="pointer-events-auto flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onSwitchTo3D}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#120a05]/90 border border-amber-500/50 text-amber-100 hover:text-white hover:bg-amber-950/80 font-bold text-xs shadow-xl backdrop-blur-md transition-all duration-200 cursor-pointer active:scale-95 group"
-          >
-            <Globe className="w-4 h-4 text-amber-400 group-hover:rotate-45 transition-transform" />
-            <span>3D Globe</span>
-          </button>
-
-          <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#120a05]/85 border border-amber-500/30 text-amber-300 text-[11px] font-mono tracking-wide backdrop-blur-md">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            Explore Mode
-          </span>
-        </div>
-
-        {/* Tile Layer Selector */}
-        <div className="pointer-events-auto relative">
+      {/* Quick Tile Layer Selector (compact bottom-left positioning above time controls) */}
+      <div className="absolute top-20 right-4 z-20 pointer-events-auto">
+        <div className="relative">
           <button
             type="button"
             onClick={() => setShowStyleMenu((prev) => !prev)}
-            className="px-3 py-2 rounded-xl bg-[#120a05]/90 border border-amber-500/50 text-amber-300 hover:text-amber-100 backdrop-blur-md shadow-xl transition cursor-pointer flex items-center gap-1.5 text-xs font-bold"
-            title="Switch OpenStreetMap Tile Layer"
+            className="px-2.5 py-1.5 rounded-xl bg-[#0c1626]/90 hover:bg-[#13233a] border border-cyan-500/40 text-cyan-200 hover:text-white backdrop-blur-md shadow-lg transition cursor-pointer flex items-center gap-1.5 text-xs font-bold font-mono"
+            title="Switch OpenStreetMap Map Tile Style"
           >
-            <Layers className="w-4 h-4 text-amber-400" />
-            <span className="hidden sm:inline">OSM Tiles</span>
+            <Layers className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Map Style</span>
           </button>
 
           {showStyleMenu && (
-            <div className="absolute right-0 mt-2 w-60 rounded-xl bg-[#120a05]/98 border border-amber-500/50 shadow-2xl p-1.5 space-y-1 backdrop-blur-xl z-30 animate-in fade-in">
-              <div className="px-2.5 py-1 text-[10px] uppercase font-bold text-amber-400 tracking-wider">
-                OpenStreetMap Layers
+            <div className="absolute right-0 mt-2 w-56 rounded-xl bg-[#0c1626]/98 border border-cyan-500/50 shadow-2xl p-1.5 space-y-1 backdrop-blur-xl z-30 animate-in fade-in">
+              <div className="px-2.5 py-1 text-[10px] uppercase font-bold text-cyan-400 tracking-wider">
+                Map Tiles
               </div>
               {TILE_STYLES.map((style) => (
                 <button
@@ -759,12 +741,12 @@ export const StreetMapView: React.FC<StreetMapViewProps> = ({
                   }}
                   className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-bold transition flex items-center justify-between cursor-pointer ${
                     selectedStyleId === style.id
-                      ? 'bg-amber-900/80 text-amber-100 border border-amber-400/40'
-                      : 'text-amber-200/80 hover:bg-amber-950/70 hover:text-amber-100'
+                      ? 'bg-cyan-950/80 text-cyan-200 border border-cyan-400/40'
+                      : 'text-stone-300 hover:bg-cyan-950/40 hover:text-cyan-100'
                   }`}
                 >
                   <span>{style.name}</span>
-                  {selectedStyleId === style.id && <Sparkles className="w-3.5 h-3.5 text-amber-300" />}
+                  {selectedStyleId === style.id && <Sparkles className="w-3.5 h-3.5 text-cyan-300" />}
                 </button>
               ))}
             </div>

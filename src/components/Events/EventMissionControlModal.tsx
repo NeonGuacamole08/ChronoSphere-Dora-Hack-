@@ -13,10 +13,16 @@ import {
   AlertCircle,
   Activity,
   RefreshCw,
+  BarChart3,
+  Globe,
+  ShieldCheck,
+  UserCheck,
+  Zap,
 } from 'lucide-react';
 import { ScavengerEvent, Capsule } from '../../types';
 import { getSupabaseClient, capsulesDb } from '../../utils/supabase';
 import { translate, SupportedLanguage } from '../../utils/i18n';
+import { fetchLiveAnalytics, LiveAnalyticsSummary } from '../../utils/analytics';
 
 interface EventMissionControlModalProps {
   isOpen: boolean;
@@ -35,6 +41,7 @@ export const EventMissionControlModal: React.FC<EventMissionControlModalProps> =
   onBroadcastHint,
   language = 'en',
 }) => {
+  const [activeTab, setActiveTab] = useState<'mission_control' | 'analytics'>('mission_control');
   const [activeHintCapsule, setActiveHintCapsule] = useState<Capsule | null>(null);
   const [hintInput, setHintInput] = useState<string>('');
   const [justBroadcasted, setJustBroadcasted] = useState<string | null>(null);
@@ -44,6 +51,22 @@ export const EventMissionControlModal: React.FC<EventMissionControlModalProps> =
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'offline'>('connecting');
   const [lastLivePing, setLastLivePing] = useState<string | null>(null);
+
+  // Live Headcount & Creator Analytics State
+  const [analyticsData, setAnalyticsData] = useState<LiveAnalyticsSummary | null>(null);
+  const [isAnalyticsLoading, setIsAnalyticsLoading] = useState<boolean>(false);
+
+  const fetchAnalytics = useCallback(async () => {
+    setIsAnalyticsLoading(true);
+    try {
+      const result = await fetchLiveAnalytics(capsules);
+      setAnalyticsData(result);
+    } catch (e) {
+      console.warn('Analytics query notice:', e);
+    } finally {
+      setIsAnalyticsLoading(false);
+    }
+  }, [capsules]);
 
   // Fetch live event stats from Supabase public.capsules
   const fetchLiveEventCapsules = useCallback(async () => {
@@ -107,6 +130,12 @@ export const EventMissionControlModal: React.FC<EventMissionControlModalProps> =
       setIsLoading(false);
     }
   }, [event.id, event.capsule_ids, event.creator_username, capsules]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchAnalytics();
+    }
+  }, [isOpen, fetchAnalytics]);
 
   // Set up live querying & Real-Time Supabase subscription (postgres_changes)
   useEffect(() => {
@@ -247,7 +276,7 @@ export const EventMissionControlModal: React.FC<EventMissionControlModalProps> =
         <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none" />
 
         {/* Modal Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-cyan-500/30 shrink-0">
+        <div className="flex items-center justify-between pb-3 border-b border-cyan-500/30 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-cyan-600 to-teal-400 text-stone-950 flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.4)]">
               <Radio className="w-6 h-6 animate-pulse" />
@@ -284,11 +313,14 @@ export const EventMissionControlModal: React.FC<EventMissionControlModalProps> =
 
             <button
               type="button"
-              onClick={fetchLiveEventCapsules}
-              title="Refresh live Supabase event data"
+              onClick={() => {
+                fetchLiveEventCapsules();
+                fetchAnalytics();
+              }}
+              title="Refresh live Supabase event and analytics data"
               className="p-2 rounded-xl text-cyan-400 hover:text-white hover:bg-cyan-900/40 border border-cyan-500/30 transition cursor-pointer"
             >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${isLoading || isAnalyticsLoading ? 'animate-spin' : ''}`} />
             </button>
 
             <button
@@ -301,6 +333,39 @@ export const EventMissionControlModal: React.FC<EventMissionControlModalProps> =
           </div>
         </div>
 
+        {/* Tab Selector */}
+        <div className="flex items-center gap-2 mt-3 shrink-0">
+          <button
+            type="button"
+            onClick={() => setActiveTab('mission_control')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border ${
+              activeTab === 'mission_control'
+                ? 'bg-cyan-500 text-stone-950 border-cyan-400 shadow-md font-extrabold'
+                : 'bg-[#101e33] text-cyan-300 border-cyan-500/30 hover:bg-[#162740]'
+            }`}
+          >
+            <Radio className="w-3.5 h-3.5" />
+            <span>Hunt Mission Control</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('analytics');
+              fetchAnalytics();
+            }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border ${
+              activeTab === 'analytics'
+                ? 'bg-cyan-500 text-stone-950 border-cyan-400 shadow-md font-extrabold'
+                : 'bg-[#101e33] text-cyan-300 border-cyan-500/30 hover:bg-[#162740]'
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span>Supabase Live Analytics</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          </button>
+        </div>
+
         {justBroadcasted && (
           <div className="mt-3 px-4 py-2.5 rounded-xl bg-emerald-950/90 border border-emerald-400/80 text-emerald-200 text-xs font-bold flex items-center gap-2 animate-in fade-in duration-200 shrink-0">
             <Sparkles className="w-4 h-4 text-emerald-400" />
@@ -308,175 +373,359 @@ export const EventMissionControlModal: React.FC<EventMissionControlModalProps> =
           </div>
         )}
 
-        {/* TOP STAT CARDS: Live Event Stats from public.capsules */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5 my-4 shrink-0">
-          {/* 1. Total Capsules Hidden (Total array length queried from public.capsules) */}
-          <div className="p-3 sm:p-4 rounded-2xl bg-[#112033]/80 border border-cyan-500/25">
-            <div className="flex items-center justify-between text-cyan-400 mb-1">
-              <span className="text-[11px] font-mono font-bold uppercase tracking-wider">
-                {translate('totalCapsulesHidden', language)}
-              </span>
-              <Lock className="w-4 h-4 text-cyan-400" />
-            </div>
-            <div className="font-mono text-xl sm:text-2xl font-bold text-white">
-              {totalHidden}
-            </div>
-            <span className="text-[10px] text-cyan-300/60 font-mono">public.capsules length</span>
-          </div>
+        {/* TAB 1: HUNT MISSION CONTROL */}
+        {activeTab === 'mission_control' && (
+          <>
+            {/* TOP STAT CARDS: Live Event Stats from public.capsules */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5 my-3.5 shrink-0">
+              {/* 1. Total Capsules Hidden (Total array length queried from public.capsules) */}
+              <div className="p-3 sm:p-4 rounded-2xl bg-[#112033]/80 border border-cyan-500/25">
+                <div className="flex items-center justify-between text-cyan-400 mb-1">
+                  <span className="text-[11px] font-mono font-bold uppercase tracking-wider">
+                    {translate('totalCapsulesHidden', language)}
+                  </span>
+                  <Lock className="w-4 h-4 text-cyan-400" />
+                </div>
+                <div className="font-mono text-xl sm:text-2xl font-bold text-white">
+                  {totalHidden}
+                </div>
+                <span className="text-[10px] text-cyan-300/60 font-mono">public.capsules length</span>
+              </div>
 
-          {/* 2. Capsules Found (Count where is_found === true) */}
-          <div className="p-3 sm:p-4 rounded-2xl bg-[#112033]/80 border border-cyan-500/25">
-            <div className="flex items-center justify-between text-emerald-400 mb-1">
-              <span className="text-[11px] font-mono font-bold uppercase tracking-wider">
-                {translate('capsulesFoundCount', language)}
-              </span>
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            </div>
-            <div className="font-mono text-xl sm:text-2xl font-bold text-emerald-300 flex items-center gap-2">
-              <span>{capsulesFoundCount}</span>
-              {capsulesFoundCount > 0 && (
-                <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-sans font-medium">
-                  Active
-                </span>
-              )}
-            </div>
-            <span className="text-[10px] text-cyan-300/60 font-mono">is_found === true</span>
-          </div>
-
-          {/* Active Hunters */}
-          <div className="p-3 sm:p-4 rounded-2xl bg-[#112033]/80 border border-cyan-500/25">
-            <div className="flex items-center justify-between text-amber-400 mb-1">
-              <span className="text-[11px] font-mono font-bold uppercase tracking-wider">Hunters</span>
-              <Users className="w-4 h-4 text-amber-400" />
-            </div>
-            <div className="font-mono text-xl sm:text-2xl font-bold text-amber-300">
-              {activeHuntersCount}
-            </div>
-            <span className="text-[10px] text-cyan-300/60">Active Participants</span>
-          </div>
-
-          {/* Completion Rate */}
-          <div className="p-3 sm:p-4 rounded-2xl bg-[#112033]/80 border border-cyan-500/25">
-            <div className="flex items-center justify-between text-fuchsia-400 mb-1">
-              <span className="text-[11px] font-mono font-bold uppercase tracking-wider">Cleared</span>
-              <Sparkles className="w-4 h-4 text-fuchsia-400" />
-            </div>
-            <div className="font-mono text-xl sm:text-2xl font-bold text-fuchsia-300">
-              {progressPercent}%
-            </div>
-            <span className="text-[10px] text-cyan-300/60">Total Completion</span>
-          </div>
-        </div>
-
-        {/* LIVE PROGRESS BAR */}
-        <div className="p-3.5 rounded-2xl bg-[#112033]/60 border border-cyan-500/30 shrink-0 space-y-1.5">
-          <div className="flex items-center justify-between text-xs font-mono">
-            <span className="text-cyan-200 font-bold flex items-center gap-1.5">
-              <Compass className="w-3.5 h-3.5 text-cyan-400 animate-spin" style={{ animationDuration: '10s' }} />
-              {translate('liveExpeditionProgress', language)}
-            </span>
-            <span className="font-bold text-cyan-300">
-              {capsulesFoundCount} / {totalHidden} Capsules Discovered
-            </span>
-          </div>
-
-          <div className="w-full h-3 rounded-full bg-stone-900 border border-cyan-500/40 p-0.5 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-400 transition-all duration-500 shadow-[0_0_12px_rgba(6,182,212,0.6)]"
-              style={{ width: `${Math.max(capsulesFoundCount > 0 ? 6 : 0, progressPercent)}%` }}
-            />
-          </div>
-        </div>
-
-        {/* CAPSULES LIST & HINT BROADCASTING SECTION */}
-        <div className="mt-4 flex-1 overflow-y-auto pr-1 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="font-serif font-bold text-sm text-white flex items-center gap-2">
-              <FileText className="w-4 h-4 text-cyan-400" />
-              Event Capsules & Clue Dispatch
-            </h3>
-            <span className="text-xs text-cyan-400/70 font-mono">
-              Click 'Send Hint' to broadcast clue to all players
-            </span>
-          </div>
-
-          <div className="space-y-2.5">
-            {liveCapsules.map((capsule, index) => {
-              const isFound = capsule.is_found === true;
-              const hintsForThis = (event.hints_broadcasted || []).filter(
-                (h) => h.capsule_id === capsule.id
-              );
-
-              return (
-                <div
-                  key={capsule.id}
-                  className={`p-3.5 sm:p-4 rounded-2xl border transition-all ${
-                    isFound
-                      ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-100'
-                      : 'bg-[#101e33]/70 border-cyan-500/30 text-cyan-100 hover:border-cyan-500/50'
-                  }`}
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-md bg-stone-800 text-stone-300 font-mono text-[11px] font-bold flex items-center justify-center">
-                          #{index + 1}
-                        </span>
-                        <h4 className="font-serif font-bold text-sm text-white truncate">
-                          {capsule.title}
-                        </h4>
-                        {isFound ? (
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/60 text-emerald-300 text-[10px] font-mono font-bold uppercase flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                            Discovered (is_found=true)
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/60 text-amber-300 text-[10px] font-mono font-bold uppercase">
-                            Hidden
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2 text-xs text-cyan-300/70 mt-1">
-                        <MapPin className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                        <span className="truncate">{capsule.location_name}</span>
-                        <span className="text-[10px] font-mono text-cyan-400/50">
-                          ({capsule.lat.toFixed(4)}, {capsule.lng.toFixed(4)})
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Action Button: Send Hint */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenSendHint(capsule)}
-                        className="px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-stone-950 font-bold text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer active:scale-95"
-                      >
-                        <Radio className="w-3.5 h-3.5 text-stone-950" />
-                        <span>{translate('sendHint', language)}</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Existing Broadcasted Hints for this Capsule */}
-                  {hintsForThis.length > 0 && (
-                    <div className="mt-2.5 pt-2 border-t border-cyan-500/20 space-y-1">
-                      <span className="text-[10px] uppercase font-mono font-bold text-amber-400 flex items-center gap-1">
-                        <Radio className="w-3 h-3" /> Broadcasted Clues ({hintsForThis.length})
-                      </span>
-                      {hintsForThis.map((h) => (
-                        <p key={h.id} className="text-xs text-amber-200/90 italic bg-black/40 px-2.5 py-1.5 rounded-lg border border-amber-500/20">
-                          "{h.hint_text}"
-                        </p>
-                      ))}
-                    </div>
+              {/* 2. Capsules Found (Count where is_found === true) */}
+              <div className="p-3 sm:p-4 rounded-2xl bg-[#112033]/80 border border-cyan-500/25">
+                <div className="flex items-center justify-between text-emerald-400 mb-1">
+                  <span className="text-[11px] font-mono font-bold uppercase tracking-wider">
+                    {translate('capsulesFoundCount', language)}
+                  </span>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div className="font-mono text-xl sm:text-2xl font-bold text-emerald-300 flex items-center gap-2">
+                  <span>{capsulesFoundCount}</span>
+                  {capsulesFoundCount > 0 && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-sans font-medium">
+                      Active
+                    </span>
                   )}
                 </div>
-              );
-            })}
+                <span className="text-[10px] text-cyan-300/60 font-mono">is_found === true</span>
+              </div>
+
+              {/* Active Hunters */}
+              <div className="p-3 sm:p-4 rounded-2xl bg-[#112033]/80 border border-cyan-500/25">
+                <div className="flex items-center justify-between text-amber-400 mb-1">
+                  <span className="text-[11px] font-mono font-bold uppercase tracking-wider">Hunters</span>
+                  <Users className="w-4 h-4 text-amber-400" />
+                </div>
+                <div className="font-mono text-xl sm:text-2xl font-bold text-amber-300">
+                  {activeHuntersCount}
+                </div>
+                <span className="text-[10px] text-cyan-300/60">Active Participants</span>
+              </div>
+
+              {/* Completion Rate */}
+              <div className="p-3 sm:p-4 rounded-2xl bg-[#112033]/80 border border-cyan-500/25">
+                <div className="flex items-center justify-between text-fuchsia-400 mb-1">
+                  <span className="text-[11px] font-mono font-bold uppercase tracking-wider">Cleared</span>
+                  <Sparkles className="w-4 h-4 text-fuchsia-400" />
+                </div>
+                <div className="font-mono text-xl sm:text-2xl font-bold text-fuchsia-300">
+                  {progressPercent}%
+                </div>
+                <span className="text-[10px] text-cyan-300/60">Total Completion</span>
+              </div>
+            </div>
+
+            {/* LIVE PROGRESS BAR */}
+            <div className="p-3.5 rounded-2xl bg-[#112033]/60 border border-cyan-500/30 shrink-0 space-y-1.5">
+              <div className="flex items-center justify-between text-xs font-mono">
+                <span className="text-cyan-200 font-bold flex items-center gap-1.5">
+                  <Compass className="w-3.5 h-3.5 text-cyan-400 animate-spin" style={{ animationDuration: '10s' }} />
+                  {translate('liveExpeditionProgress', language)}
+                </span>
+                <span className="font-bold text-cyan-300">
+                  {capsulesFoundCount} / {totalHidden} Capsules Discovered
+                </span>
+              </div>
+
+              <div className="w-full h-3 rounded-full bg-stone-900 border border-cyan-500/40 p-0.5 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-400 transition-all duration-500 shadow-[0_0_12px_rgba(6,182,212,0.6)]"
+                  style={{ width: `${Math.max(capsulesFoundCount > 0 ? 6 : 0, progressPercent)}%` }}
+                />
+              </div>
+            </div>
+
+            {/* CAPSULES LIST & HINT BROADCASTING SECTION */}
+            <div className="mt-4 flex-1 overflow-y-auto pr-1 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-serif font-bold text-sm text-white flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-cyan-400" />
+                  Event Capsules & Clue Dispatch
+                </h3>
+                <span className="text-xs text-cyan-400/70 font-mono">
+                  Click 'Send Hint' to broadcast clue to all players
+                </span>
+              </div>
+
+              <div className="space-y-2.5">
+                {liveCapsules.map((capsule, index) => {
+                  const isFound = capsule.is_found === true;
+                  const hintsForThis = (event.hints_broadcasted || []).filter(
+                    (h) => h.capsule_id === capsule.id
+                  );
+
+                  return (
+                    <div
+                      key={capsule.id}
+                      className={`p-3.5 sm:p-4 rounded-2xl border transition-all ${
+                        isFound
+                          ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-100'
+                          : 'bg-[#101e33]/70 border-cyan-500/30 text-cyan-100 hover:border-cyan-500/50'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-md bg-stone-800 text-stone-300 font-mono text-[11px] font-bold flex items-center justify-center">
+                              #{index + 1}
+                            </span>
+                            <h4 className="font-serif font-bold text-sm text-white truncate">
+                              {capsule.title}
+                            </h4>
+                            {isFound ? (
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/60 text-emerald-300 text-[10px] font-mono font-bold uppercase flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                                Discovered (is_found=true)
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/60 text-amber-300 text-[10px] font-mono font-bold uppercase">
+                                Hidden
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 text-xs text-cyan-300/70 mt-1">
+                            <MapPin className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                            <span className="truncate">{capsule.location_name}</span>
+                            <span className="text-[10px] font-mono text-cyan-400/50">
+                              ({capsule.lat.toFixed(4)}, {capsule.lng.toFixed(4)})
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Action Button: Send Hint */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveHintCapsule(capsule);
+                              setHintInput(capsule.event_hint || '');
+                            }}
+                            className="px-3 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-stone-950 font-bold text-xs shadow-lg transition flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            <span>Send Hint</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Clues already sent history */}
+                      {hintsForThis.length > 0 && (
+                        <div className="mt-2.5 pt-2.5 border-t border-cyan-500/20 space-y-1">
+                          <span className="text-[10px] uppercase font-mono tracking-wider text-cyan-400/80 font-bold">
+                            Sent Broadcast Clues:
+                          </span>
+                          {hintsForThis.map((h, i) => (
+                            <div
+                              key={i}
+                              className="text-xs bg-[#0b1420] p-2 rounded-xl border border-cyan-500/20 text-cyan-200 flex items-start gap-1.5"
+                            >
+                              <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                              <span>{h.hint_text}</span>
+                              <span className="ml-auto text-[10px] text-cyan-400/50 font-mono">
+                                {new Date(h.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* TAB 2: LIVE SUPABASE VISITOR & CREATOR ANALYTICS */}
+        {activeTab === 'analytics' && (
+          <div className="mt-3.5 flex-1 overflow-y-auto pr-1 space-y-4 animate-in fade-in duration-200">
+            {/* Top 4 Analytics Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5 shrink-0">
+              {/* 1. Total Guest Headcount: COUNT(DISTINCT session_id) */}
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-[#112033]/90 border border-cyan-400/40 shadow-lg">
+                <div className="flex items-center justify-between text-cyan-300 mb-1">
+                  <span className="text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-wider">
+                    Guest Headcount
+                  </span>
+                  <Users className="w-4 h-4 text-cyan-400" />
+                </div>
+                <div className="font-mono text-2xl sm:text-3xl font-extrabold text-cyan-200">
+                  {analyticsData ? analyticsData.totalGuestHeadcount : 0}
+                </div>
+                <span className="text-[9.5px] text-cyan-300/70 font-mono">
+                  COUNT(DISTINCT session_id)
+                </span>
+              </div>
+
+              {/* 2. Total Capsule Creators: COUNT(DISTINCT user_id) */}
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-[#112033]/90 border border-amber-400/40 shadow-lg">
+                <div className="flex items-center justify-between text-amber-300 mb-1">
+                  <span className="text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-wider">
+                    Capsule Creators
+                  </span>
+                  <UserCheck className="w-4 h-4 text-amber-400" />
+                </div>
+                <div className="font-mono text-2xl sm:text-3xl font-extrabold text-amber-200">
+                  {analyticsData ? analyticsData.totalCapsuleCreators : 0}
+                </div>
+                <span className="text-[9.5px] text-amber-300/70 font-mono">
+                  COUNT(DISTINCT user_id)
+                </span>
+              </div>
+
+              {/* 3. Unique Visitor Tokens */}
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-[#112033]/90 border border-emerald-400/40 shadow-lg">
+                <div className="flex items-center justify-between text-emerald-300 mb-1">
+                  <span className="text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-wider">
+                    Visitor Tokens
+                  </span>
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div className="font-mono text-2xl sm:text-3xl font-extrabold text-emerald-200">
+                  {analyticsData ? analyticsData.uniqueVisitorTokens : 0}
+                </div>
+                <span className="text-[9.5px] text-emerald-300/70 font-mono">
+                  Unique Hardware Clients
+                </span>
+              </div>
+
+              {/* 4. Total Guest Logs */}
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-[#112033]/90 border border-fuchsia-400/40 shadow-lg">
+                <div className="flex items-center justify-between text-fuchsia-300 mb-1">
+                  <span className="text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-wider">
+                    Total Visits Logged
+                  </span>
+                  <Zap className="w-4 h-4 text-fuchsia-400" />
+                </div>
+                <div className="font-mono text-2xl sm:text-3xl font-extrabold text-fuchsia-200">
+                  {analyticsData ? analyticsData.totalGuestVisits : 0}
+                </div>
+                <span className="text-[9.5px] text-fuchsia-300/70 font-mono">
+                  public.guest_visits
+                </span>
+              </div>
+            </div>
+
+            {/* Language Breakdown */}
+            {analyticsData && Object.keys(analyticsData.languageDistribution).length > 0 && (
+              <div className="p-4 rounded-2xl bg-[#101e33]/80 border border-cyan-500/30 space-y-2">
+                <div className="flex items-center justify-between text-xs font-mono font-bold text-cyan-200">
+                  <span className="flex items-center gap-1.5">
+                    <Globe className="w-4 h-4 text-cyan-400" />
+                    Visitor Language Distribution
+                  </span>
+                  <span className="text-[10px] text-cyan-400/60">Auto-detected & Preferred</span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                  {Object.entries(analyticsData.languageDistribution).map(([langCode, count]) => (
+                    <div
+                      key={langCode}
+                      className="p-2 rounded-xl bg-[#09111c] border border-cyan-500/20 flex items-center justify-between text-xs font-mono"
+                    >
+                      <span className="uppercase text-cyan-300 font-bold">{langCode}</span>
+                      <span className="text-emerald-300 font-bold">{count} visits</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Creators Roster */}
+            {analyticsData && analyticsData.creatorsList.length > 0 && (
+              <div className="p-4 rounded-2xl bg-[#101e33]/80 border border-cyan-500/30 space-y-2.5">
+                <h4 className="font-serif font-bold text-sm text-white flex items-center gap-2">
+                  <UserCheck className="w-4 h-4 text-amber-400" />
+                  Active Capsule Creators ({analyticsData.creatorsList.length})
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {analyticsData.creatorsList.map((creator) => (
+                    <div
+                      key={creator.userId}
+                      className="p-2.5 rounded-xl bg-[#09111c] border border-cyan-500/20 flex items-center justify-between text-xs"
+                    >
+                      <div className="min-w-0">
+                        <div className="font-bold text-cyan-100 truncate">
+                          {creator.username}
+                        </div>
+                        <div className="text-[10px] text-cyan-400/60 font-mono truncate">
+                          ID: {creator.userId.slice(0, 16)}...
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40 text-[10px] font-mono font-bold shrink-0">
+                        {creator.capsulesCount} capsules
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Recent Guest Visits Log Table */}
+            <div className="p-4 rounded-2xl bg-[#101e33]/80 border border-cyan-500/30 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <h4 className="font-serif font-bold text-sm text-white flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-emerald-400" />
+                  Live Guest Visits Feed (public.guest_visits)
+                </h4>
+                <span className="text-[10px] text-cyan-400/60 font-mono">
+                  Realtime Headcount Sync
+                </span>
+              </div>
+
+              {analyticsData && analyticsData.recentVisits.length > 0 ? (
+                <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                  {analyticsData.recentVisits.map((visit) => (
+                    <div
+                      key={visit.id}
+                      className="p-2 rounded-xl bg-[#09111c] border border-cyan-500/20 flex items-center justify-between text-[11px] font-mono"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                        <span className="text-cyan-300 truncate">
+                          Token: {visit.visitor_token.slice(0, 12)}...
+                        </span>
+                        <span className="text-stone-400 uppercase text-[9px] px-1 py-0.2 rounded bg-stone-800">
+                          {visit.preferred_language || 'EN'}
+                        </span>
+                      </div>
+                      <span className="text-cyan-400/60 text-[10px] shrink-0">
+                        {new Date(visit.visited_at).toLocaleTimeString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-cyan-300/60 text-center py-4">
+                  No guest visits logged yet.
+                </p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* HINT COMPOSITION MODAL POPUP */}
         {activeHintCapsule && (

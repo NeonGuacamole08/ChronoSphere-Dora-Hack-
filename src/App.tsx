@@ -763,6 +763,10 @@ export default function App() {
           setIsLanguageModalOpen(true);
         }}
         onSelectLanguage={handleSelectLanguage}
+        viewMode={viewMode}
+        onSwitchTo3D={() => setViewMode('3d')}
+        onSwitchTo2D={() => setViewMode('2d')}
+        onToggleViewMode={() => setViewMode((prev) => (prev === '3d' ? '2d' : '3d'))}
       />
 
       {/* Active Scavenger Hunt Event Top Banner */}

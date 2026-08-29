@@ -540,6 +540,220 @@ app.post('/api/send-recommendation', async (req, res) => {
   }
 });
 
+// In-memory analytics store for fast aggregate metrics & headcounts
+const inMemoryGuestSessions = new Set<string>();
+const inMemoryVisitorTokens = new Set<string>();
+const inMemoryGuestVisits: Array<{
+  session_id: string;
+  visitor_token: string;
+  is_guest: boolean;
+  user_agent?: string;
+  preferred_language?: string;
+  visited_at: string;
+}> = [];
+
+/**
+ * Endpoint /api/analytics/log-visit
+ * Logs guest and user visits, persists to Supabase guest_visits table & in-memory cache
+ */
+app.post('/api/analytics/log-visit', async (req, res) => {
+  try {
+    const {
+      session_id,
+      visitor_token,
+      user_id,
+      is_guest = true,
+      user_agent,
+      preferred_language = 'en',
+      visited_at = new Date().toISOString(),
+    } = req.body || {};
+
+    const effectiveSessionId = session_id || `sess_${Date.now()}`;
+    const effectiveVisitorToken = visitor_token || `vis_${Date.now()}`;
+
+    inMemoryGuestSessions.add(effectiveSessionId);
+    inMemoryVisitorTokens.add(effectiveVisitorToken);
+    inMemoryGuestVisits.unshift({
+      session_id: effectiveSessionId,
+      visitor_token: effectiveVisitorToken,
+      is_guest: Boolean(is_guest),
+      user_agent,
+      preferred_language,
+      visited_at,
+    });
+
+    if (inMemoryGuestVisits.length > 200) {
+      inMemoryGuestVisits.pop();
+    }
+
+    // Insert into Supabase if configured
+    const supabase = getSupabaseServerClient();
+    if (supabase) {
+      try {
+        await supabase.from('guest_visits').insert({
+          session_id: effectiveSessionId,
+          visitor_token: effectiveVisitorToken,
+          user_id: user_id || (is_guest ? `guest_${effectiveVisitorToken.slice(0, 8)}` : 'user'),
+          is_guest: Boolean(is_guest),
+          user_agent: user_agent || 'Client Web',
+          preferred_language,
+          visited_at,
+        });
+      } catch (dbErr: any) {
+        // Silently tolerate if schema is provisioned dynamically
+      }
+    }
+
+    return res.json({
+      success: true,
+      session_id: effectiveSessionId,
+      total_guest_sessions: inMemoryGuestSessions.size,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * Endpoint /api/analytics/stats
+ * Returns Total Guest Headcount: COUNT(DISTINCT session_id) and Total Capsule Creators: COUNT(DISTINCT user_id)
+ */
+app.get('/api/analytics/stats', async (req, res) => {
+  try {
+    const supabase = getSupabaseServerClient();
+    let distinctSessionsCount = inMemoryGuestSessions.size;
+    let distinctCreatorsCount = 1;
+    let dbVisits: any[] = [];
+
+    if (supabase) {
+      try {
+        // Query guest_visits
+        const { data: visits } = await supabase
+          .from('guest_visits')
+          .select('session_id, visitor_token, user_id, is_guest, preferred_language, visited_at')
+          .order('visited_at', { ascending: false })
+          .limit(100);
+
+        if (Array.isArray(visits) && visits.length > 0) {
+          dbVisits = visits;
+          const sSet = new Set(visits.map((v) => v.session_id));
+          inMemoryGuestSessions.forEach((s) => sSet.add(s));
+          distinctSessionsCount = sSet.size;
+        }
+
+        // Query distinct creators from capsules table
+        const { data: caps } = await supabase
+          .from('capsules')
+          .select('user_id, creator_id, creator_username, creator_email');
+
+        if (Array.isArray(caps) && caps.length > 0) {
+          const cSet = new Set(
+            caps.map((c) => c.user_id || c.creator_id || c.creator_email || c.creator_username).filter(Boolean)
+          );
+          distinctCreatorsCount = Math.max(cSet.size, 1);
+        }
+      } catch (dbErr) {
+        console.warn('[Analytics API] Supabase query notice:', dbErr);
+      }
+    }
+
+    return res.json({
+      success: true,
+      totalGuestHeadcount: Math.max(distinctSessionsCount, 1),
+      totalCapsuleCreators: Math.max(distinctCreatorsCount, 1),
+      totalSessionsRecorded: distinctSessionsCount,
+      recentVisits: dbVisits.length > 0 ? dbVisits.slice(0, 10) : inMemoryGuestVisits.slice(0, 10),
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Translation cache
+const serverTranslationCache = new Map<string, string>();
+
+/**
+ * Endpoint /api/translate
+ * Dynamic User Content Translation for capsule titles, secret memory letters, hints, and live chat messages
+ */
+app.post('/api/translate', async (req, res) => {
+  try {
+    const { text, targetLanguage = 'en', sourceLanguage = 'auto' } = req.body || {};
+
+    if (!text || typeof text !== 'string' || !text.trim()) {
+      return res.json({ translatedText: text || '' });
+    }
+
+    const trimmed = text.trim();
+    const cacheKey = `${targetLanguage}:::${trimmed}`;
+
+    if (serverTranslationCache.has(cacheKey)) {
+      return res.json({
+        translatedText: serverTranslationCache.get(cacheKey),
+        cached: true,
+      });
+    }
+
+    // 1. If Gemini API key is configured, use Google GenAI for fluent contextual translation
+    if (process.env.GEMINI_API_KEY) {
+      try {
+        const { GoogleGenAI } = await import('@google/genai');
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+        const prompt = `You are a professional multilingual translator for a global time-capsule & treasure hunt app. Translate the following user-generated text into target language code "${targetLanguage}".
+Text to translate:
+"""
+${trimmed}
+"""
+Output strictly ONLY the translated text, preserving emojis and tone, without any quotation marks, introductory notes, or markdown formatting.`;
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: prompt,
+        });
+
+        const translated = response.text ? response.text.trim() : trimmed;
+        if (translated) {
+          serverTranslationCache.set(cacheKey, translated);
+          return res.json({
+            translatedText: translated,
+            provider: 'gemini',
+          });
+        }
+      } catch (geminiErr: any) {
+        console.warn('[Translate API] Gemini translation notice:', geminiErr?.message);
+      }
+    }
+
+    // 2. High-speed Google Translate public fallback
+    try {
+      const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLanguage || 'auto'}&tl=${targetLanguage}&dt=t&q=${encodeURIComponent(trimmed)}`;
+      const gRes = await fetch(gUrl);
+      if (gRes.ok) {
+        const gData: any = await gRes.json();
+        if (Array.isArray(gData) && Array.isArray(gData[0])) {
+          const fullTranslation = gData[0].map((item: any) => item[0]).join('');
+          if (fullTranslation) {
+            serverTranslationCache.set(cacheKey, fullTranslation);
+            return res.json({
+              translatedText: fullTranslation,
+              provider: 'google-gtx',
+            });
+          }
+        }
+      }
+    } catch (gtxErr: any) {
+      console.warn('[Translate API] Google GTX fallback notice:', gtxErr?.message);
+    }
+
+    // Return original if both fail
+    return res.json({ translatedText: trimmed });
+  } catch (err: any) {
+    console.error('[Translate API Error]:', err);
+    return res.json({ translatedText: req.body?.text || '' });
+  }
+});
+
 async function startServer() {
   // Vite middleware in development
   if (process.env.NODE_ENV !== 'production') {
