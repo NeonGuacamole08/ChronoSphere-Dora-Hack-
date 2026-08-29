@@ -28,7 +28,6 @@ import {
   Plus,
   Check,
   MousePointerClick,
-  Layers,
 } from 'lucide-react';
 import { Capsule, Coordinates } from '../../types';
 import { UserLocation } from '../../utils/useUserLocation';
@@ -95,30 +94,14 @@ interface StreetMapViewProps {
   initialCenter?: { lat: number; lng: number; zoom?: number };
 }
 
-// Tile layers available for free OSM exploration
-const TILE_STYLES = [
-  {
-    id: 'osm_standard',
-    name: 'OpenStreetMap Standard',
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    maxZoom: 19,
-  },
-  {
-    id: 'carto_voyager',
-    name: 'Carto Voyager (Streets & POIs)',
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-    maxZoom: 20,
-  },
-  {
-    id: 'carto_dark',
-    name: 'Dark Matter (Night Grid)',
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-    maxZoom: 20,
-  },
-];
+// Standard OpenStreetMap Tile Layer
+const OSM_TILE_LAYER = {
+  id: 'osm_standard',
+  name: 'OpenStreetMap',
+  url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  maxZoom: 19,
+};
 
 // Helper: Custom Animated HTML DivIcon creator for Leaflet
 function createCapsuleDivIcon(
@@ -510,9 +493,6 @@ export const StreetMapView: React.FC<StreetMapViewProps> = ({
     handleMapClick(center.lat, center.lng);
   };
 
-  const activeTileStyle =
-    TILE_STYLES.find((s) => s.id === selectedStyleId) || TILE_STYLES[0];
-
   const isDropModeActive = isLocalDropMode || isPlantingMode;
 
   return (
@@ -526,11 +506,11 @@ export const StreetMapView: React.FC<StreetMapViewProps> = ({
         ref={mapRef}
         zoomControl={false}
       >
-        {/* OpenStreetMap Tile Layer */}
+        {/* OpenStreetMap Standard Tile Layer */}
         <TileLayer
-          url={activeTileStyle.url}
-          attribution={activeTileStyle.attribution}
-          maxZoom={activeTileStyle.maxZoom}
+          url={OSM_TILE_LAYER.url}
+          attribution={OSM_TILE_LAYER.attribution}
+          maxZoom={OSM_TILE_LAYER.maxZoom}
         />
 
         {/* Map Lifecycle & Cleanup Guard */}
@@ -712,47 +692,6 @@ export const StreetMapView: React.FC<StreetMapViewProps> = ({
           />
         )}
       </MapContainer>
-
-      {/* Quick Tile Layer Selector (compact bottom-left positioning above time controls) */}
-      <div className="absolute top-20 right-4 z-20 pointer-events-auto">
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setShowStyleMenu((prev) => !prev)}
-            className="px-2.5 py-1.5 rounded-xl bg-[#0c1626]/90 hover:bg-[#13233a] border border-cyan-500/40 text-cyan-200 hover:text-white backdrop-blur-md shadow-lg transition cursor-pointer flex items-center gap-1.5 text-xs font-bold font-mono"
-            title="Switch OpenStreetMap Map Tile Style"
-          >
-            <Layers className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Map Style</span>
-          </button>
-
-          {showStyleMenu && (
-            <div className="absolute right-0 mt-2 w-56 rounded-xl bg-[#0c1626]/98 border border-cyan-500/50 shadow-2xl p-1.5 space-y-1 backdrop-blur-xl z-30 animate-in fade-in">
-              <div className="px-2.5 py-1 text-[10px] uppercase font-bold text-cyan-400 tracking-wider">
-                Map Tiles
-              </div>
-              {TILE_STYLES.map((style) => (
-                <button
-                  key={style.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedStyleId(style.id);
-                    setShowStyleMenu(false);
-                  }}
-                  className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-bold transition flex items-center justify-between cursor-pointer ${
-                    selectedStyleId === style.id
-                      ? 'bg-cyan-950/80 text-cyan-200 border border-cyan-400/40'
-                      : 'text-stone-300 hover:bg-cyan-950/40 hover:text-cyan-100'
-                  }`}
-                >
-                  <span>{style.name}</span>
-                  {selectedStyleId === style.id && <Sparkles className="w-3.5 h-3.5 text-cyan-300" />}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* DROP PIN ACTIVE HUD BANNER */}
       {isDropModeActive && (

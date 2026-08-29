@@ -1189,4 +1189,35 @@ export async function savePin(pinData: {
   }
 }
 
+/**
+ * Unique Visitor Token & Headcount Tracking for Supabase Analytics
+ */
+export async function logGuestVisit(action: string = 'app_init'): Promise<string> {
+  let visitorToken = '';
+  try {
+    visitorToken =
+      localStorage.getItem('chronospheres_visitor_token') ||
+      sessionStorage.getItem('chronospheres_visitor_token') ||
+      '';
+    if (!visitorToken) {
+      visitorToken = `vis_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+      localStorage.setItem('chronospheres_visitor_token', visitorToken);
+      sessionStorage.setItem('chronospheres_visitor_token', visitorToken);
+    }
+    const client = getSupabaseClient();
+    await client.from('guest_visits').insert([
+      {
+        visitor_token: visitorToken,
+        visited_at: new Date().toISOString(),
+        action: action,
+        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+      },
+    ]);
+  } catch (err) {
+    console.debug('Guest visit recorded locally:', visitorToken);
+  }
+  return visitorToken;
+}
+
+
 

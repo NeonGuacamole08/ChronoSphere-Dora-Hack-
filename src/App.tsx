@@ -29,7 +29,7 @@ import { useUserLocation, ProximityAlertEvent } from './utils/useUserLocation';
 import { fetchCountryDetails, getCountryCodeFromCoordinates } from './utils/countries';
 import { GeocodingResult } from './utils/mapbox';
 import { ambientSound } from './utils/audio';
-import { supabaseAuth, capsulesDb, AppUser, createGuestUser } from './utils/supabase';
+import { supabaseAuth, capsulesDb, AppUser, createGuestUser, logGuestVisit } from './utils/supabase';
 import { AlertTriangle, X } from 'lucide-react';
 import { SEED_EVENT_CAPSULES } from './data/seedEvents';
 import { ScavengerEvent, EventBroadcastHint } from './types';
@@ -113,10 +113,12 @@ export default function App() {
           setCurrentUser(u);
         } else {
           setCurrentUser(createGuestUser());
+          logGuestVisit('app_init_guest');
         }
       } catch (e) {
         console.warn('Init session check:', e);
         setCurrentUser(createGuestUser());
+        logGuestVisit('app_init_guest_fallback');
       }
       // Always load public capsules so world map is interactive immediately
       loadUserCapsules();
@@ -692,6 +694,7 @@ export default function App() {
   const handleContinueAsGuest = () => {
     const guestUser = createGuestUser();
     setCurrentUser(guestUser);
+    logGuestVisit('continue_as_guest');
     setIsAuthModalOpen(false);
   };
 
@@ -925,6 +928,7 @@ export default function App() {
         onClose={() => setIsCountryDrawerOpen(false)}
         onSelectCapsule={handleSelectCapsule}
         onPlantInCountry={handlePlantInCountry}
+        language={currentLanguage}
       />
 
       {/* 5. 'My Vault' / Capsule Inventory Slide-out Drawer */}
@@ -979,6 +983,7 @@ export default function App() {
         simulatedTimeOffsetMs={simulatedTimeOffsetMs}
         userLocation={userLocation}
         onSimulateLocation={simulateLocation}
+        language={currentLanguage}
       />
 
       {/* 9. Create Capsule Modal */}
@@ -997,6 +1002,7 @@ export default function App() {
         initialCoords={createCoords}
         activeUsername={activeUsername}
         currentUser={currentUser}
+        language={currentLanguage}
       />
 
       {/* 10. Offline Standalone HTML & Arweave Payload Inspector */}

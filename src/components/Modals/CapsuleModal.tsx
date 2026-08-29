@@ -31,6 +31,7 @@ import { SpotifyEmbed } from '../Spotify/SpotifyEmbed';
 import { generateOfflineHtmlViewer } from '../../utils/crypto';
 import { UserLocation } from '../../utils/useUserLocation';
 import { getDistanceInMeters, formatDistanceText } from '../../utils/proximity';
+import { SupportedLanguage, translate } from '../../utils/i18n';
 
 interface CapsuleModalProps {
   capsule: Capsule | null;
@@ -45,6 +46,7 @@ interface CapsuleModalProps {
   simulatedTimeOffsetMs?: number;
   userLocation?: UserLocation | null;
   onSimulateLocation?: (lat: number, lng: number) => void;
+  language?: SupportedLanguage;
 }
 
 export const CapsuleModal: React.FC<CapsuleModalProps> = ({
@@ -60,6 +62,7 @@ export const CapsuleModal: React.FC<CapsuleModalProps> = ({
   simulatedTimeOffsetMs = 0,
   userLocation = null,
   onSimulateLocation,
+  language = 'en',
 }) => {
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
@@ -326,12 +329,12 @@ export const CapsuleModal: React.FC<CapsuleModalProps> = ({
 
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full parchment-subtle border border-amber-300/80 text-stone-800">
               <User className="w-3.5 h-3.5 text-amber-700" />
-              <span>Planted by {capsule.creator_username}</span>
+              <span>{translate('by', language)} {capsule.creator_username}</span>
             </div>
 
             {capsule.recipient_username && (
               <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-950 border border-amber-400 font-medium">
-                <span>Tagged for @{capsule.recipient_username}</span>
+                <span>@{capsule.recipient_username}</span>
               </div>
             )}
           </div>
@@ -343,7 +346,7 @@ export const CapsuleModal: React.FC<CapsuleModalProps> = ({
                 <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
                 <div>
                   <h4 className="font-bold text-rose-950 text-sm">
-                    Delete Time Capsule Pin?
+                    {translate('delete', language)}
                   </h4>
                   <p className="text-xs text-rose-800 mt-0.5">
                     This will permanently remove this capsule marker from the 3D Earth globe and database. This action cannot be undone.
@@ -357,7 +360,7 @@ export const CapsuleModal: React.FC<CapsuleModalProps> = ({
                   onClick={() => setIsConfirmingDelete(false)}
                   className="px-3 py-1.5 rounded-lg bg-stone-200 hover:bg-stone-300 text-stone-800 text-xs font-semibold transition cursor-pointer"
                 >
-                  Cancel
+                  {translate('cancel', language)}
                 </button>
                 <button
                   type="button"
@@ -365,7 +368,7 @@ export const CapsuleModal: React.FC<CapsuleModalProps> = ({
                   className="px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  Yes, Delete Pin
+                  {translate('delete', language)}
                 </button>
               </div>
             </div>

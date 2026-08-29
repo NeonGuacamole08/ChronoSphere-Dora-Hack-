@@ -1,12 +1,18 @@
 import React, { useEffect } from 'react';
 import { Compass, AlertTriangle, X } from 'lucide-react';
+import { SupportedLanguage, translate } from '../../utils/i18n';
 
 interface LandWarningToastProps {
   isOpen: boolean;
   onClose: () => void;
+  language?: SupportedLanguage;
 }
 
-export const LandWarningToast: React.FC<LandWarningToastProps> = ({ isOpen, onClose }) => {
+export const LandWarningToast: React.FC<LandWarningToastProps> = ({
+  isOpen,
+  onClose,
+  language = 'en',
+}) => {
   useEffect(() => {
     if (isOpen) {
       const timer = setTimeout(() => {
@@ -29,10 +35,10 @@ export const LandWarningToast: React.FC<LandWarningToastProps> = ({ isOpen, onCl
       <div className="flex flex-col min-w-0 pr-1">
         <div className="flex items-center gap-1 text-xs font-bold text-amber-300">
           <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-          <span>Ocean Click Detected</span>
+          <span>{translate('oceanClickDetected', language)}</span>
         </div>
         <span className="text-[11px] text-amber-200/80 leading-tight">
-          Pins must be land-locked to dry land or city territories. Please click on a landmass!
+          {translate('oceanWarningDesc', language)}
         </span>
       </div>
       <button
@@ -46,3 +52,4 @@ export const LandWarningToast: React.FC<LandWarningToastProps> = ({ isOpen, onCl
     </div>
   );
 };
+

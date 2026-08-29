@@ -36,6 +36,7 @@ import { SpotifyEmbed } from '../Spotify/SpotifyEmbed';
 import { generateArweaveTxId } from '../../utils/crypto';
 import { AppUser, savePin } from '../../utils/supabase';
 import { getCountryCodeFromCoordinates, isCoordinateOnLand } from '../../utils/countries';
+import { SupportedLanguage, translate } from '../../utils/i18n';
 
 interface CreateCapsuleModalProps {
   isOpen: boolean;
@@ -46,6 +47,7 @@ interface CreateCapsuleModalProps {
   initialCoords?: Coordinates | null;
   activeUsername: string;
   currentUser?: AppUser | null;
+  language?: SupportedLanguage;
 }
 
 // Convert 2-letter country code into flag emoji
@@ -144,6 +146,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
   initialCoords,
   activeUsername,
   currentUser,
+  language = 'en',
 }) => {
   const [step, setStep] = useState<'form' | 'confirm'>('form');
 
@@ -708,17 +711,17 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
             <span className="text-xl sm:text-2xl">{getCountryFlagEmoji(countryCode)}</span>
             <div>
               <h2 className="font-serif font-bold text-base sm:text-lg text-amber-100 flex items-center gap-1.5 sm:gap-2 leading-tight">
-                <span>{step === 'form' ? 'Plant Earth Time Capsule' : 'Confirm Capsule Manifest'}</span>
+                <span>{step === 'form' ? translate('plantEarthTimeCapsule', language) : translate('confirmCapsuleManifest', language)}</span>
                 {draftToEdit?.is_draft && (
                   <span className="text-[10px] bg-amber-500/30 text-amber-200 px-2 py-0.5 rounded-full border border-amber-400/40">
-                    Draft
+                    {translate('drafts', language)}
                   </span>
                 )}
               </h2>
               <span className="text-[10px] sm:text-xs text-amber-200/80 font-mono">
                 {step === 'form'
-                  ? 'Seal secret memories & unlimited media on Earth'
-                  : 'Review cryptographic lock & attachments before burial'}
+                  ? translate('sealSecretMemories', language)
+                  : translate('reviewCryptoLock', language)}
               </span>
             </div>
           </div>
@@ -744,10 +747,10 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                 <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
                 <div className="leading-snug">
                   <span className="font-bold text-amber-900 block">
-                    Guest Mode Active
+                    {translate('guestModeActive', language)}
                   </span>
                   <span className="text-amber-800 text-[11px]">
-                    None of your data, pins, vaults, or shares will be saved permanently. Create an account to preserve and lock this capsule forever.
+                    {translate('guestModeWarning', language)}
                   </span>
                 </div>
               </div>
@@ -757,28 +760,28 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
             <div className="space-y-3 sm:space-y-4">
               <div>
                 <label className="block text-[10px] sm:text-xs font-bold text-amber-950 uppercase tracking-wider mb-1">
-                  Capsule Title
+                  {translate('capsuleTitle', language)}
                 </label>
                 <input
                   type="text"
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g., Midnight Promise under the Tuscan Stars"
+                  placeholder={translate('capsuleTitlePlaceholder', language)}
                   className="w-full text-xs sm:text-sm font-medium px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl bg-white border border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-600 text-stone-900 placeholder:text-stone-400 shadow-xs"
                 />
               </div>
 
               <div>
                 <label className="block text-[10px] sm:text-xs font-bold text-amber-950 uppercase tracking-wider mb-1">
-                  Primary Memory Story & Secret Letter
+                  {translate('primaryStory', language)}
                 </label>
                 <textarea
                   required
                   rows={3}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Write your heartfelt story, future message, coordinates secret, or time reflection..."
+                  placeholder={translate('storyPlaceholder', language)}
                   className="w-full text-[11px] sm:text-xs leading-relaxed px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl bg-white border border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-600 text-stone-900 placeholder:text-stone-400 shadow-xs"
                 />
               </div>
@@ -789,7 +792,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
               <div className="flex items-center justify-between">
                 <span className="text-[11px] sm:text-xs font-bold text-amber-950 flex items-center gap-1.5">
                   <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-700" />
-                  Earth Coordinates & Location (Land Locked)
+                  {translate('earthCoordinates', language)}
                 </span>
                 <span className="text-[10px] sm:text-[11px] font-mono text-amber-800">
                   {lat !== null && lng !== null
@@ -810,14 +813,14 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                   type="text"
                   value={locationName}
                   onChange={(e) => setLocationName(e.target.value)}
-                  placeholder="Location Name (e.g. Kyoto Bamboo Grove)"
+                  placeholder={translate('locationNamePlaceholder', language)}
                   className="text-[11px] sm:text-xs px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-white border border-amber-300 text-stone-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
                 />
                 <input
                   type="text"
                   value={countryName}
                   onChange={(e) => setCountryName(e.target.value)}
-                  placeholder="Country Name (e.g. Japan)"
+                  placeholder={translate('countryNamePlaceholder', language)}
                   className="text-[11px] sm:text-xs px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-white border border-amber-300 text-stone-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
                 />
               </div>
@@ -828,10 +831,10 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
               <div className="flex items-center justify-between">
                 <label className="text-[11px] sm:text-xs font-bold text-amber-950 flex items-center gap-1.5">
                   <Calendar className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-700" />
-                  Unlock Date & Time (Vault Lock)
+                  {translate('unlockDateTime', language)}
                 </label>
                 <span className="text-[9px] sm:text-[10px] text-amber-800 italic">
-                  Locked until timestamp arrives
+                  {translate('lockedUntilTimestamp', language)}
                 </span>
               </div>
 
@@ -845,42 +848,42 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
               {/* Quick Preset Buttons */}
               <div className="flex flex-wrap gap-1.5 pt-1">
                 <span className="text-[10px] font-bold text-amber-900 self-center mr-1">
-                  Presets:
+                  {translate('presets', language)}
                 </span>
                 <button
                   type="button"
                   onClick={() => setPresetDate('hour')}
                   className="text-[10px] px-2 py-0.5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition cursor-pointer"
                 >
-                  +1 Hour
+                  {translate('plusOneHour', language)}
                 </button>
                 <button
                   type="button"
                   onClick={() => setPresetDate('week')}
                   className="text-[10px] px-2 py-0.5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition cursor-pointer"
                 >
-                  +1 Week
+                  {translate('plusOneWeek', language)}
                 </button>
                 <button
                   type="button"
                   onClick={() => setPresetDate('month')}
                   className="text-[10px] px-2 py-0.5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition cursor-pointer"
                 >
-                  +1 Month
+                  {translate('plusOneMonth', language)}
                 </button>
                 <button
                   type="button"
                   onClick={() => setPresetDate('year')}
                   className="text-[10px] px-2 py-0.5 rounded-md bg-amber-200 hover:bg-amber-300 text-amber-950 font-bold border border-amber-400 transition cursor-pointer"
                 >
-                  +1 Year
+                  {translate('plusOneYear', language)}
                 </button>
                 <button
                   type="button"
                   onClick={() => setPresetDate('decade')}
                   className="text-[10px] px-2 py-0.5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition cursor-pointer"
                 >
-                  +10 Years
+                  {translate('plusTenYears', language)}
                 </button>
               </div>
             </div>
@@ -890,9 +893,9 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
               <label className="text-[11px] sm:text-xs font-bold text-amber-950 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <Lock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-700" />
-                  Access Control & Vault Security
+                  {translate('accessControl', language)}
                 </span>
-                <span className="text-[10px] text-stone-500">Who can decrypt</span>
+                <span className="text-[10px] text-stone-500">{translate('whoCanDecrypt', language)}</span>
               </label>
 
               <div className="grid grid-cols-2 gap-2">
@@ -907,9 +910,9 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                 >
                   <Lock className="w-4 h-4 text-amber-400 shrink-0" />
                   <div>
-                    <div className="text-xs font-bold">Personal Vault</div>
+                    <div className="text-xs font-bold">{translate('personalVault', language)}</div>
                     <div className="text-[10px] opacity-80 leading-tight">
-                      Only you or recipient
+                      {translate('onlyYouOrRecipient', language)}
                     </div>
                   </div>
                 </button>
@@ -925,9 +928,9 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                 >
                   <Globe2 className="w-4 h-4 text-amber-400 shrink-0" />
                   <div>
-                    <div className="text-xs font-bold">Public Explorer</div>
+                    <div className="text-xs font-bold">{translate('publicExplorer', language)}</div>
                     <div className="text-[10px] opacity-80 leading-tight">
-                      Open to world on unlock
+                      {translate('openToWorld', language)}
                     </div>
                   </div>
                 </button>
@@ -939,10 +942,10 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold text-amber-950 flex items-center gap-1.5">
                       <Zap className="w-3.5 h-3.5 text-amber-700" />
-                      Public Unlock Mode
+                      {translate('publicUnlockMode', language)}
                     </span>
                     <span className="text-[10px] text-amber-800 font-medium">
-                      GPS Proximity & Time Rule
+                      {translate('gpsProximityRule', language)}
                     </span>
                   </div>
 
@@ -958,9 +961,9 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                     >
                       <Zap className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                       <div>
-                        <div className="text-xs font-bold text-amber-100">⚡ Instant Find</div>
+                        <div className="text-xs font-bold text-amber-100">{translate('instantFindTitle', language)}</div>
                         <div className="text-[10px] opacity-80 leading-tight mt-0.5">
-                          Unlocks as soon as another explorer reaches target coordinates (within proximity).
+                          {translate('instantFindDesc', language)}
                         </div>
                       </div>
                     </button>
@@ -976,9 +979,9 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                     >
                       <Lock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                       <div>
-                        <div className="text-xs font-bold text-amber-100">⏳ Time-Locked</div>
+                        <div className="text-xs font-bold text-amber-100">{translate('timeLockedTitle', language)}</div>
                         <div className="text-[10px] opacity-80 leading-tight mt-0.5">
-                          Unlocks only when the explorer is at the location AND the unlock date has passed.
+                          {translate('timeLockedDesc', language)}
                         </div>
                       </div>
                     </button>
@@ -988,7 +991,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                   <div className="flex items-center justify-between pt-1 border-t border-amber-300/60">
                     <span className="text-[10px] font-bold text-amber-900 flex items-center gap-1">
                       <Radio className="w-3 h-3 text-amber-700" />
-                      Interaction / Proximity Radius:
+                      {translate('proximityRadius', language)}:
                     </span>
                     <div className="flex gap-1.5">
                       {[50, 100, 250, 500].map((meters) => (
@@ -1015,7 +1018,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
                     <span className="text-[10px] font-bold text-amber-900 block mb-0.5">
-                      Designated Recipient (Optional):
+                      {translate('designatedRecipient', language)}:
                     </span>
                     <input
                       type="text"
@@ -1027,7 +1030,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                   </div>
                   <div>
                     <span className="text-[10px] font-bold text-amber-900 block mb-0.5">
-                      Recipient Email (Optional Notification):
+                      {translate('recipientEmail', language)}:
                     </span>
                     <input
                       type="email"
@@ -1041,7 +1044,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
 
                 <div>
                   <span className="text-[10px] font-bold text-amber-900 block mb-0.5">
-                    Tag Friends & Collaborators (Comma-separated handles):
+                    {translate('tagFriends', language)}:
                   </span>
                   <input
                     type="text"
@@ -1060,11 +1063,11 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                 <div className="flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-amber-700" />
                   <span className="text-xs font-bold text-amber-950 uppercase tracking-wide">
-                    Multi-Media Attachments ({attachments.length})
+                    {translate('multimediaAttachments', language)} ({attachments.length})
                   </span>
                 </div>
                 <span className="text-[10px] font-mono text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300 font-bold">
-                  Unlimited Photos • Audio • Letters • Docs
+                  {translate('unlimitedMediaSubtitle', language)}
                 </span>
               </div>
 
@@ -1089,7 +1092,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                     disabled={isProcessingUpload}
                   />
                   <ImageIcon className="w-4 h-4 text-amber-800" />
-                  <span className="text-[11px] font-bold">+ Photos</span>
+                  <span className="text-[11px] font-bold">{translate('addPhotos', language)}</span>
                   <span className="text-[9px] text-stone-500">Multi-upload</span>
                 </label>
 
@@ -1100,8 +1103,8 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                   className="p-2.5 rounded-xl bg-white hover:bg-amber-50 border border-amber-300 hover:border-amber-400 text-stone-800 flex flex-col items-center justify-center gap-1 cursor-pointer transition shadow-xs"
                 >
                   <FileText className="w-4 h-4 text-amber-800" />
-                  <span className="text-[11px] font-bold">+ Written Letter</span>
-                  <span className="text-[9px] text-stone-500">Secret notes</span>
+                  <span className="text-[11px] font-bold">{translate('addWrittenLetter', language)}</span>
+                  <span className="text-[9px] text-stone-500">{translate('secretNotes', language)}</span>
                 </button>
 
                 {/* 3. Add Document / File */}
@@ -1115,14 +1118,14 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                     disabled={isProcessingUpload}
                   />
                   <File className="w-4 h-4 text-amber-800" />
-                  <span className="text-[11px] font-bold">+ Document</span>
+                  <span className="text-[11px] font-bold">{translate('addDocument', language)}</span>
                   <span className="text-[9px] text-stone-500">PDF, TXT, MD</span>
                 </label>
 
                 {/* 4. Paste Image URL */}
                 <div className="p-2.5 rounded-xl bg-white border border-amber-300 text-stone-800 flex flex-col justify-between shadow-xs">
                   <span className="text-[10px] font-bold text-amber-900 flex items-center gap-1">
-                    <LinkIcon className="w-3 h-3" /> Image URL
+                    <LinkIcon className="w-3 h-3" /> {translate('imageUrl', language)}
                   </span>
                   <div className="flex gap-1 mt-1">
                     <input
@@ -1138,7 +1141,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                       disabled={!imageUrlInput.trim()}
                       className="px-2 py-1 bg-amber-800 text-white rounded text-[10px] font-bold disabled:opacity-40 cursor-pointer"
                     >
-                      Add
+                      {translate('add', language)}
                     </button>
                   </div>
                 </div>
@@ -1155,7 +1158,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
                       <FileText className="w-3.5 h-3.5 text-amber-800" />
-                      Add Written Letter or Secret Note
+                      {translate('addWrittenLetter', language)}
                     </span>
                     <button
                       type="button"
@@ -1169,14 +1172,14 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                     type="text"
                     value={letterTitle}
                     onChange={(e) => setLetterTitle(e.target.value)}
-                    placeholder="Letter Title (e.g. Letter to My Future Child, Secret Map Riddle)"
+                    placeholder={translate('letterTitlePlaceholder', language)}
                     className="w-full text-xs px-3 py-1.5 rounded-lg bg-white border border-amber-300 text-stone-900"
                   />
                   <textarea
                     rows={3}
                     value={letterContent}
                     onChange={(e) => setLetterContent(e.target.value)}
-                    placeholder="Write the full text of your secret letter or reflection..."
+                    placeholder={translate('letterContentPlaceholder', language)}
                     className="w-full text-xs leading-relaxed px-3 py-1.5 rounded-lg bg-white border border-amber-300 text-stone-900"
                   />
                   <div className="flex justify-end gap-2 pt-1">
@@ -1185,7 +1188,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                       onClick={() => setShowAddLetterModal(false)}
                       className="px-3 py-1 text-xs rounded bg-stone-200 text-stone-700"
                     >
-                      Cancel
+                      {translate('cancel', language)}
                     </button>
                     <button
                       type="button"
@@ -1193,7 +1196,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                       disabled={!letterTitle.trim() || !letterContent.trim()}
                       className="px-4 py-1 text-xs rounded bg-amber-800 text-white font-bold disabled:opacity-40"
                     >
-                      Attach Letter
+                      {translate('attachLetter', language)}
                     </button>
                   </div>
                 </div>
@@ -1203,7 +1206,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
               {attachments.length > 0 ? (
                 <div className="space-y-2 pt-2 border-t border-amber-300/80">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900 font-mono block">
-                    Attached Items Manifest ({attachments.length}):
+                    {translate('attachedManifest', language)} ({attachments.length}):
                   </span>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
                     {attachments.map((att) => (
@@ -1270,7 +1273,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                 </div>
               ) : (
                 <div className="p-3 text-center rounded-xl bg-white/40 border border-dashed border-amber-300 text-stone-500 text-[11px]">
-                  No extra media attached yet. You can attach unlimited photos, voice notes, secret letters, and documents.
+                  {translate('noMediaAttached', language)}
                 </div>
               )}
             </div>
@@ -1287,11 +1290,10 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
               <ShieldCheck className="w-4 h-4 text-amber-800 shrink-0 mt-0.5" />
               <div>
                 <span className="font-bold text-amber-950">
-                  Arweave Permaweb & Supabase Encryption
+                  {translate('arweavePermaweb', language)}
                 </span>
                 <p className="mt-0.5 text-stone-600 leading-relaxed">
-                  When you plant this capsule, all attached photos, voice memos, letters, and documents are cryptographically sealed with an
-                  Arweave TX ID and backed up to decentralized storage, ensuring your memories survive for centuries.
+                  {translate('arweaveNotice', language)}
                 </p>
               </div>
             </div>
@@ -1303,7 +1305,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                 onClick={handleModalClose}
                 className="px-3.5 py-2.5 rounded-xl bg-stone-200 hover:bg-stone-300 text-stone-700 font-semibold text-xs transition cursor-pointer"
               >
-                Cancel
+                {translate('cancel', language)}
               </button>
 
               <div className="flex items-center gap-2">
@@ -1314,7 +1316,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                   title="Save draft to My Vault without locking or burying"
                 >
                   <Bookmark className="w-3.5 h-3.5 text-amber-800" />
-                  <span>Save as Draft</span>
+                  <span>{translate('saveAsDraft', language)}</span>
                 </button>
 
                 <button
@@ -1322,7 +1324,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                   className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-700 to-amber-900 hover:from-amber-800 hover:to-amber-950 text-amber-100 font-bold text-xs transition shadow-lg flex items-center gap-2 cursor-pointer"
                 >
                   <Lock className="w-4 h-4 text-amber-300" />
-                  <span>Lock & Review ({attachments.length + 1} Items)</span>
+                  <span>{translate('lockAndReview', language)} ({attachments.length + 1} {translate('items', language)})</span>
                 </button>
               </div>
             </div>
@@ -1336,12 +1338,10 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
             <div className="p-4 rounded-xl bg-gradient-to-r from-amber-900/90 to-amber-950/95 text-amber-50 border border-amber-400/60 shadow-lg space-y-1.5">
               <div className="flex items-center gap-2 font-serif font-bold text-base text-amber-200">
                 <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
-                <span>Pre-Lock Capsule Manifest</span>
+                <span>{translate('preLockManifestTitle', language)}</span>
               </div>
               <p className="text-xs text-amber-200/80 leading-relaxed">
-                Review all attached items and unlock parameters. Once buried in Earth, the
-                contents will be time-locked under cryptographic encryption until the
-                designated unlock timestamp.
+                {translate('preLockManifestNotice', language)}
               </p>
             </div>
 
@@ -1349,10 +1349,10 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
             <div className="p-4 rounded-xl parchment-subtle border border-amber-800/30 space-y-3.5 shadow-sm">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-amber-950 font-mono">
-                  Items to be Sealed & Buried:
+                  {translate('itemsToBeSealed', language)}:
                 </h3>
                 <span className="text-xs font-mono font-bold text-amber-900 bg-amber-200/80 px-2 py-0.5 rounded-full">
-                  Total Items: {1 + attachments.length + (spotifyTrack ? 1 : 0)}
+                  {translate('totalItems', language)}: {1 + attachments.length + (spotifyTrack ? 1 : 0)}
                 </span>
               </div>
 
@@ -1362,7 +1362,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                   <FileText className="w-4 h-4 text-amber-800 shrink-0 mt-0.5" />
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-stone-900">
-                      1 Primary Memory Letter
+                      1 {translate('primaryMemoryLetter', language)}
                     </div>
                     <div className="text-[11px] text-stone-600 truncate">
                       {messageWords} words • &ldquo;{title}&rdquo;
@@ -1375,10 +1375,10 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                   <ImageIcon className="w-4 h-4 text-purple-700 shrink-0 mt-0.5" />
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-stone-900">
-                      {photosCount} Photo Attachment{photosCount === 1 ? '' : 's'}
+                      {photosCount} {translate('photoAttachments', language)}
                     </div>
                     <div className="text-[11px] text-stone-600 truncate">
-                      {photosCount > 0 ? 'High-res preserved imagery' : 'No photos attached'}
+                      {photosCount > 0 ? translate('highResPreserved', language) : translate('noPhotosAttached', language)}
                     </div>
                   </div>
                 </div>
@@ -1388,10 +1388,10 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                   <Mic className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-stone-900">
-                      {audioCount} Voice Memo{audioCount === 1 ? '' : 's'}
+                      {audioCount} {translate('voiceMemos', language)}
                     </div>
                     <div className="text-[11px] text-stone-600 truncate">
-                      {audioCount > 0 ? 'Lossless audio recordings' : 'No audio notes attached'}
+                      {audioCount > 0 ? translate('losslessAudio', language) : translate('noAudioAttached', language)}
                     </div>
                   </div>
                 </div>
@@ -1401,10 +1401,10 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                   <FileText className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-stone-900">
-                      {lettersCount} Written Secret Letter{lettersCount === 1 ? '' : 's'}
+                      {lettersCount} {translate('writtenLetters', language)}
                     </div>
                     <div className="text-[11px] text-stone-600 truncate">
-                      {lettersCount > 0 ? 'Time reflections & secret notes' : 'No extra letters'}
+                      {lettersCount > 0 ? translate('secretNotes', language) : translate('noExtraLetters', language)}
                     </div>
                   </div>
                 </div>
@@ -1414,10 +1414,10 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                   <File className="w-4 h-4 text-cyan-700 shrink-0 mt-0.5" />
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-stone-900">
-                      {docsCount} Document / File{docsCount === 1 ? '' : 's'}
+                      {docsCount} {translate('documentsCount', language)}
                     </div>
                     <div className="text-[11px] text-stone-600 truncate">
-                      {docsCount > 0 ? 'Preserved documents & records' : 'No documents attached'}
+                      {docsCount > 0 ? translate('preservedDocs', language) : translate('noDocsAttached', language)}
                     </div>
                   </div>
                 </div>
@@ -1427,10 +1427,10 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                   <Music className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-stone-900 truncate">
-                      {spotifyTrack?.title ? `1 Track: ${spotifyTrack.title}` : '0 Spotify Tracks'}
+                      {spotifyTrack?.title ? `1 Track: ${spotifyTrack.title}` : `0 Spotify Tracks`}
                     </div>
                     <div className="text-[11px] text-stone-600 truncate">
-                      {spotifyTrack?.artist || 'No musical theme attached'}
+                      {spotifyTrack?.artist || translate('noMusicalTheme', language)}
                     </div>
                   </div>
                 </div>
@@ -1440,7 +1440,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
               {attachments.length > 0 && (
                 <div className="space-y-1.5 pt-2">
                   <span className="text-[10px] font-bold uppercase font-mono text-amber-900">
-                    Attached Artifacts Details:
+                    {translate('attachedArtifactsDetails', language)}:
                   </span>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {attachments.map((att) => (
@@ -1488,7 +1488,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <span className="text-[10px] uppercase font-mono text-stone-500 block">
-                    Burial Coordinates & Country
+                    {translate('burialCoordsAndCountry', language)}
                   </span>
                   <div className="font-bold text-stone-900 flex items-center gap-1.5 mt-0.5">
                     <span className="text-base">{getCountryFlagEmoji(countryCode)}</span>
@@ -1503,13 +1503,13 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
 
                 <div>
                   <span className="text-[10px] uppercase font-mono text-stone-500 block">
-                    Target Unlock Time
+                    {translate('targetUnlockTime', language)}
                   </span>
                   <div className="font-bold text-amber-950 mt-0.5">
                     {formattedUnlockDate}
                   </div>
                   <div className="text-[11px] text-stone-600">
-                    {accessType === 'private' ? '🔒 Private Vault Lock' : '🌐 Public Discovery'}
+                    {accessType === 'private' ? translate('privateVaultLock', language) : translate('publicDiscovery', language)}
                   </div>
                 </div>
               </div>
@@ -1523,7 +1523,7 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                 className="px-4 py-2.5 rounded-xl bg-stone-200 hover:bg-stone-300 text-stone-800 font-semibold text-xs transition cursor-pointer flex items-center gap-1.5"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Back & Edit</span>
+                <span>{translate('backAndEdit', language)}</span>
               </button>
 
               <button
@@ -1535,12 +1535,12 @@ export const CreateCapsuleModal: React.FC<CreateCapsuleModalProps> = ({
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4.5 h-4.5 text-amber-300 animate-spin" />
-                    <span>Burying Capsule...</span>
+                    <span>{translate('buryingCapsule', language)}...</span>
                   </>
                 ) : (
                   <>
                     <Lock className="w-4.5 h-4.5 text-amber-300" />
-                    <span>Bury Capsule</span>
+                    <span>{translate('buryCapsule', language)}</span>
                   </>
                 )}
               </button>

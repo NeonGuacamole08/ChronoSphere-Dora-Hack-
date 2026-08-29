@@ -205,15 +205,15 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* 2. CENTER: Search Bar with Embedded 'Drop Pin' Action */}
+      {/* 2. CENTER: Compact Search Bar with Embedded 'Drop Pin' Action */}
       <div
         ref={searchContainerRef}
-        className={`relative flex-1 min-w-0 max-w-full md:min-w-[170px] md:max-w-[260px] lg:min-w-[220px] lg:max-w-sm xl:max-w-md mx-0 md:mx-1 lg:mx-2 ${
+        className={`relative flex-initial min-w-0 w-full md:w-[180px] lg:w-[210px] xl:w-[240px] mx-0 md:mx-1 shrink-0 ${
           isMobileSearchOpen ? 'block w-full' : 'hidden md:block'
         }`}
       >
-        <div className="relative flex items-center bg-[#0c1626]/90 backdrop-blur-md rounded-full border border-cyan-500/40 shadow-[0_0_20px_rgba(4,20,38,0.7)] px-2 sm:px-2.5 md:px-2.5 lg:px-3 py-1 md:py-1 gap-1">
-          <Search className="w-3.5 h-3.5 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 text-cyan-400/90 shrink-0 ml-0.5" />
+        <div className="relative flex items-center bg-[#0c1626]/90 backdrop-blur-md rounded-full border border-cyan-500/40 shadow-[0_0_20px_rgba(4,20,38,0.7)] px-2 sm:px-2.5 py-1 gap-1">
+          <Search className="w-3.5 h-3.5 text-cyan-400/90 shrink-0 ml-0.5" />
           <input
             type="text"
             value={searchQuery}
@@ -221,15 +221,15 @@ export const Header: React.FC<HeaderProps> = ({
             onFocus={() => {
               if (suggestions.length > 0) setShowDropdown(true);
             }}
-            placeholder="Search city, address..."
-            className="w-full min-w-0 text-[11px] md:text-xs px-1.5 py-0.5 md:py-0.5 bg-transparent text-cyan-50 placeholder:text-cyan-200/50 focus:outline-none font-sans truncate"
+            placeholder={translate('searchPlaceholder', currentLanguage)}
+            className="w-full min-w-0 text-[11px] md:text-xs px-1 py-0.5 bg-transparent text-cyan-50 placeholder:text-cyan-200/50 focus:outline-none font-sans truncate"
           />
 
           {/* Embedded Drop Pin Action Button inside Search Bar */}
           <button
             type="button"
             onClick={onDropPinClick}
-            className={`flex items-center gap-1 px-1.5 sm:px-2 md:px-2 lg:px-2.5 py-0.5 md:py-1 rounded-full text-[10px] md:text-[11px] font-medium shrink-0 transition cursor-pointer border ${
+            className={`flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] md:text-[11px] font-medium shrink-0 transition cursor-pointer border ${
               isPlantingMode
                 ? 'bg-cyan-500 text-stone-950 border-cyan-300 ring-1 ring-cyan-300 font-bold shadow-[0_0_10px_rgba(6,182,212,0.6)]'
                 : 'bg-[#14233b] hover:bg-[#1a2f4d] text-cyan-200 border-cyan-500/40'
@@ -237,7 +237,7 @@ export const Header: React.FC<HeaderProps> = ({
             title={isPlantingMode ? 'Planting Mode Active: Click globe or search to drop pin' : 'Drop a pin on globe or searched location'}
           >
             <MapPin className="w-3 h-3 text-cyan-400 shrink-0" />
-            <span className="hidden lg:inline">Drop Pin</span>
+            <span className="hidden 2xl:inline">{translate('dropPin', currentLanguage)}</span>
           </button>
         </div>
 
@@ -272,33 +272,22 @@ export const Header: React.FC<HeaderProps> = ({
         )}
       </div>
 
-      {/* 3. RIGHT: Action Buttons Cluster */}
-      <div className="flex items-center justify-end gap-1 md:gap-1.5 lg:gap-2 shrink-0 flex-nowrap">
-        {/* VIEW MODE TOGGLE BUTTONS: 3D Globe & Explore Mode on same line with same size */}
+      {/* 3. RIGHT: Action Buttons Cluster (Pushed to the left right next to search) */}
+      <div className="flex items-center justify-start gap-1 md:gap-1.5 shrink-0 flex-nowrap overflow-x-auto no-scrollbar">
+        {/* VIEW MODE TOGGLE BUTTONS */}
         {viewMode === '2d' ? (
-          <>
-            {/* 3D Globe Button when in 2D Mode */}
-            {onSwitchTo3D && (
-              <button
-                type="button"
-                onClick={onSwitchTo3D}
-                className="flex items-center gap-1 md:gap-1.5 px-2 sm:px-2.5 py-1 md:py-1.5 rounded-xl bg-[#180e05]/95 hover:bg-[#251509] text-amber-200 border border-amber-500/60 hover:border-amber-400 text-[11px] md:text-xs font-bold transition shadow-md cursor-pointer shrink-0"
-                title="Switch to 3D Earth Globe View"
-              >
-                <Globe className="w-3.5 h-3.5 text-amber-400" />
-                <span>3D Globe</span>
-              </button>
-            )}
-
-            {/* Explore Mode Active Pill */}
-            <div
-              className="hidden sm:flex items-center gap-1 px-2 sm:px-2.5 py-1 md:py-1.5 rounded-xl bg-[#0c1626]/90 border border-emerald-500/50 text-emerald-300 text-[11px] md:text-xs font-mono font-bold transition shadow-md shrink-0"
-              title="Currently in 2D OpenStreetMap Explore Mode"
+          /* 3D Globe Button when in 2D Mode */
+          onSwitchTo3D && (
+            <button
+              type="button"
+              onClick={onSwitchTo3D}
+              className="flex items-center gap-1 md:gap-1.5 px-2 sm:px-2.5 py-1 md:py-1.5 rounded-xl bg-[#180e05]/95 hover:bg-[#251509] text-amber-200 border border-amber-500/60 hover:border-amber-400 text-[11px] md:text-xs font-bold transition shadow-md cursor-pointer shrink-0"
+              title="Switch to 3D Earth Globe View"
             >
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Explore Mode</span>
-            </div>
-          </>
+              <Globe className="w-3.5 h-3.5 text-amber-400" />
+              <span>{translate('threeDGlobe', currentLanguage)}</span>
+            </button>
+          )
         ) : (
           /* Explore Mode Button when in 3D Mode */
           onSwitchTo2D && (
@@ -309,8 +298,7 @@ export const Header: React.FC<HeaderProps> = ({
               title="Switch to 2D OpenStreetMap Explore Mode"
             >
               <Map className="w-3.5 h-3.5 text-cyan-300" />
-              <span className="hidden sm:inline">Explore Mode</span>
-              <span className="inline sm:hidden">Explore</span>
+              <span>{translate('exploreMode', currentLanguage)}</span>
             </button>
           )
         )}
@@ -395,7 +383,7 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <Layers className={`w-3.5 h-3.5 md:w-3.5 md:h-3.5 ${showHeatmap ? 'text-amber-400' : 'text-cyan-300'}`} />
           <span className="hidden xl:inline font-semibold">
-            {showHeatmap ? 'Heatmap' : 'Pins'}
+            {showHeatmap ? translate('heatmap', currentLanguage) : translate('pins', currentLanguage)}
           </span>
           {/* Dynamic Pin Count Stack Badge */}
           <span
@@ -460,10 +448,10 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                   <div>
                     <h4 className="font-bold text-xs text-amber-100 flex items-center gap-1.5">
-                      Soundtrack & Vibe
+                      {translate('soundtrackAndVibe', currentLanguage)}
                     </h4>
                     <p className="text-[10px] text-amber-300/70">
-                      Royalty-free procedural audio
+                      {translate('proceduralSynth', currentLanguage)}
                     </p>
                   </div>
                 </div>
@@ -489,7 +477,7 @@ export const Header: React.FC<HeaderProps> = ({
                   ) : (
                     <>
                       <VolumeX className="w-3 h-3 text-rose-400" />
-                      <span>OFF (Muted)</span>
+                      <span>OFF</span>
                     </>
                   )}
                 </button>
@@ -498,7 +486,7 @@ export const Header: React.FC<HeaderProps> = ({
               {/* 4 Music Sound Choices */}
               <div className="space-y-1.5">
                 <p className="text-[10px] uppercase font-mono tracking-wider text-amber-300/80 px-0.5">
-                  Select Theme Track:
+                  {translate('selectThemeTrack', currentLanguage)}
                 </p>
                 <div className="grid grid-cols-1 gap-1.5">
                   {SOUND_THEMES.map((theme) => {
@@ -613,7 +601,7 @@ export const Header: React.FC<HeaderProps> = ({
               title="Guest Explorer Mode (Click to Sign In or Save Vaults)"
             >
               <User className="w-3 h-3 md:w-3.5 md:h-3.5 text-emerald-300" />
-              <span className="hidden sm:inline">Sign In</span>
+              <span className="hidden sm:inline">{translate('signIn', currentLanguage)}</span>
             </button>
           )}
 

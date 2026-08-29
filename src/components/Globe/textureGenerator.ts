@@ -220,7 +220,7 @@ export function generateEarthTextures(): {
 
     cloudCtx.fillStyle = grad;
     cloudCtx.beginPath();
-    cloudCtx.ellipse(cx, cy, radiusX, radiusY, (Math.random() - 0.5) * 0.5, 0, Math.PI * 2);
+    cloudCtx.ellipse(cx, cy, Math.max(0.001, radiusX), Math.max(0.001, radiusY), (Math.random() - 0.5) * 0.5, 0, Math.PI * 2);
     cloudCtx.fill();
   }
 

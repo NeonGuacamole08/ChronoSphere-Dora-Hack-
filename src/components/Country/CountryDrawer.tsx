@@ -13,6 +13,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
+import { SupportedLanguage, translate } from '../../utils/i18n';
 
 interface CountryDrawerProps {
   country: CountryData | null;
@@ -21,6 +22,7 @@ interface CountryDrawerProps {
   onClose: () => void;
   onSelectCapsule: (capsule: Capsule) => void;
   onPlantInCountry: (country: CountryData) => void;
+  language?: SupportedLanguage;
 }
 
 export const CountryDrawer: React.FC<CountryDrawerProps> = ({
@@ -30,6 +32,7 @@ export const CountryDrawer: React.FC<CountryDrawerProps> = ({
   onClose,
   onSelectCapsule,
   onPlantInCountry,
+  language = 'en',
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -148,7 +151,7 @@ export const CountryDrawer: React.FC<CountryDrawerProps> = ({
             <div className="p-2 rounded-xl parchment-subtle border border-amber-300/60 shadow-xs">
               <span className="text-[9px] uppercase font-bold text-amber-800 flex items-center gap-1">
                 <Building className="w-2.5 h-2.5 text-amber-700" />
-                Capital
+                {translate('capital', language)}
               </span>
               <p className="text-[11px] font-semibold text-stone-900 mt-0.5 truncate">
                 {capitalStr}
@@ -158,7 +161,7 @@ export const CountryDrawer: React.FC<CountryDrawerProps> = ({
             <div className="p-2 rounded-xl parchment-subtle border border-amber-300/60 shadow-xs">
               <span className="text-[9px] uppercase font-bold text-amber-800 flex items-center gap-1">
                 <Users className="w-2.5 h-2.5 text-amber-700" />
-                Population
+                {translate('population', language)}
               </span>
               <p className="text-[11px] font-semibold text-stone-900 mt-0.5 truncate">
                 {populationStr}
@@ -168,7 +171,7 @@ export const CountryDrawer: React.FC<CountryDrawerProps> = ({
             <div className="p-2 rounded-xl parchment-subtle border border-amber-300/60 col-span-2 shadow-xs">
               <span className="text-[9px] uppercase font-bold text-amber-800 flex items-center gap-1">
                 <Coins className="w-2.5 h-2.5 text-amber-700" />
-                Currency
+                {translate('currency', language)}
               </span>
               <p className="text-[11px] font-semibold text-stone-800 mt-0.5 truncate">
                 {primaryCurrency}
@@ -178,7 +181,7 @@ export const CountryDrawer: React.FC<CountryDrawerProps> = ({
             <div className="p-2 rounded-xl parchment-subtle border border-amber-300/60 col-span-2 shadow-xs">
               <span className="text-[9px] uppercase font-bold text-amber-800 flex items-center gap-1">
                 <Globe2 className="w-2.5 h-2.5 text-amber-700" />
-                Languages & Timezone
+                {translate('languagesAndTimezone', language)}
               </span>
               <p className="text-[11px] font-semibold text-stone-800 mt-0.5">
                 {languagesStr} • <span className="font-mono text-[10px] text-amber-900">{timezoneStr}</span>
@@ -193,7 +196,7 @@ export const CountryDrawer: React.FC<CountryDrawerProps> = ({
             className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-700 to-amber-900 hover:from-amber-800 hover:to-amber-950 text-amber-100 font-semibold text-xs transition shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <MapPin className="w-3.5 h-3.5 text-amber-300" />
-            Plant Capsule in {country.name.common}
+            {translate('plantCapsuleInCountry', language, { country: country.name.common })}
           </button>
 
           {/* Local Active Time Capsules */}
@@ -201,13 +204,13 @@ export const CountryDrawer: React.FC<CountryDrawerProps> = ({
             <div className="flex items-center justify-between border-b border-amber-200 pb-1">
               <h4 className="font-serif font-bold text-xs sm:text-sm text-stone-900 flex items-center gap-1">
                 <Compass className="w-3.5 h-3.5 text-amber-700" />
-                Time Capsules ({countryCapsules.length})
+                {translate('timeCapsules', language)} ({countryCapsules.length})
               </h4>
             </div>
 
             {countryCapsules.length === 0 ? (
               <div className="p-3 rounded-xl parchment-subtle text-center text-[11px] text-stone-600 italic border border-dashed border-amber-300">
-                No time capsules planted here yet. Be the first to bury an encrypted memory!
+                {translate('noCapsulesHere', language)}
               </div>
             ) : (
               <div className="space-y-1.5 max-h-48 overflow-y-auto pr-0.5">
@@ -231,7 +234,7 @@ export const CountryDrawer: React.FC<CountryDrawerProps> = ({
                           }`}
                         >
                           {isUnlocked ? <Unlock className="w-2 h-2" /> : <Lock className="w-2 h-2" />}
-                          {isUnlocked ? 'Unlocked' : 'Locked'}
+                          {isUnlocked ? translate('unlocked', language) : translate('locked', language)}
                         </span>
                       </div>
 

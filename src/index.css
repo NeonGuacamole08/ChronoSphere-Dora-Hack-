@@ -200,9 +200,11 @@
   box-shadow: 0 20px 35px -10px rgba(6, 182, 212, 0.35) !important;
 }
 
-/* Position leaflet attribution unobtrusively so it never overlaps corner controls */
+/* Position leaflet attribution cleanly at the bottom edge */
 .leaflet-bottom.leaflet-right {
-  margin-bottom: 76px !important;
+  margin-bottom: 4px !important;
+  margin-right: 4px !important;
+  z-index: 30 !important;
 }
 
 .leaflet-container .leaflet-control-attribution {

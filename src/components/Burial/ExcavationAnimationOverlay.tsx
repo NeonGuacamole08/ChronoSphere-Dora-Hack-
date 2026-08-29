@@ -212,10 +212,12 @@ export const ExcavationAnimationOverlay: React.FC<ExcavationAnimationOverlayProp
       // Excavated opening in the ground with golden ascension glow
       ctx.save();
       ctx.beginPath();
-      ctx.ellipse(centerX, groundY + 10, (pitWidth / 2) * holeFactor, 32 * holeFactor, 0, 0, Math.PI * 2);
+      const holeRadiusX = Math.max(0.001, (pitWidth / 2) * holeFactor);
+      const holeRadiusY = Math.max(0.001, 32 * holeFactor);
+      ctx.ellipse(centerX, groundY + 10, holeRadiusX, holeRadiusY, 0, 0, Math.PI * 2);
       ctx.fillStyle = '#0a0502';
       ctx.fill();
-      ctx.lineWidth = 3 * holeFactor;
+      ctx.lineWidth = Math.max(1, 3 * holeFactor);
       ctx.strokeStyle = '#f59e0b';
       ctx.stroke();
 

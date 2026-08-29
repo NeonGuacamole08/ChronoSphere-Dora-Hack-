@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { Capsule } from '../../types';
 import { latLngToVector3 } from '../../utils/coordinates';
 import { Sparkles, Lock, KeyRound, Trophy } from 'lucide-react';
+import { SupportedLanguage, translate } from '../../utils/i18n';
 
 interface CapsulePinProps {
   capsule: Capsule;
@@ -13,6 +14,7 @@ interface CapsulePinProps {
   radius?: number;
   isJudgeOverride?: boolean;
   activeUsername?: string;
+  language?: SupportedLanguage;
 }
 
 export const CapsulePin: React.FC<CapsulePinProps> = ({
@@ -22,6 +24,7 @@ export const CapsulePin: React.FC<CapsulePinProps> = ({
   radius = 2.0,
   isJudgeOverride = false,
   activeUsername = 'DoraHacksJudge',
+  language = 'en',
 }) => {
   const [hovered, setHovered] = useState(false);
   const groupRef = useRef<THREE.Group>(null);
@@ -243,7 +246,7 @@ export const CapsulePin: React.FC<CapsulePinProps> = ({
               >
                 <Lock className="w-3.5 h-3.5 text-rose-400 shrink-0" />
                 <span className="font-sans font-medium text-xs tracking-tight text-rose-100">
-                  Private ({capsule.creator_username})
+                  {translate('private', language)} ({capsule.creator_username})
                 </span>
               </div>
             )}
@@ -260,7 +263,7 @@ export const CapsulePin: React.FC<CapsulePinProps> = ({
                       ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40'
                       : 'bg-amber-950/80 text-amber-300 border border-amber-500/40'
                   }`}>
-                    {capsule.access_type}
+                    {capsule.access_type === 'public' ? translate('public', language) : translate('private', language)}
                   </span>
                 </div>
 
@@ -270,14 +273,14 @@ export const CapsulePin: React.FC<CapsulePinProps> = ({
                       {capsule.message}
                     </div>
                     <div className="mt-1.5 text-[9px] text-cyan-400/80 font-mono flex items-center justify-between">
-                      <span>By {capsule.creator_username}</span>
+                      <span>{translate('by', language)} {capsule.creator_username}</span>
                       <span>Arweave Anchored</span>
                     </div>
                   </>
                 ) : (
                   <div className="text-[11px] text-rose-300 flex items-center gap-1.5">
                     <Lock className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                    <span>Locked vault: Only creator & tagged recipient can decrypt.</span>
+                    <span>{translate('lockedVaultDesc', language)}</span>
                   </div>
                 )}
               </div>

@@ -13,6 +13,7 @@ import { CameraController } from './CameraController';
 import { generateEarthTextures } from './textureGenerator';
 import { UserLocation3DPin } from './UserLocation3DPin';
 import { UserLocation } from '../../utils/useUserLocation';
+import { SupportedLanguage } from '../../utils/i18n';
 
 interface GlobeSceneProps {
   capsules: Capsule[];
@@ -30,6 +31,7 @@ interface GlobeSceneProps {
   activeUsername?: string;
   onTriggerCloudDive?: (coords: { lat: number; lng: number }) => void;
   onZoomPastThreshold?: () => void;
+  language?: SupportedLanguage;
 }
 
 export const GlobeScene: React.FC<GlobeSceneProps> = ({
@@ -48,6 +50,7 @@ export const GlobeScene: React.FC<GlobeSceneProps> = ({
   activeUsername = 'DoraHacksJudge',
   onTriggerCloudDive,
   onZoomPastThreshold,
+  language = 'en',
 }) => {
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
 
@@ -155,6 +158,7 @@ export const GlobeScene: React.FC<GlobeSceneProps> = ({
               radius={2.0}
               isJudgeOverride={isJudgeOverride}
               activeUsername={activeUsername}
+              language={language}
             />
           ))}
         </group>

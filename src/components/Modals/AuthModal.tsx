@@ -234,14 +234,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <div>
               <h3 className="font-serif font-bold text-base sm:text-lg text-white leading-tight">
                 {mode === 'profile'
-                  ? 'Authenticated Explorer'
+                  ? translate('accountKey', language)
                   : mode === 'verify_email'
-                  ? 'Email Confirmation'
+                  ? (language === 'fr' ? 'Confirmation Email' : 'Email Confirmation')
                   : mode === 'forgot_password' || mode === 'reset_password_code'
-                  ? 'Password Recovery'
+                  ? (language === 'fr' ? 'Récupération de Mot de Passe' : 'Password Recovery')
                   : mode === 'signup'
-                  ? 'Create Explorer Account'
-                  : 'Explorer Sign In'}
+                  ? translate('createAccount', language)
+                  : translate('signIn', language)}
               </h3>
               <p className="text-[11px] sm:text-xs text-amber-200/80">
                 TreasureFest Secure Earth Identity
@@ -273,7 +273,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   : 'border-transparent text-stone-600 hover:text-stone-900'
               }`}
             >
-              Sign In
+              {translate('signIn', language)}
             </button>
             <button
               onClick={() => {
@@ -287,7 +287,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   : 'border-transparent text-stone-600 hover:text-stone-900'
               }`}
             >
-              Create Account
+              {translate('createAccount', language)}
             </button>
           </div>
         )}

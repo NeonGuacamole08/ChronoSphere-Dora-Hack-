@@ -8,6 +8,7 @@ import { reverseGeocodeMapbox } from '../../utils/mapbox';
 import { LandWarningToast } from './LandWarningToast';
 import { GestureTutorialOverlay } from './GestureTutorialOverlay';
 import { UserLocation } from '../../utils/useUserLocation';
+import { SupportedLanguage } from '../../utils/i18n';
 
 interface GlobeViewProps {
   capsules: Capsule[];
@@ -26,6 +27,7 @@ interface GlobeViewProps {
   isJudgeOverride?: boolean;
   activeUsername?: string;
   onTriggerCloudDive?: (coords: { lat: number; lng: number }) => void;
+  language?: SupportedLanguage;
 }
 
 export const GlobeView: React.FC<GlobeViewProps> = ({
@@ -44,6 +46,7 @@ export const GlobeView: React.FC<GlobeViewProps> = ({
   isJudgeOverride = false,
   activeUsername = 'DoraHacksJudge',
   onTriggerCloudDive,
+  language = 'en',
 }) => {
   const [, setClickedCoord] = useState<Coordinates | null>(null);
   const [showOceanWarning, setShowOceanWarning] = useState(false);
@@ -187,6 +190,7 @@ export const GlobeView: React.FC<GlobeViewProps> = ({
           activeUsername={activeUsername}
           onTriggerCloudDive={onTriggerCloudDive}
           onZoomPastThreshold={handleDismissGestureTutorial}
+          language={language}
         />
       </div>
 
@@ -194,12 +198,14 @@ export const GlobeView: React.FC<GlobeViewProps> = ({
       <GestureTutorialOverlay
         isVisible={showGestureTutorial}
         onDismiss={handleDismissGestureTutorial}
+        language={language}
       />
 
       {/* Non-intrusive Ocean Click Notification */}
       <LandWarningToast
         isOpen={showOceanWarning}
         onClose={() => setShowOceanWarning(false)}
+        language={language}
       />
     </div>
   );

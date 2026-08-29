@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, X, Hand } from 'lucide-react';
+import { SupportedLanguage, translate } from '../../utils/i18n';
 
 interface GestureTutorialOverlayProps {
   isVisible: boolean;
   onDismiss: () => void;
+  language?: SupportedLanguage;
 }
 
 export const GestureTutorialOverlay: React.FC<GestureTutorialOverlayProps> = ({
   isVisible,
   onDismiss,
+  language = 'en',
 }) => {
   const [hasInteracted, setHasInteracted] = useState(false);
 
@@ -58,10 +61,10 @@ export const GestureTutorialOverlay: React.FC<GestureTutorialOverlayProps> = ({
         <div className="flex flex-col text-left pr-1">
           <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono uppercase tracking-wider text-cyan-300 font-bold">
             <Sparkles className="w-3 h-3 text-cyan-400 animate-spin" style={{ animationDuration: '4s' }} />
-            <span>Interactive Zoom</span>
+            <span>{translate('interactiveZoom', language)}</span>
           </div>
           <p className="text-xs sm:text-sm font-sans font-semibold text-white leading-snug">
-            Pinch or double-tap to enter <span className="text-amber-300 font-bold">Explore Mode</span>
+            {translate('pinchOrDoubleTap', language)}
           </p>
         </div>
 
@@ -81,3 +84,4 @@ export const GestureTutorialOverlay: React.FC<GestureTutorialOverlayProps> = ({
     </div>
   );
 };
+

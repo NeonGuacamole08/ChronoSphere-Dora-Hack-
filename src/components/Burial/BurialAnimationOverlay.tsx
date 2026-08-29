@@ -267,23 +267,27 @@ export const BurialAnimationOverlay: React.FC<BurialAnimationOverlayProps> = ({
       // Excavated Hole in the Ground (Animates open and smoothly fills back up to 0)
       if (holeFactor > 0.01) {
         ctx.beginPath();
-        ctx.ellipse(centerX, groundY + 10 * holeFactor, (pitWidth / 2) * holeFactor, 28 * holeFactor, 0, 0, Math.PI * 2);
+        const holeRadiusX = Math.max(0.001, (pitWidth / 2) * holeFactor);
+        const holeRadiusY = Math.max(0.001, 28 * holeFactor);
+        ctx.ellipse(centerX, groundY + 10 * holeFactor, holeRadiusX, holeRadiusY, 0, 0, Math.PI * 2);
         ctx.fillStyle = '#0a0502';
         ctx.fill();
-        ctx.lineWidth = 3 * holeFactor;
+        ctx.lineWidth = Math.max(1, 3 * holeFactor);
         ctx.strokeStyle = '#5c3418';
         ctx.stroke();
 
         // Soil mound on sides from digging (shrinks and flattens out)
         if (elapsed > 0.3) {
           ctx.fillStyle = '#3d2110';
+          const moundRadiusX = Math.max(0.001, 35 * holeFactor);
+          const moundRadiusY = Math.max(0.001, 14 * holeFactor);
           // Left dirt mound
           ctx.beginPath();
           ctx.ellipse(
             centerX - pitWidth * 0.55 * holeFactor,
             groundY - 4 * holeFactor,
-            35 * holeFactor,
-            14 * holeFactor,
+            moundRadiusX,
+            moundRadiusY,
             -0.15,
             0,
             Math.PI * 2
@@ -294,8 +298,8 @@ export const BurialAnimationOverlay: React.FC<BurialAnimationOverlayProps> = ({
           ctx.ellipse(
             centerX + pitWidth * 0.55 * holeFactor,
             groundY - 4 * holeFactor,
-            35 * holeFactor,
-            14 * holeFactor,
+            moundRadiusX,
+            moundRadiusY,
             0.15,
             0,
             Math.PI * 2
@@ -312,7 +316,7 @@ export const BurialAnimationOverlay: React.FC<BurialAnimationOverlayProps> = ({
         // Fresh smoothed topsoil strip
         ctx.fillStyle = '#4a2810';
         ctx.beginPath();
-        ctx.ellipse(centerX, groundY, pitWidth * 0.4, 6, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX, groundY, Math.max(0.001, pitWidth * 0.4), 6, 0, 0, Math.PI * 2);
         ctx.fill();
 
         // Fresh grass sprouts covering the smoothed spot
@@ -425,8 +429,10 @@ export const BurialAnimationOverlay: React.FC<BurialAnimationOverlayProps> = ({
               ctx.fill();
             } else {
               // Pebble / stone
+              const pebbleR1 = Math.max(0.001, currentSize);
+              const pebbleR2 = Math.max(0.001, currentSize * 0.65);
               ctx.beginPath();
-              ctx.ellipse(0, 0, currentSize, currentSize * 0.65, 0, 0, Math.PI * 2);
+              ctx.ellipse(0, 0, pebbleR1, pebbleR2, 0, 0, Math.PI * 2);
               ctx.fill();
             }
 
@@ -442,7 +448,9 @@ export const BurialAnimationOverlay: React.FC<BurialAnimationOverlayProps> = ({
         ctx.save();
         ctx.globalAlpha = sealFade;
         ctx.beginPath();
-        ctx.ellipse(centerX, groundY, 44 * sealT, 14 * sealT, 0, 0, Math.PI * 2);
+        const sealRadiusX = Math.max(0.001, 44 * sealT);
+        const sealRadiusY = Math.max(0.001, 14 * sealT);
+        ctx.ellipse(centerX, groundY, sealRadiusX, sealRadiusY, 0, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(245, 158, 11, ${0.4 * (1 - sealT * 0.5)})`;
         ctx.fill();
         ctx.strokeStyle = `rgba(251, 191, 36, ${0.85 * (1 - sealT * 0.2)})`;
