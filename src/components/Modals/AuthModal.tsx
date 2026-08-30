@@ -26,7 +26,7 @@ interface AuthModalProps {
   onAuthSuccess: (user: AppUser) => void;
   onSignOut: () => void;
   onContinueAsGuest?: () => void;
-  initialMode?: 'signin' | 'signup' | 'forgot_password';
+  initialMode?: 'signin' | 'signup' | 'forgot_password' | 'profile';
   language?: SupportedLanguage;
   onSelectLanguage?: (lang: SupportedLanguage) => void;
 }

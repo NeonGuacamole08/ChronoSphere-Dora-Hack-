@@ -23,6 +23,7 @@ import {
   Package,
   Trophy,
   Map,
+  Key,
 } from 'lucide-react';
 import { searchMapboxPlaces, GeocodingResult } from '../../utils/mapbox';
 import { AppUser } from '../../utils/supabase';
@@ -44,6 +45,7 @@ interface HeaderProps {
   currentUser: AppUser | null;
   onOpenAuthModal: (mode?: 'signin' | 'signup') => void;
   onSignOut: () => void;
+  onOpenDashboard?: () => void;
   capsulesCount: number;
   totalCapsulesCount: number;
   vaultCapsulesCount?: number;
@@ -75,6 +77,7 @@ export const Header: React.FC<HeaderProps> = ({
   currentUser,
   onOpenAuthModal,
   onSignOut,
+  onOpenDashboard,
   capsulesCount,
   totalCapsulesCount,
   vaultCapsulesCount,
@@ -274,8 +277,8 @@ export const Header: React.FC<HeaderProps> = ({
         )}
       </div>
 
-      {/* 3. RIGHT: Action Buttons Cluster (Pushed to the left right next to search) */}
-      <div className="flex items-center justify-start gap-1 md:gap-1.5 shrink-0 flex-nowrap overflow-x-auto no-scrollbar">
+      {/* 3. RIGHT: Action Buttons Cluster */}
+      <div className="flex items-center justify-start gap-1 md:gap-1.5 shrink-0 flex-wrap sm:flex-nowrap overflow-visible">
         {/* VIEW MODE TOGGLE BUTTONS */}
         {viewMode === '2d' ? (
           /* 3D Globe Button when in 2D Mode */
@@ -283,11 +286,11 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onSwitchTo3D}
-              className="flex items-center gap-1 md:gap-1.5 px-2 sm:px-2.5 py-1 md:py-1.5 rounded-xl bg-[#180e05]/95 hover:bg-[#251509] text-amber-200 border border-amber-500/60 hover:border-amber-400 text-[11px] md:text-xs font-bold transition shadow-md cursor-pointer shrink-0"
+              className="flex items-center gap-1 md:gap-1.5 px-2 sm:px-2.5 py-1 md:py-1.5 rounded-xl bg-[#180e05]/95 hover:bg-[#251509] text-amber-200 border border-amber-500/60 hover:border-amber-400 text-[11px] md:text-xs font-bold transition shadow-md cursor-pointer shrink-0 whitespace-nowrap"
               title="Switch to 3D Earth Globe View"
             >
-              <Globe className="w-3.5 h-3.5 text-amber-400" />
-              <span>{translate('threeDGlobe', currentLanguage)}</span>
+              <Globe className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span className="whitespace-nowrap">{translate('threeDGlobe', currentLanguage)}</span>
             </button>
           )
         ) : (
@@ -296,11 +299,11 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onSwitchTo2D}
-              className="flex items-center gap-1 md:gap-1.5 px-2 sm:px-2.5 py-1 md:py-1.5 rounded-xl bg-[#0c1626]/90 hover:bg-[#13233a] text-cyan-200 hover:text-white border border-cyan-500/40 text-[11px] md:text-xs font-bold transition shadow-md cursor-pointer shrink-0"
+              className="flex items-center gap-1 md:gap-1.5 px-2 sm:px-2.5 py-1 md:py-1.5 rounded-xl bg-[#0c1626]/90 hover:bg-[#13233a] text-cyan-200 hover:text-white border border-cyan-500/40 text-[11px] md:text-xs font-bold transition shadow-md cursor-pointer shrink-0 whitespace-nowrap"
               title="Switch to 2D OpenStreetMap Explore Mode"
             >
-              <Map className="w-3.5 h-3.5 text-cyan-300" />
-              <span>{translate('exploreMode', currentLanguage)}</span>
+              <Map className="w-3.5 h-3.5 text-cyan-300 shrink-0" />
+              <span className="whitespace-nowrap">{translate('exploreMode', currentLanguage)}</span>
             </button>
           )
         )}
@@ -309,12 +312,12 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           type="button"
           onClick={onOpenCreate}
-          className="hidden md:flex items-center gap-1 md:gap-1.5 px-2 md:px-2.5 lg:px-3 py-1 md:py-1.5 rounded-full bg-[#208b9e] hover:bg-[#1fa1bc] text-white text-[11px] md:text-xs font-bold transition shadow-[0_0_15px_rgba(6,182,212,0.4)] border border-cyan-300 hover:shadow-cyan-400/60 cursor-pointer shrink-0"
+          className="hidden md:flex items-center gap-1 md:gap-1.5 px-2 md:px-2.5 lg:px-3 py-1 md:py-1.5 rounded-full bg-[#208b9e] hover:bg-[#1fa1bc] text-white text-[11px] md:text-xs font-bold transition shadow-[0_0_15px_rgba(6,182,212,0.4)] border border-cyan-300 hover:shadow-cyan-400/60 cursor-pointer shrink-0 whitespace-nowrap"
           title="Plant a new encrypted time capsule"
         >
-          <Plus className="w-3.5 h-3.5 text-cyan-100 stroke-[2.5]" />
-          <span className="hidden lg:inline">{translate('plantCapsule', currentLanguage)}</span>
-          <span className="inline lg:hidden">{translate('plant', currentLanguage)}</span>
+          <Plus className="w-3.5 h-3.5 text-cyan-100 stroke-[2.5] shrink-0" />
+          <span className="hidden lg:inline whitespace-nowrap">{translate('plantCapsule', currentLanguage)}</span>
+          <span className="inline lg:hidden whitespace-nowrap">{translate('plant', currentLanguage)}</span>
         </button>
 
         {/* EVENTS & SCAVENGER HUNT COMPETITIONS BUTTON */}
@@ -322,16 +325,16 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={onOpenEvents}
-            className={`flex items-center gap-1 md:gap-1.5 px-2 sm:px-2.5 py-1 md:py-1.5 rounded-xl border text-[11px] md:text-xs font-bold transition shadow-md cursor-pointer shrink-0 ${
+            className={`flex items-center gap-1 md:gap-1.5 px-2 sm:px-2.5 py-1 md:py-1.5 rounded-xl border text-[11px] md:text-xs font-bold transition shadow-md cursor-pointer shrink-0 whitespace-nowrap ${
               activeEventId
                 ? 'bg-gradient-to-r from-amber-500 to-yellow-400 text-stone-950 border-amber-300 ring-2 ring-amber-400/60 shadow-[0_0_15px_rgba(245,158,11,0.6)] animate-pulse'
                 : 'bg-[#180e05]/95 hover:bg-[#251509] text-amber-200 border-amber-500/60 hover:border-amber-400'
             }`}
             title="Scavenger Hunt Competitions & Events Dashboard"
           >
-            <Trophy className={`w-3.5 h-3.5 ${activeEventId ? 'text-stone-950' : 'text-amber-400'}`} />
-            <span className="hidden sm:inline">{translate('events', currentLanguage)}</span>
-            <span className="inline sm:hidden">Hunts</span>
+            <Trophy className={`w-3.5 h-3.5 shrink-0 ${activeEventId ? 'text-stone-950' : 'text-amber-400'}`} />
+            <span className="hidden sm:inline whitespace-nowrap">{translate('events', currentLanguage)}</span>
+            <span className="inline sm:hidden whitespace-nowrap">Hunts</span>
             {activeEventId && (
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping ml-0.5" />
             )}
@@ -343,14 +346,14 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={onOpenVault}
-            className="flex items-center gap-1 md:gap-1.5 px-1.5 sm:px-2 md:px-2.5 lg:px-3 py-1 md:py-1.5 rounded-xl bg-[#121c2b]/95 hover:bg-[#1c2c43] text-amber-200 border border-amber-500/60 hover:border-amber-400 text-[11px] md:text-xs font-bold transition shadow-md hover:shadow-[0_0_14px_rgba(245,158,11,0.35)] cursor-pointer shrink-0"
+            className="flex items-center gap-1 md:gap-1.5 px-1.5 sm:px-2 md:px-2.5 lg:px-3 py-1 md:py-1.5 rounded-xl bg-[#121c2b]/95 hover:bg-[#1c2c43] text-amber-200 border border-amber-500/60 hover:border-amber-400 text-[11px] md:text-xs font-bold transition shadow-md hover:shadow-[0_0_14px_rgba(245,158,11,0.35)] cursor-pointer shrink-0 whitespace-nowrap"
             title={`My Vault: ${vaultCapsulesCount ?? 0} personal capsules in safe`}
           >
-            <Package className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden sm:inline">{translate('myVault', currentLanguage)}</span>
+            <Package className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="hidden sm:inline whitespace-nowrap">{translate('myVault', currentLanguage)}</span>
             <span
               id="my-vault-capsule-badge"
-              className="text-[9px] md:text-[10px] px-1.5 py-0.2 rounded-full bg-amber-950/90 text-amber-300 border border-amber-600/60 font-mono font-bold shadow-inner"
+              className="text-[9px] md:text-[10px] px-1.5 py-0.2 rounded-full bg-amber-950/90 text-amber-300 border border-amber-600/60 font-mono font-bold shadow-inner shrink-0"
             >
               {vaultCapsulesCount ?? 0}
             </span>
@@ -609,82 +612,119 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* User Profile / Supabase Menu Dropdown */}
           {showUserDropdown && currentUser && (
-            <div className="absolute right-0 top-full mt-2 w-64 p-3 rounded-2xl bg-[#0b1320]/95 backdrop-blur-md border border-emerald-500/50 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150">
-              <div className="flex items-center gap-2.5 pb-2.5 border-b border-cyan-500/30">
+            <div className="absolute right-0 top-full mt-2 w-72 p-3 rounded-2xl bg-gradient-to-b from-[#180f07] to-[#0d0703] backdrop-blur-md border border-amber-500/50 shadow-[0_15px_50px_rgba(0,0,0,0.9)] z-50 animate-in fade-in zoom-in-95 duration-150 text-amber-100 font-sans">
+              {/* User Info Header */}
+              <div className="flex items-center gap-2.5 pb-2.5 border-b border-amber-500/30">
                 <img
                   src={currentUser.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=explorer'}
                   alt={currentUser.username}
-                  className="w-9 h-9 rounded-full border border-emerald-400 object-cover bg-stone-900"
+                  className="w-10 h-10 rounded-xl border border-amber-400 object-cover bg-stone-900 shadow-sm"
                 />
                 <div className="min-w-0 flex-1">
-                  <div className="font-bold text-xs text-white truncate">
-                    {currentUser.username}
+                  <div className="font-bold text-xs text-white truncate flex items-center gap-1.5">
+                    <span>{currentUser.username}</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   </div>
-                  <div className="text-[11px] text-emerald-300/80 truncate">
+                  <div className="text-[11px] text-amber-200/70 truncate">
                     {currentUser.email}
+                  </div>
+                  <div className="text-[9px] font-mono text-amber-400/90 font-bold mt-0.5">
+                    Verified Time Explorer
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-1 mt-2">
+              {/* Action Buttons List */}
+              <div className="space-y-1 mt-2 text-xs">
+                {/* 1. User Dashboard Button */}
+                {onOpenDashboard && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowUserDropdown(false);
+                      onOpenDashboard();
+                    }}
+                    className="w-full text-left px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-950/80 to-[#2c1709] hover:from-amber-900 hover:to-[#381e0c] text-amber-100 border border-amber-500/40 hover:border-amber-400 transition cursor-pointer flex items-center justify-between font-bold shadow-xs"
+                  >
+                    <span className="flex items-center gap-2">
+                      <User className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Explorer Dashboard</span>
+                    </span>
+                    <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-500 text-stone-950 font-extrabold font-mono">
+                      NEW
+                    </span>
+                  </button>
+                )}
+
+                {/* 2. My Vault Safe */}
+                {onOpenVault && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowUserDropdown(false);
+                      onOpenVault();
+                    }}
+                    className="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[#251509] text-amber-200/90 hover:text-white transition cursor-pointer flex items-center justify-between"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Package className="w-3.5 h-3.5 text-amber-400" />
+                      <span>{translate('myVault', currentLanguage)}</span>
+                    </span>
+                    <span className="text-[10px] font-mono text-amber-400 font-bold">
+                      {vaultCapsulesCount ?? 0} in safe
+                    </span>
+                  </button>
+                )}
+
+                {/* 3. Account & Security Key */}
                 <button
                   type="button"
                   onClick={() => {
                     setShowUserDropdown(false);
                     onOpenAuthModal('profile' as any);
                   }}
-                  className="w-full text-left px-2.5 py-1.5 rounded-xl text-xs hover:bg-cyan-950/70 text-cyan-100 transition cursor-pointer flex items-center justify-between"
+                  className="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[#251509] text-amber-200/90 hover:text-white transition cursor-pointer flex items-center justify-between"
                 >
-                  <span>{translate('accountKey', currentLanguage)}</span>
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="flex items-center gap-2">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>{translate('accountKey', currentLanguage)}</span>
+                  </span>
+                  <Key className="w-3 h-3 text-amber-400/60" />
                 </button>
 
-                {/* Language Selector Dropdown inside User Settings */}
-                <div className="pt-2 border-t border-cyan-500/20 mt-1.5">
-                  <div className="flex items-center justify-between text-[10px] text-cyan-300 font-mono mb-1.5 px-1 font-bold">
-                    <span className="flex items-center gap-1.5">
-                      <Globe className="w-3 h-3 text-cyan-400" />
-                      {translate('preferredLanguage', currentLanguage)}
-                    </span>
-                    <span className="text-emerald-400 font-bold uppercase">{currentLanguage}</span>
-                  </div>
-                  <div className="grid grid-cols-1 gap-1">
-                    {LANGUAGES.map((lang) => (
-                      <button
-                        key={lang.code}
-                        type="button"
-                        onClick={() => {
-                          if (onSelectLanguage) {
-                            onSelectLanguage(lang.code);
-                          }
-                          setShowUserDropdown(false);
-                        }}
-                        className={`w-full text-left px-2.5 py-1.5 rounded-xl text-xs transition cursor-pointer flex items-center justify-between ${
-                          currentLanguage === lang.code
-                            ? 'bg-cyan-500/25 text-cyan-200 border border-cyan-400/60 font-bold'
-                            : 'text-stone-300 hover:bg-cyan-950/60 border border-transparent'
-                        }`}
-                      >
-                        <span className="flex items-center gap-2">
-                          <span className="text-sm">{lang.flag}</span>
-                          <span>{lang.nativeName}</span>
-                          <span className="text-[10px] text-cyan-400/50">({lang.name})</span>
-                        </span>
-                        {currentLanguage === lang.code && (
-                          <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.8)]" />
-                        )}
-                      </button>
-                    ))}
+                {/* 4. Compact Language Selector Row (Single Row!) */}
+                <div className="pt-2 border-t border-amber-500/20 mt-1 flex items-center justify-between px-1">
+                  <span className="flex items-center gap-1.5 text-[11px] text-amber-200/80 font-medium">
+                    <Globe className="w-3.5 h-3.5 text-amber-400" />
+                    <span>{translate('preferredLanguage', currentLanguage)}</span>
+                  </span>
+                  <div className="relative">
+                    <select
+                      value={currentLanguage}
+                      onChange={(e) => {
+                        if (onSelectLanguage) {
+                          onSelectLanguage(e.target.value as SupportedLanguage);
+                        }
+                      }}
+                      className="bg-[#241509] border border-amber-600/40 text-amber-200 font-bold text-[11px] rounded-lg px-2 py-1 focus:outline-none cursor-pointer pr-5"
+                    >
+                      {LANGUAGES.map((lang) => (
+                        <option key={lang.code} value={lang.code} className="bg-[#180f08] text-amber-100">
+                          {lang.flag} {lang.nativeName}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
+                {/* 5. Sign Out Button */}
                 <button
                   type="button"
                   onClick={() => {
                     setShowUserDropdown(false);
                     onSignOut();
                   }}
-                  className="w-full text-left px-2.5 py-1.5 rounded-xl text-xs hover:bg-rose-950/70 text-rose-300 transition cursor-pointer flex items-center justify-between border-t border-cyan-500/20 mt-1 pt-1.5"
+                  className="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-rose-950/70 text-rose-300 hover:text-rose-200 transition cursor-pointer flex items-center justify-between border-t border-amber-500/20 mt-1.5 pt-1.5 font-medium"
                 >
                   <span>{translate('signOut', currentLanguage)}</span>
                   <LogOut className="w-3.5 h-3.5 text-rose-400" />

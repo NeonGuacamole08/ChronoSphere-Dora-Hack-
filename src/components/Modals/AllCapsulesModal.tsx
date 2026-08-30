@@ -212,30 +212,27 @@ export const AllCapsulesModal: React.FC<AllCapsulesModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/75 backdrop-blur-sm animate-fade-in">
       <div
         id="all-capsules-global-archive-modal"
-        className="relative w-full max-w-5xl max-h-[92vh] bg-gradient-to-b from-[#180f08] via-[#120a04] to-[#0a0502] border border-amber-500/50 rounded-2xl sm:rounded-3xl shadow-[0_25px_80px_rgba(0,0,0,0.95)] flex flex-col overflow-hidden text-amber-100 font-sans"
+        className="relative w-full max-w-5xl max-h-[92vh] parchment-card border-2 border-amber-800/40 rounded-2xl sm:rounded-3xl shadow-[0_25px_80px_rgba(0,0,0,0.6)] flex flex-col overflow-hidden text-amber-950 font-sans"
       >
-        {/* Ambient Warm Golden Glow */}
-        <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
-
-        {/* 1. MODAL HEADER & HEATMAP CONTROLLER */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-3.5 sm:py-4 bg-gradient-to-r from-[#26160c] via-[#1c0f06] to-[#26160c] border-b border-amber-500/40">
+        {/* 1. MODAL HEADER & HEATMAP CONTROLLER (Tree Bark Banner) */}
+        <div className="tree-bark-banner flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-3.5 sm:py-4 border-b border-amber-800/40 text-amber-100">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-600 to-yellow-400 text-stone-950 flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.5)] shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-stone-950 flex items-center justify-center shadow-md shrink-0">
               <Layers className="w-5 h-5 text-stone-950 stroke-[2.5]" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="font-serif font-bold text-lg sm:text-xl text-white tracking-tight leading-tight">
+                <h2 className="font-serif font-bold text-lg sm:text-xl text-amber-100 tracking-tight leading-tight">
                   Global Capsule Archive & Memory Heatmap
                 </h2>
-                <span className="px-2 py-0.5 rounded-full bg-amber-950/90 border border-amber-400/60 text-[10px] sm:text-xs font-mono font-bold text-amber-300 shadow-inner">
+                <span className="px-2 py-0.5 rounded-full bg-amber-950/80 border border-amber-400/50 text-[10px] sm:text-xs font-mono font-bold text-amber-300 shadow-inner">
                   {stats.total} Total Capsules
                 </span>
               </div>
-              <p className="text-[11px] sm:text-xs text-amber-200/70 mt-0.5">
+              <p className="text-[11px] sm:text-xs text-amber-200/80 mt-0.5">
                 Explore every time capsule buried worldwide across {stats.countriesCount} countries.
               </p>
             </div>
@@ -249,7 +246,7 @@ export const AllCapsulesModal: React.FC<AllCapsulesModalProps> = ({
               className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold transition cursor-pointer shadow-md ${
                 showHeatmap
                   ? 'bg-gradient-to-r from-amber-500 to-yellow-400 text-stone-950 border-amber-300 ring-2 ring-amber-400/60 shadow-[0_0_20px_rgba(245,158,11,0.6)]'
-                  : 'bg-[#2a1a0e] hover:bg-[#382313] text-amber-200 border-amber-600/50'
+                  : 'bg-black/30 hover:bg-black/50 text-amber-200 border-amber-500/40'
               }`}
               title="Toggle 3D Glowing Heatmap of Memory Density on Earth"
             >
@@ -261,7 +258,7 @@ export const AllCapsulesModal: React.FC<AllCapsulesModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 sm:p-2 rounded-xl bg-[#2a1a0e] hover:bg-[#3a2414] text-amber-300 hover:text-white transition cursor-pointer border border-amber-600/50"
+              className="p-1.5 sm:p-2 rounded-xl bg-black/30 hover:bg-black/50 text-amber-200 hover:text-white transition cursor-pointer border border-amber-500/40"
               aria-label="Close modal"
             >
               <X className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -270,31 +267,31 @@ export const AllCapsulesModal: React.FC<AllCapsulesModalProps> = ({
         </div>
 
         {/* 2. SUMMARY METRICS & QUICK HOTSPOTS BAR */}
-        <div className="px-4 sm:px-6 py-2.5 bg-[#140b05] border-b border-amber-500/30 flex flex-col md:flex-row md:items-center justify-between gap-2.5 text-xs">
+        <div className="px-4 sm:px-6 py-2.5 bg-amber-900/10 border-b border-amber-800/20 flex flex-col md:flex-row md:items-center justify-between gap-2.5 text-xs text-amber-950">
           {/* Quick Metrics */}
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 text-[11px] font-medium font-mono">
-              <Unlock className="w-3 h-3 text-emerald-400" />
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-300 text-[11px] font-medium font-mono">
+              <Unlock className="w-3 h-3 text-emerald-700" />
               {stats.unlocked} Unlocked
             </span>
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-950/80 text-amber-300 border border-amber-500/40 text-[11px] font-medium font-mono">
-              <Lock className="w-3 h-3 text-amber-400" />
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 text-[11px] font-medium font-mono">
+              <Lock className="w-3 h-3 text-amber-700" />
               {stats.locked} Locked
             </span>
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-purple-950/80 text-purple-300 border border-purple-500/40 text-[11px] font-medium font-mono">
-              <Trophy className="w-3 h-3 text-purple-400" />
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-purple-100 text-purple-900 border border-purple-300 text-[11px] font-medium font-mono">
+              <Trophy className="w-3 h-3 text-purple-700" />
               {stats.eventsCount} Events
             </span>
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#2f1b0a] text-amber-200 border border-amber-500/40 text-[11px] font-medium font-mono">
-              <Mic className="w-3 h-3 text-amber-400" />
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 text-[11px] font-medium font-mono">
+              <Mic className="w-3 h-3 text-amber-700" />
               {stats.audioCount} Audio
             </span>
           </div>
 
           {/* Quick Hotspot Fly-to shortcuts */}
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-            <span className="text-[10px] text-amber-300/80 font-mono uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
-              <Compass className="w-3 h-3 text-amber-400" />
+            <span className="text-[10px] text-amber-900/80 font-mono uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
+              <Compass className="w-3 h-3 text-amber-700" />
               Hotspots:
             </span>
             {hotspots.map((h) => (
@@ -324,7 +321,7 @@ export const AllCapsulesModal: React.FC<AllCapsulesModalProps> = ({
                   });
                   onClose();
                 }}
-                className="px-2 py-0.5 rounded-lg bg-[#241408] hover:bg-amber-900/60 text-amber-200 hover:text-white border border-amber-600/40 text-[10px] font-medium transition cursor-pointer shrink-0 whitespace-nowrap"
+                className="px-2 py-0.5 rounded-lg bg-white hover:bg-amber-100 text-amber-950 border border-amber-700/30 text-[10px] font-medium transition cursor-pointer shrink-0 whitespace-nowrap shadow-xs"
               >
                 {h.name}
               </button>
@@ -333,22 +330,22 @@ export const AllCapsulesModal: React.FC<AllCapsulesModalProps> = ({
         </div>
 
         {/* 3. SEARCH, FILTERS & SORTING CONTROLS */}
-        <div className="p-3 sm:p-4 bg-[#160d05] border-b border-amber-500/30 flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+        <div className="p-3 sm:p-4 bg-white/80 border-b border-amber-800/20 flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
           {/* Search bar */}
           <div className="relative flex-1 min-w-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-400/80" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-700/80" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by title, location, country, creator @username, tag, or story..."
-              className="w-full pl-9 pr-3 py-1.5 sm:py-2 rounded-xl bg-[#0f0703] border border-amber-500/40 text-amber-100 placeholder:text-amber-400/40 text-xs sm:text-sm focus:outline-none focus:border-amber-400 shadow-inner font-sans"
+              className="w-full pl-9 pr-3 py-1.5 sm:py-2 rounded-xl bg-white border border-amber-800/30 text-amber-950 placeholder:text-amber-900/40 text-xs sm:text-sm focus:outline-none focus:border-amber-600 shadow-xs font-sans"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-amber-400/70 hover:text-amber-200 text-xs cursor-pointer"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-amber-700 hover:text-amber-950 text-xs cursor-pointer font-bold"
               >
                 Clear
               </button>
@@ -358,7 +355,7 @@ export const AllCapsulesModal: React.FC<AllCapsulesModalProps> = ({
           {/* Category Tabs & Sort */}
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0">
             {/* Filter pills */}
-            <div className="flex items-center bg-[#0f0703] p-1 rounded-xl border border-amber-500/30 gap-1 shrink-0">
+            <div className="flex items-center bg-[#f5ecdc] p-1 rounded-xl border border-amber-800/20 gap-1 shrink-0">
               {(
                 [
                   { id: 'all', label: 'All', count: stats.total },
@@ -374,14 +371,14 @@ export const AllCapsulesModal: React.FC<AllCapsulesModalProps> = ({
                   onClick={() => setFilterCategory(tab.id)}
                   className={`px-2 sm:px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer whitespace-nowrap flex items-center gap-1 ${
                     filterCategory === tab.id
-                      ? 'bg-gradient-to-r from-amber-500 to-yellow-400 text-stone-950 shadow-sm'
-                      : 'text-amber-300/80 hover:text-white hover:bg-[#251508]'
+                      ? 'bg-gradient-to-r from-amber-700 to-amber-900 text-amber-100 shadow-xs'
+                      : 'text-amber-950/80 hover:text-amber-950 hover:bg-amber-200/50'
                   }`}
                 >
                   <span>{tab.label}</span>
                   <span
                     className={`text-[9px] px-1 rounded-full font-mono ${
-                      filterCategory === tab.id ? 'bg-stone-950 text-amber-300' : 'bg-amber-950 text-amber-400'
+                      filterCategory === tab.id ? 'bg-amber-950 text-amber-300' : 'bg-amber-200 text-amber-900'
                     }`}
                   >
                     {tab.count}
@@ -394,7 +391,7 @@ export const AllCapsulesModal: React.FC<AllCapsulesModalProps> = ({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-2 sm:px-2.5 py-1.5 rounded-xl bg-[#0f0703] border border-amber-500/40 text-amber-200 text-[11px] font-medium focus:outline-none cursor-pointer"
+              className="px-2 sm:px-2.5 py-1.5 rounded-xl bg-white border border-amber-800/30 text-amber-950 text-[11px] font-medium focus:outline-none cursor-pointer shadow-xs"
             >
               <option value="newest">Newest First</option>
               <option value="soonest">Unlocking Soonest</option>
@@ -405,18 +402,18 @@ export const AllCapsulesModal: React.FC<AllCapsulesModalProps> = ({
         </div>
 
         {/* 4. CAPSULES DIRECTORY LIST */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-3 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-3 bg-[#faf5ec]/60 custom-scrollbar">
           {displayedCapsules.length === 0 ? (
-            <div className="py-12 text-center text-amber-200/60 flex flex-col items-center justify-center gap-2">
-              <MapPin className="w-10 h-10 text-amber-500/40 animate-bounce" />
-              <p className="font-bold text-sm text-amber-200">No capsules matched your current search or filter.</p>
+            <div className="py-12 text-center text-amber-950/60 flex flex-col items-center justify-center gap-2">
+              <MapPin className="w-10 h-10 text-amber-600 animate-bounce" />
+              <p className="font-bold text-sm text-amber-950">No capsules matched your current search or filter.</p>
               <button
                 type="button"
                 onClick={() => {
                   setSearchQuery('');
                   setFilterCategory('all');
                 }}
-                className="mt-2 px-3 py-1.5 rounded-xl bg-amber-950 hover:bg-amber-900 border border-amber-400 text-xs font-bold text-amber-300 transition cursor-pointer"
+                className="mt-2 px-3 py-1.5 rounded-xl bg-amber-800 hover:bg-amber-900 border border-amber-600 text-xs font-bold text-amber-100 transition cursor-pointer shadow-xs"
               >
                 Reset Filters
               </button>
@@ -430,7 +427,7 @@ export const AllCapsulesModal: React.FC<AllCapsulesModalProps> = ({
                 return (
                   <div
                     key={cap.id}
-                    className="relative group p-3.5 sm:p-4 rounded-2xl bg-[#1c1108]/90 hover:bg-[#26170c] border border-amber-500/30 hover:border-amber-400/80 transition-all duration-200 shadow-md flex flex-col justify-between gap-3"
+                    className="relative group p-3.5 sm:p-4 rounded-2xl bg-white hover:bg-amber-50/70 border border-amber-800/25 hover:border-amber-700 transition-all duration-200 shadow-xs hover:shadow-md flex flex-col justify-between gap-3 text-amber-950"
                   >
                     {/* Top Row: Country flag + Location & Status Pill */}
                     <div className="flex items-start justify-between gap-2">
@@ -439,11 +436,11 @@ export const AllCapsulesModal: React.FC<AllCapsulesModalProps> = ({
                           {flag}
                         </span>
                         <div className="min-w-0">
-                          <h4 className="font-bold text-sm sm:text-base text-white tracking-tight truncate group-hover:text-amber-200 transition">
+                          <h4 className="font-bold text-sm sm:text-base text-amber-950 font-serif tracking-tight truncate group-hover:text-amber-800 transition">
                             {cap.title}
                           </h4>
-                          <p className="text-[11px] text-amber-300/80 flex items-center gap-1 truncate">
-                            <MapPin className="w-3 h-3 text-amber-400 shrink-0" />
+                          <p className="text-[11px] text-amber-900/75 flex items-center gap-1 truncate">
+                            <MapPin className="w-3 h-3 text-amber-700 shrink-0" />
                             <span className="truncate">{cap.location_name || `${cap.lat.toFixed(2)}°, ${cap.lng.toFixed(2)}°`}</span>
                           </p>
                         </div>
@@ -452,13 +449,13 @@ export const AllCapsulesModal: React.FC<AllCapsulesModalProps> = ({
                       {/* Status badge */}
                       <div className="shrink-0">
                         {countdown.isUnlocked ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/50 text-[10px] font-bold font-mono shadow-xs">
-                            <Unlock className="w-2.5 h-2.5 text-emerald-400" />
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold font-mono shadow-xs">
+                            <Unlock className="w-2.5 h-2.5 text-emerald-700" />
                             Ready
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-500/50 text-[10px] font-bold font-mono shadow-xs">
-                            <Lock className="w-2.5 h-2.5 text-amber-400" />
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold font-mono shadow-xs">
+                            <Lock className="w-2.5 h-2.5 text-amber-700" />
                             {countdown.text}
                           </span>
                         )}
@@ -467,15 +464,15 @@ export const AllCapsulesModal: React.FC<AllCapsulesModalProps> = ({
 
                     {/* Capsule Story Snippet / Message preview */}
                     {cap.message && (
-                      <p className="text-xs text-amber-100/80 line-clamp-2 italic font-sans pl-2 border-l-2 border-amber-500/50">
+                      <p className="text-xs text-amber-950/85 line-clamp-2 italic font-sans pl-2 border-l-2 border-amber-600/50">
                         "{cap.message}"
                       </p>
                     )}
 
                     {/* Meta info & Badges row */}
-                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-amber-500/20 text-[11px] text-amber-300/70">
+                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-amber-800/15 text-[11px] text-amber-900/70">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-medium text-amber-200">
+                        <span className="font-medium text-amber-950">
                           @{cap.creator_username.replace('@', '')}
                         </span>
                         <span>•</span>
@@ -485,27 +482,27 @@ export const AllCapsulesModal: React.FC<AllCapsulesModalProps> = ({
                       {/* Feature icons */}
                       <div className="flex items-center gap-1.5">
                         {(cap.audio_url || cap.attachments?.some((a) => a.type === 'audio')) && (
-                          <span title="Contains Voice Recording" className="p-1 rounded bg-amber-950 text-amber-300 border border-amber-600/30">
+                          <span title="Contains Voice Recording" className="p-1 rounded bg-amber-100 text-amber-800 border border-amber-300">
                             <Mic className="w-3 h-3" />
                           </span>
                         )}
                         {cap.spotify_track_id && (
-                          <span title="Contains Spotify Soundtrack" className="p-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-600/30">
+                          <span title="Contains Spotify Soundtrack" className="p-1 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
                             <Music className="w-3 h-3" />
                           </span>
                         )}
                         {cap.photo_url && (
-                          <span title="Contains Photo Attachment" className="p-1 rounded bg-yellow-950 text-yellow-300 border border-yellow-600/30">
+                          <span title="Contains Photo Attachment" className="p-1 rounded bg-amber-100 text-amber-800 border border-amber-300">
                             <ImageIcon className="w-3 h-3" />
                           </span>
                         )}
                         {cap.is_encrypted && (
-                          <span title="AES-256 GCM Encrypted" className="p-1 rounded bg-purple-950 text-purple-300 border border-purple-600/30">
+                          <span title="AES-256 GCM Encrypted" className="p-1 rounded bg-purple-100 text-purple-800 border border-purple-300">
                             <ShieldCheck className="w-3 h-3" />
                           </span>
                         )}
                         {cap.event_id && (
-                          <span title="Scavenger Hunt Event Quest" className="p-1 rounded bg-rose-950 text-rose-300 border border-rose-600/30">
+                          <span title="Scavenger Hunt Event Quest" className="p-1 rounded bg-rose-100 text-rose-800 border border-rose-300">
                             <Trophy className="w-3 h-3" />
                           </span>
                         )}
@@ -521,9 +518,9 @@ export const AllCapsulesModal: React.FC<AllCapsulesModalProps> = ({
                           onSelectCapsuleOnGlobe(cap);
                           onClose();
                         }}
-                        className="flex-1 py-1.5 px-2.5 rounded-xl bg-[#261509] hover:bg-[#341e0d] text-amber-200 hover:text-white border border-amber-500/40 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                        className="flex-1 py-1.5 px-2.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-800/30 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
                       >
-                        <Compass className="w-3.5 h-3.5 text-amber-400" />
+                        <Compass className="w-3.5 h-3.5 text-amber-800" />
                         <span>Fly to on Globe</span>
                       </button>
 
@@ -533,9 +530,9 @@ export const AllCapsulesModal: React.FC<AllCapsulesModalProps> = ({
                         onClick={() => {
                           onOpenCapsuleModal(cap);
                         }}
-                        className="flex-1 py-1.5 px-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-stone-950 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
+                        className="flex-1 py-1.5 px-2.5 rounded-xl bg-gradient-to-r from-amber-700 to-amber-900 hover:from-amber-600 hover:to-amber-800 text-amber-100 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs border border-amber-500/40"
                       >
-                        <Sparkles className="w-3.5 h-3.5 text-stone-950 stroke-[2.5]" />
+                        <Sparkles className="w-3.5 h-3.5 text-amber-300 stroke-[2.5]" />
                         <span>Inspect Capsule</span>
                       </button>
                     </div>
@@ -546,8 +543,8 @@ export const AllCapsulesModal: React.FC<AllCapsulesModalProps> = ({
           )}
         </div>
 
-        {/* 5. MODAL FOOTER */}
-        <div className="px-4 sm:px-6 py-3 bg-gradient-to-r from-[#26160c] via-[#1c0f06] to-[#26160c] border-t border-amber-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-amber-200/80">
+        {/* 5. MODAL FOOTER (Tree Bark Banner) */}
+        <div className="tree-bark-banner px-4 sm:px-6 py-3 border-t border-amber-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-amber-100">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
             <span>
@@ -558,7 +555,7 @@ export const AllCapsulesModal: React.FC<AllCapsulesModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="self-end sm:self-auto px-4 py-1.5 rounded-xl bg-[#2a1a0e] hover:bg-[#382313] text-amber-100 font-bold transition cursor-pointer border border-amber-600/50 shadow-sm"
+            className="self-end sm:self-auto px-4 py-1.5 rounded-xl bg-black/30 hover:bg-black/50 text-amber-100 font-bold transition cursor-pointer border border-amber-500/40 shadow-xs"
           >
             Close Archive
           </button>

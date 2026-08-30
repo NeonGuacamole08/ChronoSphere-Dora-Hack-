@@ -17,8 +17,8 @@ import { BurialAnimationOverlay } from './components/Burial/BurialAnimationOverl
 import { ExcavationAnimationOverlay } from './components/Burial/ExcavationAnimationOverlay';
 import { OfflineViewerModal } from './components/OfflineViewer/OfflineViewerModal';
 import { BackendHubModal } from './components/BackendHub/BackendHubModal';
-import { HelpModal } from './components/Modals/HelpModal';
-import { WelcomeGuideModal } from './components/Modals/WelcomeGuideModal';
+import { UserDashboardModal } from './components/Dashboard/UserDashboardModal';
+import { InteractiveDemoModal } from './components/Modals/InteractiveDemoModal';
 import { AllCapsulesModal } from './components/Modals/AllCapsulesModal';
 import { AuthModal } from './components/Modals/AuthModal';
 import { ResetPasswordModal } from './components/Modals/ResetPasswordModal';
@@ -59,7 +59,7 @@ export default function App() {
   // 2. Real Supabase Authentication State & Session Persistence (Defaults to Guest Mode)
   const [currentUser, setCurrentUser] = useState<AppUser | null>(() => createGuestUser());
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup' | 'forgot_password'>('signin');
+  const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup' | 'forgot_password' | 'profile'>('signin');
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
 
   // 2b. Language Localization State (Language selection comes first before tutorial!)
@@ -281,9 +281,9 @@ export default function App() {
   const [offlineCapsule, setOfflineCapsule] = useState<Capsule | null>(null);
   const [isOfflineViewerOpen, setIsOfflineViewerOpen] = useState(false);
 
-  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
-  const [isWelcomeGuideOpen, setIsWelcomeGuideOpen] = useState<boolean>(() => {
-    // If language was already chosen previously, show guide unless user dismissed it
+  const [isUserDashboardOpen, setIsUserDashboardOpen] = useState(false);
+  const [isDemoModalOpen, setIsDemoModalOpen] = useState<boolean>(() => {
+    // If language was already chosen previously, show demo unless user dismissed it
     if (hasSelectedInitialLanguage()) {
       try {
         return localStorage.getItem('chronospheres_welcome_dismissed') !== 'true';
@@ -291,7 +291,7 @@ export default function App() {
         return false;
       }
     }
-    // Choosing the language MUST come first! So tutorial remains closed until language is picked.
+    // Choosing the language MUST come first! So demo remains closed until language is picked.
     return false;
   });
   const [isBackendHubOpen, setIsBackendHubOpen] = useState(false);
@@ -373,7 +373,7 @@ export default function App() {
     // If this was initial setup on app startup, immediately open the tutorial in the selected language!
     if (isInitial || isInitialLanguageSetup) {
       setIsInitialLanguageSetup(false);
-      setIsWelcomeGuideOpen(true);
+      setIsDemoModalOpen(true);
     }
   };
 
@@ -685,7 +685,7 @@ export default function App() {
   };
 
   // Open Auth Modal
-  const handleOpenAuth = (mode: 'signin' | 'signup' | 'forgot_password' = 'signin') => {
+  const handleOpenAuth = (mode: 'signin' | 'signup' | 'forgot_password' | 'profile' = 'signin') => {
     setAuthModalMode(mode);
     setIsAuthModalOpen(true);
   };
@@ -756,7 +756,8 @@ export default function App() {
         showHeatmap={showHeatmap}
         isAudioMuted={isAudioMuted}
         onToggleAudio={handleToggleAudio}
-        onOpenHelp={() => setIsWelcomeGuideOpen(true)}
+        onOpenHelp={() => setIsDemoModalOpen(true)}
+        onOpenDashboard={() => setIsUserDashboardOpen(true)}
         onOpenBackendHub={() => setIsBackendHubOpen(true)}
         currentUser={currentUser}
         onOpenAuthModal={handleOpenAuth}
@@ -857,10 +858,10 @@ export default function App() {
           onFlyInComplete={() => {
             try {
               if (localStorage.getItem('chronospheres_welcome_dismissed') !== 'true') {
-                setIsWelcomeGuideOpen(true);
+                setIsDemoModalOpen(true);
               }
             } catch (e) {
-              setIsWelcomeGuideOpen(true);
+              setIsDemoModalOpen(true);
             }
           }}
           onOpenCreateWithCoords={handleOpenCreateWithCoords}
@@ -999,7 +1000,7 @@ export default function App() {
         onUnlockTest={handleUnlockTest}
         onOpenOfflineViewer={handleOpenOfflineViewer}
         onDeleteCapsule={handleDeleteCapsule}
-        onOpenTutorial={() => setIsWelcomeGuideOpen(true)}
+        onOpenTutorial={() => setIsDemoModalOpen(true)}
         isJudgeOverride={false}
         simulatedTimeOffsetMs={simulatedTimeOffsetMs}
         userLocation={userLocation}
@@ -1036,23 +1037,48 @@ export default function App() {
         }}
       />
 
-      {/* 11. Welcome & Site Guide Modal (Tutorial) */}
-      <WelcomeGuideModal
-        isOpen={isWelcomeGuideOpen && !isLanguageModalOpen}
-        onClose={() => setIsWelcomeGuideOpen(false)}
+      {/* 11. Interactive Feature Video Demo Walkthrough (Accessible via '?' button & Startup) */}
+      <InteractiveDemoModal
+        isOpen={isDemoModalOpen && !isLanguageModalOpen}
+        onClose={() => setIsDemoModalOpen(false)}
         language={currentLanguage}
         onSelectLanguage={handleSelectLanguage}
         onOpenPlantModal={() => {
           setCreateCoords(null);
           setIsCreateModalOpen(true);
         }}
-        onOpenBackendHub={() => setIsBackendHubOpen(true)}
+        onOpenVault={() => setIsVaultOpen(true)}
+        onOpenEvents={() => setIsEventsDashboardOpen(true)}
+        onOpenHeatmap={() => {
+          setShowHeatmap(true);
+          setIsAllCapsulesModalOpen(true);
+        }}
+        onToggleStreetView={() => setViewMode((prev) => (prev === '3d' ? '2d' : '3d'))}
       />
 
-      {/* 12. Help / Protocol Guide Modal */}
-      <HelpModal
-        isOpen={isHelpModalOpen}
-        onClose={() => setIsHelpModalOpen(false)}
+      {/* 12. Explorer User Dashboard (Updates & Notifications) */}
+      <UserDashboardModal
+        isOpen={isUserDashboardOpen}
+        onClose={() => setIsUserDashboardOpen(false)}
+        currentUser={currentUser}
+        capsules={capsules}
+        vaultCapsules={vaultCapsules}
+        language={currentLanguage}
+        onOpenPlantModal={() => {
+          setCreateCoords(null);
+          setIsCreateModalOpen(true);
+        }}
+        onOpenVault={() => setIsVaultOpen(true)}
+        onOpenEvents={() => setIsEventsDashboardOpen(true)}
+        onOpenDemo={() => setIsDemoModalOpen(true)}
+        onOpenHeatmapArchive={() => {
+          setShowHeatmap(true);
+          setIsAllCapsulesModalOpen(true);
+        }}
+        onOpenSecurityKeys={() => handleOpenAuth('profile')}
+        onSelectCapsuleOnGlobe={handleSelectCapsule}
+        onOpenCapsuleModal={(c) => setSelectedCapsule(c)}
+        onSignOut={handleSignOut}
       />
 
       {/* 13. Real Supabase Authentication Modal (Email/Password & Forgot Password) */}
