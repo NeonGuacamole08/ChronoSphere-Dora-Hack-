@@ -370,7 +370,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
 
-        {/* 3. TOTAL PIN COUNT STACK BADGE & HEATMAP TOGGLE */}
+        {/* 3. ALL CAPSULES DIRECTORY & 3D HEATMAP TOGGLE */}
         <button
           type="button"
           onClick={onToggleLayers}
@@ -379,7 +379,7 @@ export const Header: React.FC<HeaderProps> = ({
               ? 'bg-amber-500/30 text-amber-200 border-amber-400 ring-2 ring-amber-400/50 shadow-[0_0_15px_rgba(245,158,11,0.4)] font-bold'
               : 'bg-[#0c1626]/90 text-stone-200 border-cyan-500/40 hover:bg-[#13233a]'
           }`}
-          title="Total Active Pins Stack & 3D Glowing Memory Heatmap Overlay"
+          title={`All ${capsulesCount} Capsules Directory & 3D Memory Heatmap Overlay — Click to explore all capsules`}
         >
           <Layers className={`w-3.5 h-3.5 md:w-3.5 md:h-3.5 ${showHeatmap ? 'text-amber-400' : 'text-cyan-300'}`} />
           <span className="hidden xl:inline font-semibold">
@@ -389,7 +389,7 @@ export const Header: React.FC<HeaderProps> = ({
           <span
             id="total-pin-count-badge"
             className="text-[9px] md:text-[10px] px-1.5 py-0.2 rounded-full bg-cyan-900/90 text-cyan-200 border border-cyan-400/60 font-mono font-bold shadow-inner"
-            title={`${capsulesCount} visible capsules on globe`}
+            title={`${capsulesCount} total capsules made worldwide`}
           >
             {capsulesCount}
           </span>

@@ -19,6 +19,7 @@ import { OfflineViewerModal } from './components/OfflineViewer/OfflineViewerModa
 import { BackendHubModal } from './components/BackendHub/BackendHubModal';
 import { HelpModal } from './components/Modals/HelpModal';
 import { WelcomeGuideModal } from './components/Modals/WelcomeGuideModal';
+import { AllCapsulesModal } from './components/Modals/AllCapsulesModal';
 import { AuthModal } from './components/Modals/AuthModal';
 import { ResetPasswordModal } from './components/Modals/ResetPasswordModal';
 import { GuestRecommendationModal } from './components/Modals/GuestRecommendationModal';
@@ -264,6 +265,9 @@ export default function App() {
   // My Vault Drawer State
   const [isVaultOpen, setIsVaultOpen] = useState(false);
   const [vaultInitialTab, setVaultInitialTab] = useState<'locked' | 'unlocked' | 'drafts'>('locked');
+
+  // All Capsules Global Archive & Heatmap Modal State
+  const [isAllCapsulesModalOpen, setIsAllCapsulesModalOpen] = useState(false);
 
   // 2-Second Burial Animation State
   const [buryingCapsule, setBuryingCapsule] = useState<Capsule | null>(null);
@@ -745,7 +749,10 @@ export default function App() {
           setIsCreateModalOpen(true);
         }}
         onOpenVault={() => setIsVaultOpen(true)}
-        onToggleLayers={() => setShowHeatmap((prev) => !prev)}
+        onToggleLayers={() => {
+          setShowHeatmap(true);
+          setIsAllCapsulesModalOpen((prev) => !prev);
+        }}
         showHeatmap={showHeatmap}
         isAudioMuted={isAudioMuted}
         onToggleAudio={handleToggleAudio}
@@ -944,6 +951,19 @@ export default function App() {
         onDeleteCapsule={handleDeleteCapsule}
         currentUser={currentUser}
         onOpenAuthModal={() => handleOpenAuth('signin')}
+      />
+
+      {/* 5.5. All Capsules Global Archive & 3D Memory Heatmap Directory Modal */}
+      <AllCapsulesModal
+        isOpen={isAllCapsulesModalOpen}
+        onClose={() => setIsAllCapsulesModalOpen(false)}
+        capsules={capsules}
+        simulatedTimeOffsetMs={simulatedTimeOffsetMs}
+        showHeatmap={showHeatmap}
+        onToggleHeatmap={() => setShowHeatmap((prev) => !prev)}
+        onSelectCapsuleOnGlobe={handleViewVaultCapsuleOnGlobe}
+        onOpenCapsuleModal={(cap) => handleSelectCapsule(cap, true)}
+        language={currentLanguage}
       />
 
       {/* 6. 2-Second Dirt Burial Particle & Lock Animation Overlay */}
