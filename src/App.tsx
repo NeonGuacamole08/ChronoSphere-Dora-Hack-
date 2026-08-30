@@ -763,6 +763,7 @@ export default function App() {
         onSignOut={handleSignOut}
         capsulesCount={filteredCapsules.length}
         totalCapsulesCount={capsules.length}
+        vaultCapsulesCount={vaultCapsules.length}
         onDropPinClick={handleDropPinClick}
         isPlantingMode={isPlantingMode}
         onOpenEvents={() => setIsEventsDashboardOpen(true)}

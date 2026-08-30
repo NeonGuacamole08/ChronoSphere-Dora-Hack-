@@ -46,6 +46,7 @@ interface HeaderProps {
   onSignOut: () => void;
   capsulesCount: number;
   totalCapsulesCount: number;
+  vaultCapsulesCount?: number;
   onDropPinClick: () => void;
   isPlantingMode: boolean;
   onOpenEvents?: () => void;
@@ -76,6 +77,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSignOut,
   capsulesCount,
   totalCapsulesCount,
+  vaultCapsulesCount,
   onDropPinClick,
   isPlantingMode,
   onOpenEvents,
@@ -342,7 +344,7 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             onClick={onOpenVault}
             className="flex items-center gap-1 md:gap-1.5 px-1.5 sm:px-2 md:px-2.5 lg:px-3 py-1 md:py-1.5 rounded-xl bg-[#121c2b]/95 hover:bg-[#1c2c43] text-amber-200 border border-amber-500/60 hover:border-amber-400 text-[11px] md:text-xs font-bold transition shadow-md hover:shadow-[0_0_14px_rgba(245,158,11,0.35)] cursor-pointer shrink-0"
-            title="My Vault: Locked & Unlocked Capsule Inventory Drawer"
+            title={`My Vault: ${vaultCapsulesCount ?? 0} personal capsules in safe`}
           >
             <Package className="w-3.5 h-3.5 text-amber-400" />
             <span className="hidden sm:inline">{translate('myVault', currentLanguage)}</span>
@@ -350,7 +352,7 @@ export const Header: React.FC<HeaderProps> = ({
               id="my-vault-capsule-badge"
               className="text-[9px] md:text-[10px] px-1.5 py-0.2 rounded-full bg-amber-950/90 text-amber-300 border border-amber-600/60 font-mono font-bold shadow-inner"
             >
-              {totalCapsulesCount}
+              {vaultCapsulesCount ?? 0}
             </span>
           </button>
         )}
