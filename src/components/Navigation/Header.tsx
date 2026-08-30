@@ -161,23 +161,23 @@ export const Header: React.FC<HeaderProps> = ({
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
   return (
-    <header className="absolute top-2 left-2 right-2 sm:top-3 sm:left-3 sm:right-3 md:top-3 md:left-3 md:right-3 lg:top-4 lg:left-4 lg:right-4 z-40 flex flex-col md:flex-row md:items-center justify-between gap-2 md:gap-2 lg:gap-3 pointer-events-auto select-none">
+    <header className="absolute top-2 left-2 right-2 sm:top-3 sm:left-3 sm:right-3 md:top-3 md:left-3 md:right-3 lg:top-3 lg:left-3 lg:right-3 z-40 flex flex-col md:flex-row md:items-center justify-start gap-1.5 md:gap-2 lg:gap-2 pointer-events-auto select-none">
       <div className="flex items-center justify-between w-full md:w-auto gap-2 shrink-0">
         {/* 1. LEFT: ChronoSpheres Brand */}
-        <div className="flex items-center gap-1.5 sm:gap-2 md:gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* Glowing Globe Circle Emblem */}
-          <div className="w-8 h-8 md:w-8 md:h-8 lg:w-9 lg:h-9 rounded-full bg-[#0c1b2f]/90 border-2 border-cyan-400 flex items-center justify-center text-cyan-200 shadow-[0_0_15px_rgba(6,182,212,0.4)] shrink-0">
-            <Globe className="w-4 h-4 md:w-4 md:h-4 lg:w-4.5 lg:h-4.5 stroke-[1.9] text-cyan-300" />
+          <div className="w-8 h-8 rounded-full bg-[#0c1b2f]/90 border-2 border-cyan-400 flex items-center justify-center text-cyan-200 shadow-[0_0_15px_rgba(6,182,212,0.4)] shrink-0">
+            <Globe className="w-4 h-4 stroke-[1.9] text-cyan-300" />
           </div>
 
           {/* Brand Text */}
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
-              <span className="font-sans font-bold text-sm sm:text-base md:text-base lg:text-lg xl:text-xl text-white tracking-tight leading-none drop-shadow">
+              <span className="font-sans font-bold text-sm sm:text-base md:text-base lg:text-lg text-white tracking-tight leading-none drop-shadow">
                 ChronoSpheres
               </span>
             </div>
-            <span className="text-[9px] md:text-[10px] lg:text-[11px] text-cyan-200/70 font-sans tracking-tight mt-0.5 font-medium hidden xl:inline">
+            <span className="text-[9px] md:text-[10px] text-cyan-200/70 font-sans tracking-tight mt-0.5 font-medium hidden 2xl:inline">
               3D Earth Time Capsules
             </span>
           </div>
@@ -208,7 +208,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* 2. CENTER: Compact Search Bar with Embedded 'Drop Pin' Action */}
       <div
         ref={searchContainerRef}
-        className={`relative flex-initial min-w-0 w-full md:w-[180px] lg:w-[210px] xl:w-[240px] mx-0 md:mx-1 shrink-0 ${
+        className={`relative flex-initial min-w-0 w-full md:w-[150px] lg:w-[175px] xl:w-[200px] mx-0 shrink-0 ${
           isMobileSearchOpen ? 'block w-full' : 'hidden md:block'
         }`}
       >

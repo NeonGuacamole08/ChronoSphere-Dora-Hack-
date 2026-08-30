@@ -663,7 +663,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-xs font-bold text-stone-800">
-                      Password
+                      {translate('password', language)}
                     </label>
                     {mode === 'signin' && (
                       <button
@@ -675,7 +675,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         }}
                         className="text-[11px] font-bold text-emerald-800 hover:text-emerald-950 underline cursor-pointer"
                       >
-                        Forgot Password?
+                        {translate('forgotPassword', language)}
                       </button>
                     )}
                   </div>
@@ -702,7 +702,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>
-                      <span>{mode === 'signup' ? 'Create Account & Start Exploring' : 'Sign In'}</span>
+                      <span>{mode === 'signup' ? translate('createAccount', language) : translate('signIn', language)}</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
@@ -714,7 +714,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <div className="flex items-center gap-2">
                   <div className="h-px bg-amber-300/70 flex-1" />
                   <span className="text-[10px] uppercase font-mono tracking-wider text-stone-600 font-bold">
-                    Or Explore Freely
+                    {language === 'fr' ? 'Ou Explorer Librement' : 'Or Explore Freely'}
                   </span>
                   <div className="h-px bg-amber-300/70 flex-1" />
                 </div>
@@ -723,10 +723,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
                   <div className="leading-snug">
                     <span className="font-bold block text-amber-900">
-                      Guest Mode: None of your data, pins, vaults, or shares will be saved.
+                      {language === 'fr' ? 'Mode Invité : Vos données de capsules ne seront pas sauvegardées de façon permanente.' : 'Guest Mode: None of your data, pins, vaults, or shares will be saved.'}
                     </span>
                     <span className="text-amber-800 text-[10px]">
-                      Create an account above to permanently save pins, encrypt photos, and keep voice recordings.
+                      {language === 'fr' ? 'Créez un compte ci-dessus pour sécuriser vos souvenirs chiffrés.' : 'Create an account above to permanently save pins, encrypt photos, and keep voice recordings.'}
                     </span>
                   </div>
                 </div>
@@ -742,7 +742,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   className="w-full py-2.5 px-4 rounded-xl bg-stone-800 hover:bg-stone-900 text-amber-100 font-bold text-xs flex items-center justify-center gap-2 transition shadow-sm border border-stone-700 cursor-pointer"
                 >
                   <Compass className="w-4 h-4 text-amber-400" />
-                  <span>Continue as Guest</span>
+                  <span>{translate('continueAsGuest', language)}</span>
                 </button>
               </div>
             </div>

@@ -344,11 +344,11 @@ export const WelcomeGuideModal: React.FC<WelcomeGuideModalProps> = ({
             <span>{translate('dontShowAgain', language)}</span>
           </label>
 
-          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto flex-wrap sm:flex-nowrap justify-end">
             <button
               type="button"
               onClick={handlePlantClick}
-              className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-white hover:bg-stone-50 border border-stone-300 text-stone-800 text-xs font-bold transition cursor-pointer shadow-xs"
+              className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-white hover:bg-stone-50 border border-stone-300 text-stone-800 text-xs font-bold transition cursor-pointer shadow-xs whitespace-nowrap shrink-0 text-center"
             >
               {translate('plantCapsule', language)}
             </button>
@@ -356,10 +356,10 @@ export const WelcomeGuideModal: React.FC<WelcomeGuideModalProps> = ({
             <button
               type="button"
               onClick={handleDismiss}
-              className="flex-1 sm:flex-none px-5 py-2 rounded-xl bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
+              className="flex-1 sm:flex-none px-5 py-2 rounded-xl bg-gradient-to-r from-amber-800 to-amber-900 hover:from-amber-700 hover:to-amber-800 text-amber-50 text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer whitespace-nowrap shrink-0"
             >
-              <span>{translate('startExploring', language)}</span>
-              <ArrowRight className="w-4 h-4" />
+              <span className="whitespace-nowrap">{translate('startExploring', language)}</span>
+              <ArrowRight className="w-4 h-4 shrink-0" />
             </button>
           </div>
         </div>

@@ -115,14 +115,14 @@ export const LanguageSelectModal: React.FC<LanguageSelectModalProps> = ({
           <button
             type="button"
             onClick={handleConfirm}
-            className="w-full py-3 sm:py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-teal-400 hover:from-cyan-400 hover:to-teal-300 text-stone-950 font-bold text-sm sm:text-base shadow-[0_0_20px_rgba(6,182,212,0.5)] transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+            className="w-full py-3 sm:py-3.5 px-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-teal-400 hover:from-cyan-400 hover:to-teal-300 text-stone-950 font-bold text-xs sm:text-sm md:text-base shadow-[0_0_20px_rgba(6,182,212,0.5)] transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
           >
-            <span>
+            <span className="whitespace-nowrap truncate max-w-[90%]">
               {isInitialSetup
                 ? translate('continueToTutorial', selectedLang)
                 : translate('continue', selectedLang)}
             </span>
-            <ArrowRight className="w-4 h-4 text-stone-950 stroke-[2.5]" />
+            <ArrowRight className="w-4 h-4 text-stone-950 stroke-[2.5] shrink-0" />
           </button>
         </div>
       </div>
