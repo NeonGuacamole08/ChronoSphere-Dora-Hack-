@@ -308,24 +308,24 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
       <div
         id="user-dashboard-modal-container"
-        className="relative w-full max-w-4xl max-h-[92vh] parchment-card border-2 border-amber-800/40 rounded-2xl sm:rounded-3xl shadow-[0_25px_80px_rgba(0,0,0,0.6)] flex flex-col overflow-hidden text-amber-950 font-sans"
+        className="relative w-full max-w-4xl max-h-[95vh] sm:max-h-[92vh] parchment-card border-2 border-amber-800/40 rounded-2xl sm:rounded-3xl shadow-[0_25px_80px_rgba(0,0,0,0.6)] flex flex-col overflow-hidden text-amber-950 font-sans"
       >
         {/* 1. TOP HEADER (Tree Bark Banner) */}
-        <div className="tree-bark-banner px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between border-b border-amber-800/40 shrink-0 text-amber-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-stone-950 flex items-center justify-center shadow-md shrink-0">
-              <User className="w-5 h-5 text-stone-950 stroke-[2.5]" />
+        <div className="tree-bark-banner px-3 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between border-b border-amber-800/40 shrink-0 text-amber-100">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-stone-950 flex items-center justify-center shadow-md shrink-0">
+              <User className="w-4 h-4 sm:w-5 sm:h-5 text-stone-950 stroke-[2.5]" />
             </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="font-serif font-bold text-base sm:text-lg text-amber-100 tracking-tight leading-tight">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <h2 className="font-serif font-bold text-sm sm:text-lg text-amber-100 tracking-tight leading-tight truncate">
                   Explorer Dashboard & Feed
                 </h2>
-                <span className="px-2 py-0.5 rounded-full bg-amber-950/80 border border-amber-400/50 text-[10px] sm:text-xs font-mono font-bold text-amber-300">
+                <span className="px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-950/80 border border-amber-400/50 text-[9px] sm:text-xs font-mono font-bold text-amber-300 shrink-0">
                   {isGuest ? 'Guest Session' : 'Verified Pioneer'}
                 </span>
               </div>
-              <p className="text-[11px] sm:text-xs text-amber-200/80 mt-0.5">
+              <p className="text-[10px] sm:text-xs text-amber-200/80 mt-0.5 line-clamp-1 sm:line-clamp-none">
                 Manage your time travel missions, activity feed, notifications, and platform updates.
               </p>
             </div>
@@ -334,207 +334,209 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 sm:p-2 rounded-xl bg-black/30 hover:bg-black/50 text-amber-200 hover:text-white transition cursor-pointer border border-amber-500/30"
+            className="p-1.5 sm:p-2 rounded-xl bg-black/30 hover:bg-black/50 text-amber-200 hover:text-white transition cursor-pointer border border-amber-500/30 shrink-0 ml-2"
             aria-label="Close dashboard"
           >
             <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
 
-        {/* 2. USER PROFILE BANNER & QUICK STATS */}
-        <div className="p-4 sm:p-5 bg-amber-900/5 border-b border-amber-800/20 shrink-0">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            {/* User Profile Card */}
-            <div className="flex items-center gap-3.5 min-w-0">
-              <img
-                src={currentUser?.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=explorer'}
-                alt={username}
-                className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border-2 border-amber-700/60 object-cover bg-amber-950 shadow-md shrink-0"
-              />
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-sm sm:text-base text-amber-950 truncate">
-                    @{username.replace('@', '')}
-                  </h3>
-                  {!isGuest && (
-                    <span className="p-0.5 rounded-full bg-emerald-100 border border-emerald-600 text-emerald-800" title="Cryptographically Verified">
-                      <ShieldCheck className="w-3.5 h-3.5" />
+        {/* SCROLLABLE MODAL BODY: Profile + Sticky Tabs + Content */}
+        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-[#faf5ec]/60">
+          {/* 2. USER PROFILE BANNER & QUICK STATS */}
+          <div className="p-3 sm:p-5 bg-amber-900/5 border-b border-amber-800/20">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
+              {/* User Profile Card */}
+              <div className="flex items-center gap-3 min-w-0">
+                <img
+                  src={currentUser?.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=explorer'}
+                  alt={username}
+                  className="w-11 h-11 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl border-2 border-amber-700/60 object-cover bg-amber-950 shadow-md shrink-0"
+                />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="font-bold text-sm sm:text-base text-amber-950 truncate">
+                      @{username.replace('@', '')}
+                    </h3>
+                    {!isGuest && (
+                      <span className="p-0.5 rounded-full bg-emerald-100 border border-emerald-600 text-emerald-800 shrink-0" title="Cryptographically Verified">
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] sm:text-xs text-amber-900/70 truncate">{email}</p>
+                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                    <span className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-100/90 text-amber-900 border border-amber-700/30 font-mono font-medium">
+                      🏆 Chronos Voyager (Lv. 4)
                     </span>
-                  )}
-                </div>
-                <p className="text-xs text-amber-900/70 truncate">{email}</p>
-                <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-100/90 text-amber-900 border border-amber-700/30 font-mono font-medium">
-                    🏆 Rank: Chronos Voyager (Lv. 4)
-                  </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-white/80 text-stone-700 border border-amber-700/20 font-mono">
-                    🌐 Earth Network ID: #{currentUser?.id?.slice(0, 8) || 'GUEST-01'}
-                  </span>
+                    <span className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-md bg-white/80 text-stone-700 border border-amber-700/20 font-mono">
+                      🌐 #{currentUser?.id?.slice(0, 8) || 'GUEST-01'}
+                    </span>
+                  </div>
                 </div>
               </div>
+
+              {/* Quick Action Badges */}
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                {onOpenSecurityKeys && !isGuest && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOpenSecurityKeys();
+                      onClose();
+                    }}
+                    className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-white hover:bg-amber-50 text-amber-900 border border-amber-700/40 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                  >
+                    <Key className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Security Keys</span>
+                  </button>
+                )}
+
+                {onOpenDemo && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOpenDemo();
+                      onClose();
+                    }}
+                    className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-gradient-to-r from-amber-700 to-amber-900 hover:from-amber-600 hover:to-amber-800 text-amber-100 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-md border border-amber-500/40"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-amber-200 stroke-none" />
+                    <span>Feature Demo</span>
+                  </button>
+                )}
+
+                {onSignOut && !isGuest && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSignOut();
+                      onClose();
+                    }}
+                    className="p-1.5 sm:p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 transition cursor-pointer"
+                    title="Sign Out"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Quick Action Badges */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {onOpenSecurityKeys && !isGuest && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onOpenSecurityKeys();
-                    onClose();
-                  }}
-                  className="px-3 py-1.5 rounded-xl bg-white hover:bg-amber-50 text-amber-900 border border-amber-700/40 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-xs"
-                >
-                  <Key className="w-3.5 h-3.5 text-amber-700" />
-                  <span>Security Keys</span>
-                </button>
-              )}
+            {/* Quick Metrics Bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-3 mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-amber-800/20 text-xs">
+              <div className="p-2 sm:p-2.5 rounded-xl bg-white/80 border border-amber-700/20 shadow-xs flex items-center gap-2 sm:gap-2.5">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-100 border border-amber-700/30 flex items-center justify-center text-amber-900 shrink-0">
+                  <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="font-bold text-xs sm:text-sm text-amber-950 font-mono truncate">{totalBuried}</div>
+                  <div className="text-[9px] sm:text-[10px] text-amber-900/70 truncate">My Capsules</div>
+                </div>
+              </div>
 
-              {onOpenDemo && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onOpenDemo();
-                    onClose();
-                  }}
-                  className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-700 to-amber-900 hover:from-amber-600 hover:to-amber-800 text-amber-100 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-md border border-amber-500/40"
-                >
-                  <Play className="w-3.5 h-3.5 fill-amber-200 stroke-none" />
-                  <span>Watch Feature Demo</span>
-                </button>
-              )}
+              <div className="p-2 sm:p-2.5 rounded-xl bg-white/80 border border-emerald-700/20 shadow-xs flex items-center gap-2 sm:gap-2.5">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-100 border border-emerald-600/30 flex items-center justify-center text-emerald-800 shrink-0">
+                  <Unlock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="font-bold text-xs sm:text-sm text-emerald-950 font-mono truncate">{readyToUnseal}</div>
+                  <div className="text-[9px] sm:text-[10px] text-emerald-900/70 truncate">Unsealed & Ready</div>
+                </div>
+              </div>
 
-              {onSignOut && !isGuest && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onSignOut();
-                    onClose();
-                  }}
-                  className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 transition cursor-pointer"
-                  title="Sign Out"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              )}
+              <div className="p-2 sm:p-2.5 rounded-xl bg-white/80 border border-amber-700/20 shadow-xs flex items-center gap-2 sm:gap-2.5">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-yellow-100 border border-amber-600/30 flex items-center justify-center text-amber-900 shrink-0">
+                  <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="font-bold text-xs sm:text-sm text-amber-950 font-mono truncate">{lockedCount}</div>
+                  <div className="text-[9px] sm:text-[10px] text-amber-900/70 truncate">Time-Locked</div>
+                </div>
+              </div>
+
+              <div className="p-2 sm:p-2.5 rounded-xl bg-white/80 border border-purple-700/20 shadow-xs flex items-center gap-2 sm:gap-2.5">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-purple-100 border border-purple-600/30 flex items-center justify-center text-purple-900 shrink-0">
+                  <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="font-bold text-xs sm:text-sm text-purple-950 font-mono truncate">{capsules.length}</div>
+                  <div className="text-[9px] sm:text-[10px] text-purple-900/70 truncate">Global Density</div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Quick Metrics Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-4 pt-3 border-t border-amber-800/20 text-xs">
-            <div className="p-2.5 rounded-xl bg-white/80 border border-amber-700/20 shadow-xs flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-amber-100 border border-amber-700/30 flex items-center justify-center text-amber-900 shrink-0">
-                <MapPin className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="font-bold text-sm text-amber-950 font-mono">{totalBuried}</div>
-                <div className="text-[10px] text-amber-900/70">My Capsules</div>
-              </div>
-            </div>
-
-            <div className="p-2.5 rounded-xl bg-white/80 border border-emerald-700/20 shadow-xs flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-emerald-100 border border-emerald-600/30 flex items-center justify-center text-emerald-800 shrink-0">
-                <Unlock className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="font-bold text-sm text-emerald-950 font-mono">{readyToUnseal}</div>
-                <div className="text-[10px] text-emerald-900/70">Unsealed & Ready</div>
-              </div>
-            </div>
-
-            <div className="p-2.5 rounded-xl bg-white/80 border border-amber-700/20 shadow-xs flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-yellow-100 border border-amber-600/30 flex items-center justify-center text-amber-900 shrink-0">
-                <Lock className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="font-bold text-sm text-amber-950 font-mono">{lockedCount}</div>
-                <div className="text-[10px] text-amber-900/70">Time-Locked</div>
-              </div>
-            </div>
-
-            <div className="p-2.5 rounded-xl bg-white/80 border border-purple-700/20 shadow-xs flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-purple-100 border border-purple-600/30 flex items-center justify-center text-purple-900 shrink-0">
-                <Flame className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="font-bold text-sm text-purple-950 font-mono">{capsules.length}</div>
-                <div className="text-[10px] text-purple-900/70">Global Density</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 3. NAVIGATION TABS */}
-        <div className="px-4 sm:px-6 py-2.5 bg-amber-900/10 border-b border-amber-800/20 flex items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setActiveTab('notifications')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'notifications'
-                  ? 'bg-gradient-to-r from-amber-700 to-amber-900 text-amber-100 shadow-sm border border-amber-500/40'
-                  : 'text-amber-950/70 hover:text-amber-950 hover:bg-amber-900/10'
-              }`}
-            >
-              <Bell className="w-3.5 h-3.5" />
-              <span>Notifications</span>
-              {unreadCount > 0 && (
-                <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
-                    activeTab === 'notifications' ? 'bg-amber-950 text-amber-300' : 'bg-rose-600 text-white'
-                  }`}
-                >
-                  {unreadCount}
-                </span>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('updates')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'updates'
-                  ? 'bg-gradient-to-r from-amber-700 to-amber-900 text-amber-100 shadow-sm border border-amber-500/40'
-                  : 'text-amber-950/70 hover:text-amber-950 hover:bg-amber-900/10'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Platform Updates</span>
-              <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-200 text-amber-950 font-mono border border-amber-700/30">
-                v2.4
-              </span>
-            </button>
-          </div>
-
-          {activeTab === 'notifications' && (
-            <div className="flex items-center gap-2">
+          {/* 3. STICKY NAVIGATION TABS */}
+          <div className="sticky top-0 z-20 px-3 sm:px-6 py-2 sm:py-2.5 bg-[#f4ecd8] border-b border-amber-800/20 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pb-0.5 sm:pb-0">
               <button
                 type="button"
-                onClick={() => setFilterUnreadOnly(!filterUnreadOnly)}
-                className={`text-[11px] px-2.5 py-1 rounded-lg border transition cursor-pointer font-medium ${
-                  filterUnreadOnly
-                    ? 'bg-amber-900 text-amber-100 border-amber-900 font-bold'
-                    : 'bg-white text-amber-950/80 border-amber-800/30 hover:bg-amber-50'
+                onClick={() => setActiveTab('notifications')}
+                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                  activeTab === 'notifications'
+                    ? 'bg-gradient-to-r from-amber-700 to-amber-900 text-amber-100 shadow-sm border border-amber-500/40'
+                    : 'text-amber-950/70 hover:text-amber-950 hover:bg-amber-900/10'
                 }`}
               >
-                {filterUnreadOnly ? 'Showing Unread' : 'All Notifications'}
+                <Bell className="w-3.5 h-3.5" />
+                <span>Notifications</span>
+                {unreadCount > 0 && (
+                  <span
+                    className={`text-[9px] sm:text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                      activeTab === 'notifications' ? 'bg-amber-950 text-amber-300' : 'bg-rose-600 text-white'
+                    }`}
+                  >
+                    {unreadCount}
+                  </span>
+                )}
               </button>
 
-              {unreadCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('updates')}
+                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                  activeTab === 'updates'
+                    ? 'bg-gradient-to-r from-amber-700 to-amber-900 text-amber-100 shadow-sm border border-amber-500/40'
+                    : 'text-amber-950/70 hover:text-amber-950 hover:bg-amber-900/10'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Platform Updates</span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-200 text-amber-950 font-mono border border-amber-700/30">
+                  v2.4
+                </span>
+              </button>
+            </div>
+
+            {activeTab === 'notifications' && (
+              <div className="flex items-center gap-1.5 sm:gap-2 self-end sm:self-auto flex-wrap">
                 <button
                   type="button"
-                  onClick={handleMarkAllRead}
-                  className="text-[11px] px-2.5 py-1 rounded-lg bg-white hover:bg-amber-50 text-amber-900 border border-amber-800/30 transition cursor-pointer font-semibold shadow-xs"
+                  onClick={() => setFilterUnreadOnly(!filterUnreadOnly)}
+                  className={`text-[10px] sm:text-[11px] px-2 sm:px-2.5 py-1 rounded-lg border transition cursor-pointer font-medium ${
+                    filterUnreadOnly
+                      ? 'bg-amber-900 text-amber-100 border-amber-900 font-bold'
+                      : 'bg-white text-amber-950/80 border-amber-800/30 hover:bg-amber-50'
+                  }`}
                 >
-                  Mark All Read
+                  {filterUnreadOnly ? 'Showing Unread' : 'All Notifications'}
                 </button>
-              )}
-            </div>
-          )}
-        </div>
 
-        {/* 4. TAB CONTENT */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar bg-[#faf5ec]/60">
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleMarkAllRead}
+                    className="text-[10px] sm:text-[11px] px-2 sm:px-2.5 py-1 rounded-lg bg-white hover:bg-amber-50 text-amber-900 border border-amber-800/30 transition cursor-pointer font-semibold shadow-xs"
+                  >
+                    Mark All Read
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* 4. TAB CONTENT */}
+          <div className="p-3 sm:p-6 space-y-3">
           {/* TAB 1: NOTIFICATIONS FEED */}
           {activeTab === 'notifications' && (
             <div className="space-y-3">
@@ -651,15 +653,16 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
             </div>
           )}
         </div>
+        </div>
 
         {/* 5. FOOTER SHORTCUTS */}
-        <div className="tree-bark-banner px-4 sm:px-6 py-3 border-t border-amber-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-amber-100">
-          <div className="flex items-center gap-2 text-amber-200/80 text-[11px]">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Earth Time Capsule Protocol • DoraHacks Global Network</span>
+        <div className="tree-bark-banner px-3 sm:px-6 py-2.5 sm:py-3 border-t border-amber-800/40 flex items-center justify-between gap-2 text-xs text-amber-100 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-amber-200/80 text-[10px] sm:text-[11px] truncate">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="truncate">Earth Time Capsule Protocol</span>
           </div>
 
-          <div className="flex items-center gap-2 self-end sm:self-auto">
+          <div className="flex items-center gap-2 shrink-0">
             {onOpenDemo && (
               <button
                 type="button"
@@ -667,19 +670,20 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
                   onOpenDemo();
                   onClose();
                 }}
-                className="px-3 py-1.5 rounded-xl bg-black/30 hover:bg-black/50 text-amber-200 hover:text-white border border-amber-500/30 font-bold transition cursor-pointer flex items-center gap-1.5"
+                className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-black/30 hover:bg-black/50 text-amber-200 hover:text-white border border-amber-500/30 font-bold transition cursor-pointer flex items-center gap-1.5 text-xs"
               >
-                <Play className="w-3.5 h-3.5 fill-amber-300 stroke-none" />
-                <span>Feature Demo</span>
+                <Play className="w-3 h-3 fill-amber-300 stroke-none" />
+                <span className="hidden sm:inline">Feature Demo</span>
+                <span className="inline sm:hidden">Demo</span>
               </button>
             )}
 
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-amber-700 to-amber-900 hover:from-amber-600 hover:to-amber-800 text-amber-100 font-bold transition cursor-pointer border border-amber-500/40 shadow-sm"
+              className="px-3 sm:px-4 py-1 sm:py-1.5 rounded-xl bg-gradient-to-r from-amber-700 to-amber-900 hover:from-amber-600 hover:to-amber-800 text-amber-100 font-bold transition cursor-pointer border border-amber-500/40 shadow-sm text-xs"
             >
-              Close Dashboard
+              Close
             </button>
           </div>
         </div>

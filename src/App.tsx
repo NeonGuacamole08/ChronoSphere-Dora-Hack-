@@ -762,7 +762,7 @@ export default function App() {
         currentUser={currentUser}
         onOpenAuthModal={handleOpenAuth}
         onSignOut={handleSignOut}
-        capsulesCount={filteredCapsules.length}
+        capsulesCount={capsules.length}
         totalCapsulesCount={capsules.length}
         vaultCapsulesCount={vaultCapsules.length}
         onDropPinClick={handleDropPinClick}

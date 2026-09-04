@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Globe,
   Search,
@@ -97,10 +97,99 @@ export const Header: React.FC<HeaderProps> = ({
   const [showDropdown, setShowDropdown] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showAudioMenu, setShowAudioMenu] = useState(false);
+  const [userDropdownStyle, setUserDropdownStyle] = useState<React.CSSProperties>({});
+  const [audioMenuStyle, setAudioMenuStyle] = useState<React.CSSProperties>({});
   const [activeTheme, setActiveTheme] = useState<SoundTheme>(() => ambientSound.getTheme());
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const audioMenuRef = useRef<HTMLDivElement>(null);
+
+  // Viewport-safe bounds calculation for User Dropdown
+  const updateUserDropdownPos = useCallback(() => {
+    if (userDropdownRef.current) {
+      const rect = userDropdownRef.current.getBoundingClientRect();
+      const menuWidth = Math.min(295, window.innerWidth - 16);
+      let left = rect.right - menuWidth;
+      // Guarantee at least 8px clearance from both left and right screen edges
+      if (left < 8) {
+        left = 8;
+      }
+      if (left + menuWidth > window.innerWidth - 8) {
+        left = Math.max(8, window.innerWidth - menuWidth - 8);
+      }
+      const top = rect.bottom + 8;
+      setUserDropdownStyle({
+        position: 'fixed',
+        top: `${top}px`,
+        left: `${left}px`,
+        width: `${menuWidth}px`,
+        maxHeight: `calc(100vh - ${top + 16}px)`,
+        zIndex: 9999,
+      });
+    }
+  }, []);
+
+  // Viewport-safe bounds calculation for Sound Atmosphere Menu
+  const updateAudioMenuPos = useCallback(() => {
+    if (audioMenuRef.current) {
+      const rect = audioMenuRef.current.getBoundingClientRect();
+      const menuWidth = Math.min(320, window.innerWidth - 16);
+      let left = rect.right - menuWidth;
+      if (left < 8) {
+        left = 8;
+      }
+      if (left + menuWidth > window.innerWidth - 8) {
+        left = Math.max(8, window.innerWidth - menuWidth - 8);
+      }
+      const top = rect.bottom + 8;
+      setAudioMenuStyle({
+        position: 'fixed',
+        top: `${top}px`,
+        left: `${left}px`,
+        width: `${menuWidth}px`,
+        maxHeight: `calc(100vh - ${top + 16}px)`,
+        zIndex: 9999,
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showUserDropdown) {
+      updateUserDropdownPos();
+      window.addEventListener('resize', updateUserDropdownPos);
+      window.addEventListener('scroll', updateUserDropdownPos, true);
+      return () => {
+        window.removeEventListener('resize', updateUserDropdownPos);
+        window.removeEventListener('scroll', updateUserDropdownPos, true);
+      };
+    }
+  }, [showUserDropdown, updateUserDropdownPos]);
+
+  useEffect(() => {
+    if (showAudioMenu) {
+      updateAudioMenuPos();
+      window.addEventListener('resize', updateAudioMenuPos);
+      window.addEventListener('scroll', updateAudioMenuPos, true);
+      return () => {
+        window.removeEventListener('resize', updateAudioMenuPos);
+        window.removeEventListener('scroll', updateAudioMenuPos, true);
+      };
+    }
+  }, [showAudioMenu, updateAudioMenuPos]);
+
+  const handleToggleUserDropdown = () => {
+    if (!showUserDropdown) {
+      updateUserDropdownPos();
+    }
+    setShowUserDropdown((prev) => !prev);
+  };
+
+  const handleToggleAudioMenu = () => {
+    if (!showAudioMenu) {
+      updateAudioMenuPos();
+    }
+    setShowAudioMenu((prev) => !prev);
+  };
 
   // Subscribe to AmbientSound updates
   useEffect(() => {
@@ -131,30 +220,35 @@ export const Header: React.FC<HeaderProps> = ({
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Click outside to close dropdowns
+  // Click outside to close dropdowns (supports both mouse and touch)
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node;
       if (
         searchContainerRef.current &&
-        !searchContainerRef.current.contains(e.target as Node)
+        !searchContainerRef.current.contains(target)
       ) {
         setShowDropdown(false);
       }
       if (
         userDropdownRef.current &&
-        !userDropdownRef.current.contains(e.target as Node)
+        !userDropdownRef.current.contains(target)
       ) {
         setShowUserDropdown(false);
       }
       if (
         audioMenuRef.current &&
-        !audioMenuRef.current.contains(e.target as Node)
+        !audioMenuRef.current.contains(target)
       ) {
         setShowAudioMenu(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside, { passive: true });
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
   const handleSuggestionClick = (place: GeocodingResult) => {
@@ -384,7 +478,7 @@ export const Header: React.FC<HeaderProps> = ({
               ? 'bg-amber-500/30 text-amber-200 border-amber-400 ring-2 ring-amber-400/50 shadow-[0_0_15px_rgba(245,158,11,0.4)] font-bold'
               : 'bg-[#0c1626]/90 text-stone-200 border-cyan-500/40 hover:bg-[#13233a]'
           }`}
-          title={`All ${capsulesCount} Capsules Directory & 3D Memory Heatmap Overlay — Click to explore all capsules`}
+          title={`All ${totalCapsulesCount || capsulesCount} Capsules Directory & 3D Memory Heatmap Overlay — Click to explore all capsules`}
         >
           <Layers className={`w-3.5 h-3.5 md:w-3.5 md:h-3.5 ${showHeatmap ? 'text-amber-400' : 'text-cyan-300'}`} />
           <span className="hidden xl:inline font-semibold">
@@ -394,9 +488,9 @@ export const Header: React.FC<HeaderProps> = ({
           <span
             id="total-pin-count-badge"
             className="text-[9px] md:text-[10px] px-1.5 py-0.2 rounded-full bg-cyan-900/90 text-cyan-200 border border-cyan-400/60 font-mono font-bold shadow-inner"
-            title={`${capsulesCount} total capsules made worldwide`}
+            title={`${totalCapsulesCount || capsulesCount} total capsules made worldwide`}
           >
-            {capsulesCount}
+            {totalCapsulesCount || capsulesCount}
           </span>
         </button>
 
@@ -416,7 +510,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="relative shrink-0" ref={audioMenuRef}>
           <button
             type="button"
-            onClick={() => setShowAudioMenu(!showAudioMenu)}
+            onClick={handleToggleAudioMenu}
             className={`w-7 h-7 sm:w-7.5 sm:h-7.5 md:w-7.5 md:h-7.5 lg:w-8.5 lg:h-8.5 rounded-xl border flex items-center justify-center transition shadow-md cursor-pointer shrink-0 relative ${
               !isAudioMuted
                 ? 'bg-cyan-950/90 text-cyan-300 border-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.4)] ring-1 ring-cyan-400/50'
@@ -444,7 +538,10 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Sound Choices Popover Menu */}
           {showAudioMenu && (
-            <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 rounded-2xl bg-gradient-to-b from-[#1c120a]/95 via-[#160e08]/95 to-[#100a06]/95 backdrop-blur-md border-2 border-amber-600/60 shadow-[0_20px_50px_rgba(0,0,0,0.8)] p-3.5 z-50 text-amber-100 animate-in fade-in slide-in-from-top-2 duration-200 space-y-3">
+            <div
+              style={audioMenuStyle}
+              className="rounded-2xl bg-gradient-to-b from-[#1c120a]/95 via-[#160e08]/95 to-[#100a06]/95 backdrop-blur-md border-2 border-amber-600/60 shadow-[0_20px_50px_rgba(0,0,0,0.8)] p-3.5 text-amber-100 animate-in fade-in slide-in-from-top-2 duration-200 space-y-3 overflow-y-auto"
+            >
               {/* Header Title & Master Toggle */}
               <div className="flex items-center justify-between border-b border-amber-800/40 pb-2.5">
                 <div className="flex items-center gap-2">
@@ -583,7 +680,7 @@ export const Header: React.FC<HeaderProps> = ({
           {currentUser && !currentUser.isGuest ? (
             <button
               type="button"
-              onClick={() => setShowUserDropdown(!showUserDropdown)}
+              onClick={handleToggleUserDropdown}
               className="flex items-center gap-1 md:gap-1 px-1.5 sm:px-2 md:px-2 lg:px-2.5 py-1 md:py-1 rounded-xl bg-[#0c1626]/90 hover:bg-[#13233a] text-white border border-emerald-500/50 text-[10px] md:text-xs font-semibold transition cursor-pointer shadow-[0_0_12px_rgba(16,185,129,0.25)]"
               title={`Logged in as ${currentUser.username} (${currentUser.email})`}
             >
@@ -612,7 +709,10 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* User Profile / Supabase Menu Dropdown */}
           {showUserDropdown && currentUser && (
-            <div className="absolute right-0 top-full mt-2 w-72 p-3 rounded-2xl bg-gradient-to-b from-[#180f07] to-[#0d0703] backdrop-blur-md border border-amber-500/50 shadow-[0_15px_50px_rgba(0,0,0,0.9)] z-50 animate-in fade-in zoom-in-95 duration-150 text-amber-100 font-sans">
+            <div
+              style={userDropdownStyle}
+              className="p-3 rounded-2xl bg-gradient-to-b from-[#180f07] to-[#0d0703] backdrop-blur-md border border-amber-500/50 shadow-[0_15px_50px_rgba(0,0,0,0.9)] animate-in fade-in zoom-in-95 duration-150 text-amber-100 font-sans overflow-y-auto"
+            >
               {/* User Info Header */}
               <div className="flex items-center gap-2.5 pb-2.5 border-b border-amber-500/30">
                 <img
